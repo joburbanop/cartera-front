@@ -1,5 +1,3 @@
-
-```markdown
 # SGC (Sistema de Gestión de Cartera) - Frontend
 
 Aplicación web desarrollada como **Single-Page Application (SPA)** utilizando **Angular** para el **Sistema de Gestión de Cartera (SGC)**. Se comunica mediante una API REST en formato JSON con el backend de Laravel.
@@ -11,11 +9,12 @@ Aplicación web desarrollada como **Single-Page Application (SPA)** utilizando *
 El proyecto sigue una estructura modular y escalable orientada a características (*feature-driven*):
 
 *   **`src/app/core/`**: Servicios globales, interceptores HTTP (tokens, manejo de errores) y *Guards* de autenticación.
-*   **`src/app/shared/`**: Componentes visuales reutilizables, directivas y pipes globales.
+*   **`src/app/shared/`**: Componentes visuales reutilizables, directivas y pipes globales (`components/`, `ui-kit/`).
 *   **`src/app/features/`**: Módulos funcionales de la aplicación:
     *   `auth/`: Pantallas de inicio de sesión y control de permisos de usuario.
+    *   `dashboard/`: Pantalla principal con métricas de gerencia.
     *   `inventory/`: Creación de proyectos, lotes, registro de clientes y contratos de compraventa.
-    *   `collection/`: Recepción de pagos mensuales, archivos adjuntos y cambios comerciales.
+    *   `collection/`: Recepción de pagos mensuales, archivos adjuntos y gestión de la cobranza.
 
 ---
 
@@ -23,7 +22,7 @@ El proyecto sigue una estructura modular y escalable orientada a característica
 
 *   **Node.js** (versión LTS recomendada)
 *   **npm** o **pnpm**
-*   **Angular CLI**
+*   **Angular CLI** (v18+)
 
 ---
 
@@ -33,134 +32,30 @@ Sigue estos pasos para levantar el frontend en tu entorno local:
 
 1. **Clonar el repositorio:**
    ```bash
-   git clone [https://github.com/tu-usuario/cartera-frontend.git](https://github.com/tu-usuario/cartera-frontend.git)
-   cd cartera-frontend
+   git clone [https://github.com/joburbanop/cartera-front.git](https://github.com/joburbanop/cartera-front.git)
+   cd sgci-front
 
-```
 
-2. **Instalar dependencias:**
-```bash
+Instalar dependencias:
+
+Bash
 npm install
+Configurar las variables de entorno:
+Ajusta la URL de la API de Laravel en los archivos de entorno de Angular (ej. src/environments/environment.ts):
 
-```
-
-
-3. **Configurar las variables de entorno:**
-Ajusta la URL de la API de Laravel en los archivos de entorno de Angular (ej. `src/environments/environment.ts`):
-```typescript
+TypeScript
 export const environment = {
   production: false,
   apiUrl: '[http://cartera-api.test/api](http://cartera-api.test/api)'
 };
+Ejecutar el servidor de desarrollo:
 
-```
-
-
-4. **Ejecutar el servidor de desarrollo:**
-```bash
+Bash
 ng serve
+La aplicación estará disponible en http://localhost:4200.
 
-```
-
-
-La aplicación estará disponible en `http://localhost:4200`.
-
----
-
-## 📄 Licencia
-
+📄 Licencia
 Este proyecto es software privativo / de uso interno bajo los términos establecidos por la organización.
 
-```
-
-### Para subirlo a tu repositorio de Angular:
-Guarda este contenido en tu archivo `README.md` del frontend y ejecuta en la terminal de tu proyecto de Angular:
-
-```bash
-git add README.md
-git commit -m "docs: corregir formato del README en el frontend"
-git push origin main
-Aquí tienes el texto del `README.md` con el formato Markdown corregido (arreglando los bloques de código y las negritas que se habían desalineado un poco al copiarse) para que quede perfecto y limpio en tu repositorio:
-
-```markdown
-# SGC (Sistema de Gestión de Cartera) - Frontend
-
-Aplicación web desarrollada como **Single-Page Application (SPA)** utilizando **Angular** para el **Sistema de Gestión de Cartera (SGC)**. Se comunica mediante una API REST en formato JSON con el backend de Laravel.
 
 ---
-
-## 🚀 Arquitectura y Organización
-
-El proyecto sigue una estructura modular y escalable orientada a características (*feature-driven*):
-
-*   **`src/app/core/`**: Servicios globales, interceptores HTTP (tokens, manejo de errores) y *Guards* de autenticación.
-*   **`src/app/shared/`**: Componentes visuales reutilizables, directivas y pipes globales.
-*   **`src/app/features/`**: Módulos funcionales de la aplicación:
-    *   `auth/`: Pantallas de inicio de sesión y control de permisos de usuario.
-    *   `inventory/`: Creación de proyectos, lotes, registro de clientes y contratos de compraventa.
-    *   `collection/`: Recepción de pagos mensuales, archivos adjuntos y cambios comerciales.
-
----
-
-## 🛠️ Requisitos del Sistema
-
-*   **Node.js** (versión LTS recomendada)
-*   **npm** o **pnpm**
-*   **Angular CLI**
-
----
-
-## 📦 Instalación y Configuración Local
-
-Sigue estos pasos para levantar el frontend en tu entorno local:
-
-1. **Clonar el repositorio:**
-   ```bash
-   git clone [https://github.com/tu-usuario/cartera-frontend.git](https://github.com/tu-usuario/cartera-frontend.git)
-   cd cartera-frontend
-
-```
-
-2. **Instalar dependencias:**
-```bash
-npm install
-
-```
-
-
-3. **Configurar las variables de entorno:**
-Ajusta la URL de la API de Laravel en los archivos de entorno de Angular (ej. `src/environments/environment.ts`):
-```typescript
-export const environment = {
-  production: false,
-  apiUrl: '[http://cartera-api.test/api](http://cartera-api.test/api)'
-};
-
-```
-
-
-4. **Ejecutar el servidor de desarrollo:**
-```bash
-ng serve
-
-```
-
-
-La aplicación estará disponible en `http://localhost:4200`.
-
----
-
-## 📄 Licencia
-
-Este proyecto es software privativo / de uso interno bajo los términos establecidos por la organización.
-
-```
-
-### Para subirlo a tu repositorio de Angular:
-Guarda este contenido en tu archivo `README.md` del frontend y ejecuta en la terminal de tu proyecto de Angular:
-
-```bash
-git add README.md
-git commit -m "docs: corregir formato del README en el frontend"
-git push origin main
-
