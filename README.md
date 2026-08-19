@@ -8,21 +8,21 @@ Aplicación web desarrollada como **Single-Page Application (SPA)** utilizando *
 
 El proyecto sigue una estructura modular y escalable orientada a características (*feature-driven*):
 
-*   **`src/app/core/`**: Servicios globales, interceptores HTTP (tokens, manejo de errores) y *Guards* de autenticación.
-*   **`src/app/shared/`**: Componentes visuales reutilizables, directivas y pipes globales (`components/`, `ui-kit/`).
-*   **`src/app/features/`**: Módulos funcionales de la aplicación:
-    *   `auth/`: Pantallas de inicio de sesión y control de permisos de usuario.
-    *   `dashboard/`: Pantalla principal con métricas de gerencia.
-    *   `inventory/`: Creación de proyectos, lotes, registro de clientes y contratos de compraventa.
-    *   `collection/`: Recepción de pagos mensuales, archivos adjuntos y gestión de la cobranza.
+- **`src/app/core/`**: Servicios globales, interceptores HTTP (tokens, manejo de errores) y *Guards* de autenticación.
+- **`src/app/shared/`**: Componentes visuales reutilizables, directivas y pipes globales (`components/`, `ui-kit/`).
+- **`src/app/features/`**: Módulos funcionales de la aplicación:
+  - `auth/`: Pantallas de inicio de sesión y control de permisos de usuario.
+  - `dashboard/`: Pantalla principal con métricas de gerencia.
+  - `inventory/`: Creación de proyectos, lotes, registro de clientes y contratos de compraventa.
+  - `collection/`: Recepción de pagos mensuales, archivos adjuntos y gestión de la cobranza.
 
 ---
 
 ## 🛠️ Requisitos del Sistema
 
-*   **Node.js** (versión LTS recomendada)
-*   **npm** o **pnpm**
-*   **Angular CLI** (v18+)
+- **Node.js** (versión LTS recomendada)
+- **npm** o **pnpm**
+- **Angular CLI** (v18+)
 
 ---
 
@@ -31,31 +31,39 @@ El proyecto sigue una estructura modular y escalable orientada a característica
 Sigue estos pasos para levantar el frontend en tu entorno local:
 
 1. **Clonar el repositorio:**
+
    ```bash
-   git clone [https://github.com/joburbanop/cartera-front.git](https://github.com/joburbanop/cartera-front.git)
+   git clone https://github.com/joburbanop/cartera-front.git
    cd sgci-front
+   ```
 
+2. **Instalar dependencias:**
 
-Instalar dependencias:
+   ```bash
+   npm install
+   ```
 
-Bash
-npm install
-Configurar las variables de entorno:
-Ajusta la URL de la API de Laravel en los archivos de entorno de Angular (ej. src/environments/environment.ts):
+3. **Configurar las variables de entorno:**
 
-TypeScript
-export const environment = {
-  production: false,
-  apiUrl: '[http://cartera-api.test/api](http://cartera-api.test/api)'
-};
-Ejecutar el servidor de desarrollo:
+   Ajusta la URL de la API de Laravel en los archivos de entorno de Angular (ej. `src/environments/environment.ts`):
 
-Bash
-ng serve
-La aplicación estará disponible en http://localhost:4200.
+   ```typescript
+   export const environment = {
+     production: false,
+     apiUrl: 'http://cartera-api.test/api'
+   };
+   ```
 
-📄 Licencia
-Este proyecto es software privativo / de uso interno bajo los términos establecidos por la organización.
+4. **Ejecutar el servidor de desarrollo:**
 
+   ```bash
+   ng serve
+   ```
+
+   La aplicación estará disponible en `http://localhost:4200`.
 
 ---
+
+## 📄 Licencia
+
+Este proyecto es software privativo / de uso interno bajo los términos establecidos por la organización.
