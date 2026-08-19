@@ -34,7 +34,7 @@ Sigue estos pasos para levantar el frontend en tu entorno local:
 
    ```bash
    git clone https://github.com/joburbanop/cartera-front.git
-   cd sgci-front
+   cd cartera-front
    ```
 
 2. **Instalar dependencias:**
