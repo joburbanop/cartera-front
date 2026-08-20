@@ -1,0 +1,97 @@
+<div style="display: flex; flex-direction: column; gap: 1.5rem;">
+  
+  <!-- BARRA DE SELECCIÓN DE PROYECTO (MAESTRO) -->
+  <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+    <div>
+      <h3 style="margin: 0; color: #1e293b; font-size: 1.1rem;">Gestión de Inventario de Lotes</h3>
+      <p style="margin: 0.2rem 0 0 0; font-size: 0.85rem; color: #64748b;">Seleccione un proyecto para ver y registrar sus lotes.</p>
+    </div>
+    
+    <div style="width: 300px;">
+      <select (change)="onProjectSelect($event)" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; background-color: #f8fafc; font-weight: 600; color: #1e293b; cursor: pointer;">
+        <option value="">-- Seleccione un Proyecto --</option>
+        <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- CONTENIDO PRINCIPAL (SÓLO SE ACTIVA SI HAY UN PROYECTO SELECCIONADO) -->
+  <div *ngIf="!selectedProjectId" style="text-align: center; padding: 4rem; background: white; border-radius: 8px; border: 1px solid #e2e8f0; color: #64748b;">
+    <p style="font-size: 1.1rem; font-weight: 500; margin: 0;">Por favor, seleccione un proyecto en la parte superior para comenzar.</p>
+  </div>
+
+  <div *ngIf="selectedProjectId" style="display: flex; gap: 2rem; align-items: flex-start;">
+    
+    <!-- FORMULARIO DE CREACIÓN DE LOTE -->
+    <div style="flex: 1; background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+      <h4 style="margin-top: 0; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">Registrar Nuevo Lote</h4>
+      
+      <div *ngIf="successMessage" style="background: #dcfce7; color: #166534; padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; font-size: 0.9rem;">
+        {{ successMessage }}
+      </div>
+      
+      <div *ngIf="errorMessage" style="background: #fee2e2; color: #dc2626; padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; font-size: 0.9rem;">
+        {{ errorMessage }}
+      </div>
+
+      <form [formGroup]="lotForm" (ngSubmit)="onSubmit()" style="display: flex; flex-direction: column; gap: 1rem;">
+        
+        <div>
+          <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Número o Nombre del Lote</label>
+          <input type="text" formControlName="number" placeholder="Ej. Manzana B - Lote 12" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Área Total ($m^2$)</label>
+          <input type="number" formControlName="area_m2" placeholder="Ej. 120" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Valor de Lista ($)</label>
+          <input type="number" formControlName="list_price" placeholder="Ej. 85000000" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Estado Inicial</label>
+          <select formControlName="status" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; background-color: white;">
+            <option value="disponible">Disponible</option>
+            <option value="reservado">Preventa / Reservado</option>
+            <option value="vendido">Vendido</option>
+          </select>
+        </div>
+
+        <button type="submit" [disabled]="lotForm.invalid || isLoading" style="margin-top: 0.5rem; padding: 0.75rem; background-color: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
+          {{ isLoading ? 'Guardando...' : 'Guardar Lote' }}
+        </button>
+      </form>
+    </div>
+
+    <!-- LISTADO / TABLERO DE LOTES DEL PROYECTO -->
+    <div style="flex: 2; background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+      <h4 style="margin-top: 0; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">Lotes Registrados en el Proyecto</h4>
+      
+      <div *ngIf="lots.length === 0" style="text-align: center; padding: 2rem; color: #64748b; font-size: 0.9rem;">
+        No hay lotes registrados para este proyecto todavía.
+      </div>
+
+      <div *ngIf="lots.length > 0" style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem;">
+        <div *ngFor="let lot of lots" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 6px; background-color: #f8fafc;">
+          <div>
+            <div style="font-weight: bold; color: #1e293b; font-size: 1rem;">Lote: {{ lot.number }}</div>
+            <div style="font-size: 0.85rem; color: #64748b; margin-top: 0.2rem;">Área: {{ lot.area_m2 }} m² | Valor: $ {{ lot.list_price | number }}</div>
+          </div>
+          <div>
+            <!-- Etiqueta de estado dinámica -->
+            <span [style.background-color]="lot.status === 'disponible' ? '#dcfce7' : (lot.status === 'vendido' ? '#fee2e2' : '#fef9c3')"
+                  [style.color]="lot.status === 'disponible' ? '#166534' : (lot.status === 'vendido' ? '#dc2626' : '#854d0e')"
+                  style="font-size: 0.75rem; font-weight: bold; padding: 0.25rem 0.75rem; border-radius: 999px; text-transform: uppercase;">
+              {{ lot.status }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>

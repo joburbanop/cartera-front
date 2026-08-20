@@ -11,8 +11,12 @@ import { CommonModule } from '@angular/common';
 })
 export class MainLayoutComponent {
   isCarteraOpen = false;
+  isInventarioOpen = false;
 
   toggleCartera() {
     this.isCarteraOpen = !this.isCarteraOpen;
+  }
+  toggleInventario() {
+    this.isInventarioOpen = !this.isInventarioOpen;
   }
 }
