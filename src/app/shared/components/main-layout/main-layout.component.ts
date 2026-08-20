@@ -1,11 +1,18 @@
 import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router'; // <-- 1. Importamos esto
+import { RouterModule, RouterOutlet } from '@angular/router'; 
+import { CommonModule } from '@angular/common'; 
 
 @Component({
   selector: 'app-main-layout',
-  standalone: true, // <-- Asegúrate de que tenga esto
-  imports: [RouterOutlet], // <-- 2. Lo inyectamos aquí
+  standalone: true,
+  imports: [RouterModule, RouterOutlet, CommonModule], 
   templateUrl: './main-layout.component.html',
-  styleUrl: './main-layout.component.scss',
+  styleUrls: ['./main-layout.component.scss'],
 })
-export class MainLayoutComponent {}
+export class MainLayoutComponent {
+  isCarteraOpen = false;
+
+  toggleCartera() {
+    this.isCarteraOpen = !this.isCarteraOpen;
+  }
+}

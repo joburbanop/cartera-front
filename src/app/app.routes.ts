@@ -7,13 +7,16 @@ export const routes: Routes = [
   },
   {
     path: '',
-    // Cargamos la carcasa principal
     loadComponent: () => import('./shared/components/main-layout/main-layout.component').then(m => m.MainLayoutComponent),
-    // Todo lo que esté aquí adentro aparecerá junto al menú lateral
     children: [
       {
         path: 'dashboard',
         loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent)
+      },
+      { 
+        path: 'bank-accounts',
+        // ¡Corregido! Agregamos .component a la ruta y al nombre de la clase
+        loadComponent: () => import('./features/collection/bank-accounts/bank-accounts.component').then(m => m.BankAccountsComponent)
       },
       {
         path: '',
