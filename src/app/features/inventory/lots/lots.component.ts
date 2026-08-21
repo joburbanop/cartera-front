@@ -1,62 +1,100 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ActivatedRoute, Router,RouterModule } from '@angular/router'; // Para leer la URL y navegar
 import { ProjectService } from '../../../core/services/project.service';
 import { LotService } from '../../../core/services/lot.service';
 
 @Component({
   selector: 'app-lots',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './lots.component.html'
+ imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  templateUrl: './lots.component.html',
+  styleUrl: './lots.component.scss' // <-- ASEGÚRATE DE QUE ESTO ESTÉ AQUÍ
 })
 export class LotsComponent implements OnInit {
   private fb = inject(FormBuilder);
   private projectService = inject(ProjectService);
   private lotService = inject(LotService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
 
   projects: any[] = [];
   lots: any[] = [];
   selectedProjectId: number | null = null;
+  activeProject: any = null; // Guardará todos los datos del proyecto seleccionado
   
+  // KPIs específicos del proyecto
+  projectTotalLots = 0;
+  projectAvailableLots = 0;
+  projectTotalValue = 0; // Suma del valor de los lotes
+
+  // Control del UI
   isLoading = false;
-  successMessage = '';
+  isModalOpen = false;
   errorMessage = '';
 
   lotForm = this.fb.group({
     project_id: ['', Validators.required],
-    number: ['', Validators.required],         // Cambiado de 'lot_number' a 'number'
-    area_m2: ['', [Validators.required, Validators.min(1)]],  // Cambiado de 'area' a 'area_m2'
-    list_price: ['', [Validators.required, Validators.min(0)]], // Cambiado de 'price' a 'list_price'
-    price_m2: [0], // Lo calcularemos automáticamente o lo enviaremos en 0 para que Laravel lo procese
-    status: ['disponible', Validators.required] // Cambiado de 'available' a 'disponible' (Enum del Backend)
+    number: ['', Validators.required],
+    area_m2: ['', [Validators.required, Validators.min(1)]],
+    list_price: ['', [Validators.required, Validators.min(0)]],
+    price_m2: ['0'], // Valor por defecto si no lo usan manual
+    status: ['disponible', Validators.required]
   });
-
 
   ngOnInit(): void {
     this.loadProjects();
+
+    // 1. Leer la URL para ver si llegamos desde el Dashboard
+    this.route.queryParams.subscribe(params => {
+      if (params['projectId']) {
+        this.selectProject(Number(params['projectId']));
+      }
+    });
   }
 
   loadProjects() {
     this.projectService.getProjects().subscribe({
       next: (response) => {
         this.projects = response.data?.data || response.data || [];
+        
+        // Si hay un ID seleccionado, buscamos la info completa del proyecto
+        if (this.selectedProjectId) {
+          this.activeProject = this.projects.find(p => p.id === this.selectedProjectId);
+        }
         this.cdr.detectChanges();
       }
     });
   }
 
-  // Se dispara cuando el usuario cambia el proyecto en el select principal
+  // Se dispara al elegir un proyecto en el select o al venir de la URL
   onProjectSelect(event: any) {
-    this.selectedProjectId = event.target.value;
-    this.lotForm.patchValue({ project_id: this.selectedProjectId?.toString() });
+    const pId = Number(event.target.value);
     
-    if (this.selectedProjectId) {
-      this.loadLots();
+    // Si eligen un proyecto, cambiamos la URL para mantener el estado
+    if (pId) {
+      this.router.navigate([], { queryParams: { projectId: pId } });
     } else {
+      this.router.navigate([]); // Limpiamos URL
+      this.selectedProjectId = null;
+      this.activeProject = null;
       this.lots = [];
     }
+  }
+
+  // Función interna para cargar todo sobre un proyecto
+  selectProject(projectId: number) {
+    this.selectedProjectId = projectId;
+    this.lotForm.patchValue({ project_id: projectId.toString() });
+    
+    // Buscamos los datos del proyecto (si ya cargaron)
+    if (this.projects.length > 0) {
+      this.activeProject = this.projects.find(p => p.id === projectId);
+    }
+
+    this.loadLots();
   }
 
   loadLots() {
@@ -64,29 +102,75 @@ export class LotsComponent implements OnInit {
     
     this.lotService.getLotsByProject(this.selectedProjectId).subscribe({
       next: (response) => {
-        this.lots = response.data?.data || response.data || [];
+        // Extracción inteligente
+        let allLots: any[] = [];
+        if (Array.isArray(response)) {
+          allLots = response;
+        } else if (response.data && Array.isArray(response.data)) {
+          allLots = response.data;
+        } else if (response.data?.data && Array.isArray(response.data.data)) {
+          allLots = response.data.data;
+        }
+
+        this.lots = allLots;
+        this.calculateProjectKPIs(); // Calculamos métricas
         this.cdr.detectChanges();
       }
     });
   }
 
+  // --- MATEMÁTICAS DEL PROYECTO ---
+  calculateProjectKPIs() {
+    this.projectTotalLots = this.lots.length;
+    this.projectAvailableLots = 0;
+    this.projectTotalValue = 0;
+
+    this.lots.forEach(lot => {
+      // Precio acumulado
+      this.projectTotalValue += Number(lot.list_price || 0);
+
+      // Disponibilidad
+      const statusStr = typeof lot.status === 'object' ? (lot.status?.value || lot.status?.name) : lot.status;
+      const statusLimpio = String(statusStr).toLowerCase().trim();
+      if (statusLimpio === 'available' || statusLimpio === 'disponible') {
+        this.projectAvailableLots++;
+      }
+    });
+  }
+
+  // --- CONTROL DEL MODAL ---
+  openModal() {
+    this.isModalOpen = true;
+    this.errorMessage = '';
+    // Nos aseguramos de mantener el ID del proyecto y estado
+    this.lotForm.patchValue({ project_id: this.selectedProjectId?.toString(), status: 'disponible' });
+  }
+
+  closeModal() {
+    this.isModalOpen = false;
+    this.lotForm.reset({ project_id: this.selectedProjectId?.toString(), status: 'disponible', price_m2: '0' });
+  }
+
+  // --- GUARDADO ---
   onSubmit() {
     if (this.lotForm.invalid) return;
     this.isLoading = true;
-    this.successMessage = '';
     this.errorMessage = '';
 
-    this.lotService.createLot(this.lotForm.value).subscribe({
+    // Si el usuario no mandó el price_m2, lo calculamos automáticamente (precio / area)
+    const formValues = this.lotForm.value;
+    if (!formValues.price_m2 || formValues.price_m2 === '0') {
+       const area = Number(formValues.area_m2);
+       const price = Number(formValues.list_price);
+       if (area > 0) {
+         formValues.price_m2 = (price / area).toString();
+       }
+    }
+
+    this.lotService.createLot(formValues).subscribe({
       next: (response) => {
         this.isLoading = false;
-        this.successMessage = 'Lote registrado con éxito.';
-        
-        // Limpiamos el formulario pero MANTENEMOS el proyecto seleccionado y el estado por defecto
-        this.lotForm.reset({ 
-          project_id: this.selectedProjectId?.toString(),
-          status: 'available' 
-        }); 
-        
+        this.closeModal();
         this.loadLots(); 
       },
       error: (err) => {

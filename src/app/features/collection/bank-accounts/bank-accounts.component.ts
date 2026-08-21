@@ -18,7 +18,11 @@ export class BankAccountsComponent implements OnInit {
   isLoading = false;
   successMessage = '';
   errorMessage = '';
+  isModalOpen = false;
 
+  totalAccounts = 0;
+  savingsCount = 0;
+  checkingCount = 0;
   accountForm = this.fb.nonNullable.group({
     bank_name: ['', Validators.required],
     account_number: ['', Validators.required],
@@ -28,6 +32,25 @@ export class BankAccountsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadAccounts();
+  }
+
+  // Llama a esta función después de cargar las cuentas desde tu backend
+  calculateKPIs() {
+    this.totalAccounts = this.accounts.length;
+    this.savingsCount = this.accounts.filter(a => a.account_type === 'savings').length;
+    this.checkingCount = this.accounts.filter(a => a.account_type === 'checking').length;
+  }
+
+  // --- CONTROL DEL MODAL ---
+  openModal() {
+    this.isModalOpen = true;
+    this.errorMessage = '';
+    this.successMessage = '';
+  }
+
+  closeModal() {
+    this.isModalOpen = false;
+    this.accountForm.reset({ account_type: 'savings' }); // Resetea con valor por defecto
   }
 
   loadAccounts() {
@@ -52,6 +75,9 @@ export class BankAccountsComponent implements OnInit {
 
   onSubmit() {
     if (this.accountForm.invalid) return;
+    this.closeModal()
+    this.calculateKPIs()
+    
 
     this.isLoading = true;
     this.successMessage = '';

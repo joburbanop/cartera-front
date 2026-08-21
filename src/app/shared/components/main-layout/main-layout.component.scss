@@ -1,0 +1,53 @@
+// Estilos base de los enlaces del menú lateral
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1.25rem;
+  color: #94a3b8; /* Gris azulado sutil */
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  margin-bottom: 0.25rem;
+
+  // El puntito (bullet) que acompaña al texto
+  .bullet-icon {
+    width: 6px;
+    height: 6px;
+    background-color: #64748b;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+  }
+
+  // Efecto al pasar el mouse
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #f8fafc;
+    
+    .bullet-icon {
+      background-color: #94a3b8;
+    }
+  }
+
+  // Efecto cuando el enlace está activo (El color verde del mockup)
+  &.active-link {
+    background-color: #347769; /* Verde esmeralda corporativo */
+    color: #ffffff;
+    font-weight: 500;
+
+    .bullet-icon {
+      background-color: #ffffff;
+    }
+  }
+}
+
+// Títulos de las categorías (INVENTARIO, CARTERA)
+.sidebar-category {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 1.5rem 0 0.5rem 1.25rem;
+}

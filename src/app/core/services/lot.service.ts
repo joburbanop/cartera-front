@@ -17,4 +17,9 @@ export class LotService {
   createLot(data: any): Observable<any> {
     return this.http.post(this.apiUrl, data);
   }
+  // Obtener todos los lotes sin filtro de proyecto (Para el KPI general)
+  getAllLots(): Observable<any> {
+    return this.http.get(this.apiUrl);
+  }
+
 }

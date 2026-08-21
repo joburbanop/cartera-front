@@ -1,146 +1,86 @@
-<div style="display: flex; height: 100vh; background-color: #f8fafc; font-family: sans-serif;">
+<div style="display: flex; height: 100vh; background-color: #f4f5f7; font-family: 'Inter', sans-serif;">
   
-  <!-- BARRA LATERAL (SIDEBAR) -->
-  <aside style="width: 260px; background-color: white; border-right: 1px solid #e2e8f0; padding: 1.5rem; display: flex; flex-direction: column;">
+  <!-- BARRA LATERAL OSCURA (SIDEBAR) -->
+  <aside style="width: 260px; background-color: #16202a; border-right: 1px solid #1e293b; display: flex; flex-direction: column;">
     
-    <!-- Logo -->
-    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 2.5rem;">
-      <div style="width: 32px; height: 32px; background-color: #2563eb; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="white" style="width: 20px; height: 20px;">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-2.25A2.25 2.25 0 0 1 11.25 16.5h1.5a2.25 2.25 0 0 1 2.25 2.25V21" />
-        </svg>
+    <!-- Logo y Título -->
+    <div style="display: flex; align-items: center; gap: 12px; padding: 1.5rem; margin-bottom: 1rem;">
+      <div style="width: 36px; height: 36px; background-color: #347769; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 1.1rem; letter-spacing: -0.5px;">
+        CI
       </div>
       <div>
-        <h2 style="margin: 0; font-size: 1.2rem; color: #1e293b;">Casas y lotes</h2>
-        <span style="font-size: 0.8rem; color: #64748b;">Cartera</span>
+        <h2 style="margin: 0; font-size: 1.05rem; color: #ffffff; font-weight: 600;">Cartera Inmobiliaria</h2>
+        <span style="font-size: 0.75rem; color: #94a3b8;">Panel de gestión</span>
       </div>
     </div>
 
-
-    <!-- Navegación -->
-    <nav style="display: flex; flex-direction: column; gap: 0.5rem;">
+    <!-- Navegación Plana (Sin acordeones) -->
+    <nav style="display: flex; flex-direction: column; padding: 0 1rem;">
       
-      <!-- Dashboard -->
-      <a routerLink="/dashboard" routerLinkActive="active-link" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; text-decoration: none; color: #475569; font-weight: 500; border-radius: 8px;">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>
+      <!-- Enlace: Dashboard -->
+      <a routerLink="/dashboard" routerLinkActive="active-link" class="sidebar-link">
+        <div class="bullet-icon"></div>
         Dashboard
       </a>
 
-      <!-- GRUPO DESPLEGABLE: INVENTARIO -->
-      <div>
-        <button (click)="toggleInventario()" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: transparent; border: none; color: #64748b; font-weight: 500; font-size: 1rem; cursor: pointer; border-radius: 8px;">
-          <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <!-- Icono de Inventario / Caja -->
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px;">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
-            </svg>
-            Inventario
-          </div>
-          <!-- Flecha animada -->
-          <svg [style.transform]="isInventarioOpen ? 'rotate(180deg)' : 'rotate(0deg)'" style="width: 16px; height: 16px; transition: transform 0.2s;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-          </svg>
-        </button>
+      <!-- CATEGORÍA: INVENTARIO -->
+      <div class="sidebar-category">Inventario</div>
+      
+      <a routerLink="/projects" routerLinkActive="active-link" class="sidebar-link">
+        <div class="bullet-icon"></div>
+        Proyectos y Lotes
+      </a>
 
-        <!-- Submenú de Inventario -->
-        <div *ngIf="isInventarioOpen" style="display: flex; flex-direction: column; padding-left: 2.5rem; margin-top: 0.25rem; gap: 0.25rem;">
-          
-          <!-- Opción: Proyectos -->
-          <a routerLink="/projects" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; text-decoration: none; color: #475569; font-size: 0.9rem; border-radius: 6px;">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 16px; height: 16px;">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Z" />
-            </svg>
-            Proyectos
-          </a>
+     
 
-          <!-- Opción: Inventario de Lotes -->
-          <a routerLink="/lots" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; text-decoration: none; color: #475569; font-size: 0.9rem; border-radius: 6px;">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 16px; height: 16px;">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
-            </svg>
-            Inventario de Lotes
-          </a>
+      <!-- CATEGORÍA: CARTERA -->
+      <div class="sidebar-category">Cartera</div>
 
-        </div>
-      </div>
+      <a routerLink="/bank-accounts" routerLinkActive="active-link" class="sidebar-link">
+        <div class="bullet-icon"></div>
+        Cuentas bancarias
+      </a>
 
-      <!-- Grupo Desplegable: Cartera y Pagos -->
-      <div>
-        <button (click)="toggleCartera()" style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: transparent; border: none; color: #64748b; font-weight: 500; font-size: 1rem; cursor: pointer; border-radius: 8px;">
-          <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 0 1 1-6 0H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 9m18 0V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v3" /></svg>
-            Cartera y Pagos
-          </div>
-          <!-- Flecha que gira cuando se abre -->
-          <svg [style.transform]="isCarteraOpen ? 'rotate(180deg)' : 'rotate(0deg)'" style="width: 16px; height: 16px; transition: transform 0.2s;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-          </svg>
-        </button>
+      <a routerLink="/contracts" routerLinkActive="active-link" class="sidebar-link">
+        <div class="bullet-icon"></div>
+        Contratos
+      </a>
 
-        <!-- Submenú oculto/visible -->
-        <div *ngIf="isCarteraOpen" style="display: flex; flex-direction: column; padding-left: 2.5rem; margin-top: 0.25rem; gap: 0.25rem;">
-          <!-- Opción 1: Cuentas -->
-          <!-- Opción 1: Cuentas Bancarias -->
-          <a routerLink="/bank-accounts" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; text-decoration: none; color: #475569; font-size: 0.9rem; border-radius: 6px;">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 16px; height: 16px;">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.315 48.315 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75Z" />
-            </svg>
-            Cuentas Bancarias
-          </a>
-        <!-- Opción 2: Registrar Abono -->
-          <a routerLink="#" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; text-decoration: none; color: #475569; font-size: 0.9rem; border-radius: 6px;">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 16px; height: 16px;">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
-            </svg>
-            Registrar Abono
-          </a>
-          <!-- Opción 3: Estado de Morosidad -->
-          <a routerLink="#" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; text-decoration: none; color: #475569; font-size: 0.9rem; border-radius: 6px;">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 16px; height: 16px;">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            Estado de Morosidad
-          </a>
-        </div>
-      </div>
+      <a routerLink="/morosidad" routerLinkActive="active-link" class="sidebar-link">
+        <div class="bullet-icon"></div>
+        Morosidad
+      </a>
 
     </nav>
-
-    <!-- Perfil Inferior -->
-    <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px;">
-      <div style="width: 40px; height: 40px; border-radius: 50%; background-color: #cbd5e1; display: flex; align-items: center; justify-content: center; color: white;">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 24px; height: 24px;">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-        </svg>
-      </div>
-      <div>
-        <p style="margin: 0; font-weight: bold; color: #1e293b; font-size: 0.9rem;">Admin Sistema</p>
-        <p style="margin: 0; font-size: 0.8rem; color: #64748b;">Administrador</p>
-      </div>
-    </div>
   </aside>
 
   <!-- CONTENIDO PRINCIPAL -->
   <main style="flex: 1; display: flex; flex-direction: column; overflow-y: auto;">
     
-    <!-- Barra Superior -->
-    <header style="padding: 1.25rem 2rem; display: flex; justify-content: flex-end; align-items: center; gap: 1.5rem; border-bottom: 1px solid #e2e8f0; background: white;">
-       <span style="color: #64748b; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem;">
-         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 16px; height: 16px;">
-           <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-         </svg>
-         Actualizado: Hoy 17:55
-       </span>
+    <!-- Barra Superior (Header Rediseñado según el Mockup) -->
+    <header style="padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; background: white; height: 70px; box-sizing: border-box;">
        
-       <button style="background: none; border: none; color: #64748b; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0;">
-         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 18px; height: 18px;">
-           <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
-         </svg>
-         Ayuda
-       </button>
+       <!-- Breadcrumbs (Migas de pan) -->
+       <div style="color: #64748b; font-size: 0.95rem;">
+         Inventario / <span style="color: #1e293b; font-weight: 600;">Proyectos y Lotes</span>
+       </div>
+       
+       <!-- Lado Derecho: Buscador y Usuario -->
+       <div style="display: flex; align-items: center; gap: 1rem;">
+         
+         <!-- Buscador Gris -->
+         <div style="position: relative;">
+           <input type="text" placeholder="Buscar proyecto..." style="background: #f1f5f9; border: 1px solid #e2e8f0; padding: 0.55rem 1rem; border-radius: 8px; font-size: 0.85rem; width: 220px; outline: none; color: #334155;">
+         </div>
+
+         <!-- Avatar de Usuario -->
+         <div style="width: 36px; height: 36px; background: #e0f2fe; color: #0369a1; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem; cursor: pointer; border: 1px solid #bae6fd;">
+           JD
+         </div>
+       </div>
     </header>
 
-    <!-- Inyección de Componentes -->
+    <!-- Inyección de las Vistas (Tus formularios y tablas aparecerán aquí) -->
     <div style="padding: 2rem;">
       <router-outlet></router-outlet>
     </div>

@@ -28,6 +28,11 @@ export const routes: Routes = [
         path: 'lots',
         loadComponent: () => import('./features/inventory/lots/lots.component').then(m => m.LotsComponent)
       },
+      { 
+        // Ruta para los Contratos de Venta
+        path: 'contracts',
+        loadComponent: () => import('./features/sales/contracts/contracts.component').then(m => m.ContractsComponent)
+      },
       {
         path: '',
         redirectTo: 'dashboard',
