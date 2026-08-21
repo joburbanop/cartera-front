@@ -1,0 +1,156 @@
+<div style="display: flex; gap: 2rem; align-items: flex-start;">
+
+  <!-- FORMULARIO -->
+  <div style="flex: 1; background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+
+    <h3 style="margin-top: 0; color: #1e293b;">
+      Nuevo Cliente
+    </h3>
+
+    <form [formGroup]="customerForm" (ngSubmit)="onSubmit()">
+
+      <!-- Tipo de documento -->
+      <div style="margin-bottom: 1rem;">
+        <label>Tipo de documento</label>
+
+        <select
+          formControlName="document_type"
+          style="width: 100%; padding: 0.6rem; margin-top: 0.3rem;"
+        >
+          <option value="">Seleccionar</option>
+          <option value="CC">Cédula de ciudadanía</option>
+          <option value="CE">Cédula de extranjería</option>
+          <option value="NIT">NIT</option>
+          <option value="PAS">Pasaporte</option>
+        </select>
+      </div>
+
+      <!-- Número -->
+      <div style="margin-bottom: 1rem;">
+        <label>Número de documento</label>
+
+        <input
+          type="text"
+          formControlName="document_number"
+          placeholder="Ej. 1000000001"
+          style="width: 100%; padding: 0.6rem; margin-top: 0.3rem; box-sizing: border-box;"
+        >
+      </div>
+
+      <!-- Nombre -->
+      <div style="margin-bottom: 1rem;">
+        <label>Nombre completo</label>
+
+        <input
+          type="text"
+          formControlName="name"
+          placeholder="Ej. Juan Pérez"
+          style="width: 100%; padding: 0.6rem; margin-top: 0.3rem; box-sizing: border-box;"
+        >
+      </div>
+
+      <!-- Teléfono -->
+      <div style="margin-bottom: 1rem;">
+        <label>Teléfono</label>
+
+        <input
+          type="text"
+          formControlName="phone"
+          placeholder="Ej. 3001234567"
+          style="width: 100%; padding: 0.6rem; margin-top: 0.3rem; box-sizing: border-box;"
+        >
+      </div>
+
+      <!-- Email -->
+      <div style="margin-bottom: 1rem;">
+        <label>Correo electrónico</label>
+
+        <input
+          type="email"
+          formControlName="email"
+          placeholder="Ej. cliente@email.com"
+          style="width: 100%; padding: 0.6rem; margin-top: 0.3rem; box-sizing: border-box;"
+        >
+      </div>
+
+      <!-- Dirección -->
+      <div style="margin-bottom: 1rem;">
+        <label>Dirección</label>
+
+        <input
+          type="text"
+          formControlName="address"
+          placeholder="Dirección"
+          style="width: 100%; padding: 0.6rem; margin-top: 0.3rem; box-sizing: border-box;"
+        >
+      </div>
+
+      <!-- Ciudad -->
+      <div style="margin-bottom: 1rem;">
+        <label>Ciudad</label>
+
+        <input
+          type="text"
+          formControlName="city"
+          placeholder="Ciudad"
+          style="width: 100%; padding: 0.6rem; margin-top: 0.3rem; box-sizing: border-box;"
+        >
+      </div>
+
+      <button
+            type="submit"
+        style="width: 100%; padding: 0.7rem; background: #2563eb; color: white; border: none; border-radius: 4px;"
+      >
+        Registrar Cliente
+      </button>
+
+    </form>
+
+  </div>
+
+
+  <!-- LISTADO -->
+  <div style="flex: 2; background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+
+    <h3 style="margin-top: 0; color: #1e293b;">
+      Clientes registrados
+    </h3>
+
+    <div *ngIf="isLoading">
+      Cargando clientes...
+    </div>
+
+    <div *ngIf="!isLoading && customers.length === 0">
+      No hay clientes registrados.
+    </div>
+
+    <div
+      *ngFor="let customer of customers"
+      style="padding: 1rem; margin-bottom: 0.75rem; border: 1px solid #e2e8f0; border-radius: 6px;"
+    >
+
+      <div style="font-weight: bold; font-size: 1.05rem;">
+        {{ customer.name }}
+      </div>
+
+      <div style="color: #64748b; margin-top: 0.3rem;">
+        {{ customer.document_type }} {{ customer.document_number }}
+      </div>
+
+      <div style="color: #64748b; margin-top: 0.3rem;">
+        📞 {{ customer.phone }}
+      </div>
+
+      <div style="color: #64748b; margin-top: 0.3rem;">
+        ✉ {{ customer.email }}
+      </div>
+
+      <div style="color: #64748b; margin-top: 0.3rem;">
+        📍 {{ customer.city }}
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

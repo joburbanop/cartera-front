@@ -24,10 +24,20 @@ export const routes: Routes = [
         path: 'projects',
         loadComponent: () => import('./features/inventory/projects/projects.component').then(m => m.ProjectsComponent)
       },
+        // Ruta para los clientes
+        {
+        path: 'customers',loadComponent: () =>import('./features/customers/customers/customers').then(m => m.Customers)},  
+
+
       {// Ruta para los lotes
         path: 'lots',
         loadComponent: () => import('./features/inventory/lots/lots.component').then(m => m.LotsComponent)
       },
+
+      {// Ruta para crear un pago
+        path: 'payments/create',loadComponent: () =>import('./features/collection/payments/create-payment/create-payment').then(m => m.CreatePayment)
+      },
+
       {
         path: '',
         redirectTo: 'dashboard',

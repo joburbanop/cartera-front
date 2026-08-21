@@ -1,0 +1,268 @@
+<div style="max-width: 900px; margin: 0 auto;">
+
+  <div style="
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  ">
+
+    <h2 style="margin-top: 0; color: #1e293b;">
+      Registrar pago
+    </h2>
+
+    <p style="color: #64748b;">
+      Registrar abono a la cuota inicial de un contrato.
+    </p>
+
+    <!-- MENSAJES -->
+
+    <div
+      *ngIf="successMessage"
+      style="
+        background: #dcfce7;
+        color: #166534;
+        padding: 0.75rem;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+      "
+    >
+      {{ successMessage }}
+    </div>
+
+    <div
+      *ngIf="errorMessage"
+      style="
+        background: #fee2e2;
+        color: #dc2626;
+        padding: 0.75rem;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+      "
+    >
+      {{ errorMessage }}
+    </div>
+
+    <!-- CARGANDO CONTRATOS -->
+
+    <div *ngIf="isLoading">
+      Cargando contratos...
+    </div>
+
+    <!-- FORMULARIO -->
+
+    <form
+      *ngIf="!isLoading"
+      [formGroup]="paymentForm"
+      (ngSubmit)="onSubmit()"
+    >
+
+      <!-- CONTRATO -->
+
+      <div style="margin-bottom: 1rem;">
+
+        <label
+          style="
+            display: block;
+            font-weight: bold;
+            color: #475569;
+            margin-bottom: 0.3rem;
+          "
+        >
+          Contrato
+        </label>
+
+        <select
+          formControlName="contract_id"
+          style="
+            width: 100%;
+            padding: 0.65rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            box-sizing: border-box;
+          "
+        >
+
+          <option value="">
+            Seleccionar contrato
+          </option>
+
+          <option
+            *ngFor="let contract of contracts"
+            [value]="contract.id"
+          >
+            Contrato #{{ contract.id }}
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <!-- MONTO -->
+
+      <div style="margin-bottom: 1rem;">
+
+        <label
+          style="
+            display: block;
+            font-weight: bold;
+            color: #475569;
+            margin-bottom: 0.3rem;
+          "
+        >
+          Monto del pago
+        </label>
+
+        <input
+          type="number"
+          formControlName="amount"
+          min="1"
+          placeholder="Ej. 500000"
+          style="
+            width: 100%;
+            padding: 0.65rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            box-sizing: border-box;
+          "
+        >
+
+      </div>
+
+
+      <!-- FECHA -->
+
+      <div style="margin-bottom: 1rem;">
+
+        <label
+          style="
+            display: block;
+            font-weight: bold;
+            color: #475569;
+            margin-bottom: 0.3rem;
+          "
+        >
+          Fecha del pago
+        </label>
+
+        <input
+          type="date"
+          formControlName="transaction_date"
+          style="
+            width: 100%;
+            padding: 0.65rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            box-sizing: border-box;
+          "
+        >
+
+      </div>
+
+
+      <!-- MÉTODO DE PAGO -->
+
+      <div style="margin-bottom: 1rem;">
+
+        <label
+          style="
+            display: block;
+            font-weight: bold;
+            color: #475569;
+            margin-bottom: 0.3rem;
+          "
+        >
+          Método de pago
+        </label>
+
+        <select
+          formControlName="payment_method"
+          style="
+            width: 100%;
+            padding: 0.65rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            box-sizing: border-box;
+          "
+        >
+
+          <option value="">
+            Seleccionar método
+          </option>
+
+          <option value="cash">
+            Efectivo
+          </option>
+
+          <option value="bank">
+            Banco
+          </option>
+
+          <option value="barter">
+            Permuta
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <!-- COMPROBANTE -->
+
+      <div style="margin-bottom: 1.5rem;">
+
+        <label
+          style="
+            display: block;
+            font-weight: bold;
+            color: #475569;
+            margin-bottom: 0.3rem;
+          "
+        >
+          Comprobante
+        </label>
+
+        <input
+          type="file"
+          accept=".pdf,.jpg,.jpeg,.png"
+          (change)="onFileSelected($event)"
+        >
+
+        <div
+          style="
+            margin-top: 0.3rem;
+            font-size: 0.8rem;
+            color: #64748b;
+          "
+        >
+          Formatos permitidos: PDF, JPG y PNG.
+        </div>
+
+      </div>
+
+
+      <!-- BOTÓN -->
+
+      <button
+        type="submit"
+        [disabled]="isSaving"
+        style="
+          width: 100%;
+          padding: 0.75rem;
+          background: #2563eb;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          font-weight: bold;
+          cursor: pointer;
+        "
+      >
+        {{ isSaving ? 'Registrando pago...' : 'Registrar pago' }}
+      </button>
+
+    </form>
+
+  </div>
+
+</div>
