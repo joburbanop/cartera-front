@@ -1,0 +1,16 @@
+.top-navigation { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; background: white; padding: 1.25rem 1.5rem; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+.back-link { display: flex; align-items: center; gap: 0.5rem; color: #64748b; text-decoration: none; font-weight: 500; font-size: 0.9rem; &:hover { color: #2563eb; } }
+
+// Tarjetas de Resumen (Lote y Cliente)
+.summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem; }
+.info-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; h4 { font-size: 0.85rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin: 0 0 1rem 0; letter-spacing: 0.05em; } .data-row { display: flex; justify-content: space-between; margin-bottom: 0.75rem; border-bottom: 1px dashed #f1f5f9; padding-bottom: 0.25rem; } .label { color: #64748b; font-size: 0.85rem; } .value { color: #1e293b; font-weight: 600; font-size: 0.9rem; } }
+
+// Tabla y Estados
+.table-container { background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+.custom-table { width: 100%; border-collapse: collapse; th { text-align: left; padding: 1rem 1.5rem; font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; background: #f8fafc; } td { padding: 1.25rem 1.5rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; } }
+.badge-status { padding: 0.3rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+.badge-unpaid { background: #f1f5f9; color: #475569; }
+.badge-paid { background: #dcfce7; color: #166534; }
+.badge-partial { background: #fef9c3; color: #854d0e; }
+.badge-overdue { background: #fee2e2; color: #dc2626; }
+.btn-primary { background-color: #2563eb; color: white; border: none; border-radius: 8px; padding: 0.75rem 1.5rem; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: 0.2s; &:hover { background-color: #1d4ed8; } }

@@ -4,11 +4,13 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ContractService } from '../../../core/services/contract.service';
 import { ProjectService } from '../../../core/services/project.service';
 import { LotService } from '../../../core/services/lot.service';
+import { RouterModule } from '@angular/router';
+import { FinancialService } from '../../../core/services/financial.service';
 
 @Component({
   selector: 'app-contracts',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule],
   templateUrl: './contracts.component.html',
   styleUrl: './contracts.component.scss'
 })
@@ -18,6 +20,7 @@ export class ContractsComponent implements OnInit {
   private projectService = inject(ProjectService);
   private lotService = inject(LotService);
   private cdr = inject(ChangeDetectorRef);
+  private financialService = inject(FinancialService);
 
   contracts: any[] = [];
   customers: any[] = []; 
@@ -27,6 +30,9 @@ export class ContractsComponent implements OnInit {
   isLoading = false;
   successMessage = '';
   errorMessage = '';
+  projectedQuota: number = 0;
+  projectedTotal: number = 0;
+
 
   // Variables para KPIs
   totalContracts = 0;
@@ -54,6 +60,18 @@ export class ContractsComponent implements OnInit {
     this.totalPortfolioValue = this.contracts.reduce((sum, contract) => {
       return sum + Number(contract.sale_price || 0);
     }, 0);
+  }
+  alculatePreview(values: any) {
+    const salePrice = Number(values.sale_price) || 0;
+    const downPayment = Number(values.down_payment_pactada) || 0;
+    const months = Number(values.term_months) || 0;
+    const interestRate = Number(values.interest_rate) || 0;
+
+    const principal = salePrice - downPayment;
+
+    // Llamamos al servicio Core para hacer la matemática pesada
+    this.projectedQuota = this.financialService.calculateFrenchQuota(principal, months, interestRate);
+    this.projectedTotal = this.financialService.calculateProjectedTotal(this.projectedQuota, months, downPayment);
   }
 
   openModal() {
@@ -121,6 +139,9 @@ export class ContractsComponent implements OnInit {
         error: (err) => console.error('Error cargando lotes:', err)
       });
     });
+    this.contractForm.valueChanges.subscribe(values => {
+      this.calculatePreview(values);
+    });
   }
 
   loadContracts() {
@@ -130,6 +151,19 @@ export class ContractsComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  calculatePreview(values: any) {
+    const salePrice = Number(values.sale_price) || 0;
+    const downPayment = Number(values.down_payment_pactada) || 0;
+    const months = Number(values.term_months) || 0;
+    const interestRate = Number(values.interest_rate) || 0;
+
+    const principal = salePrice - downPayment;
+
+    // Llamamos al servicio Core para hacer la matemática pesada
+    this.projectedQuota = this.financialService.calculateFrenchQuota(principal, months, interestRate);
+    this.projectedTotal = this.financialService.calculateProjectedTotal(this.projectedQuota, months, downPayment);
   }
 
   loadProjects() {

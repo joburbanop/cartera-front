@@ -33,6 +33,11 @@ export const routes: Routes = [
         path: 'contracts',
         loadComponent: () => import('./features/sales/contracts/contracts.component').then(m => m.ContractsComponent)
       },
+      {//ruta para la amortización de un contrato
+        path:'amortization/:id',
+        loadComponent: () => import('./features/sales/tabla-amortizacion/tabla-amortizacion.component').then(m => m.AmortizationComponent)
+      },
+
       {
         path: '',
         redirectTo: 'dashboard',
