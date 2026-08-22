@@ -179,9 +179,30 @@ export class AmortizationComponent implements OnInit {
     return this.selectedFees.some(f => f.installment_number === fee.installment_number);
   }
 
+  getFeeDebtValue(fee: any): number {
+    const status = String(this.getFeeStatus(fee) ?? fee?.status ?? '').toLowerCase();
+
+    if (status === 'pagada' || status === 'paid') {
+      return 0;
+    }
+
+    const installmentValue = Number(fee.installment_value ?? 0);
+    const overdueBalance = Number(fee.overdue_balance ?? 0);
+    const remainingBalance = Number(fee.remaining_balance ?? 0);
+
+    if (overdueBalance > 0) {
+      return Math.max(0, Math.min(overdueBalance, installmentValue || overdueBalance));
+    }
+
+    if (remainingBalance > 0 && remainingBalance < installmentValue) {
+      return Math.max(0, remainingBalance);
+    }
+
+    return Math.max(0, installmentValue);
+  }
+
   get totalSelectedAmount(): number {
-    // AQUÍ TAMBIÉN NOS ASEGURAMOS DE QUE SUME SOLO LA CUOTA
-    return this.selectedFees.reduce((sum, fee) => sum + Number(fee.installment_value || 0), 0);
+    return this.selectedFees.reduce((sum, fee) => sum + this.getFeeDebtValue(fee), 0);
   }
 
 // ==========================================
@@ -314,7 +335,14 @@ export class AmortizationComponent implements OnInit {
 
   get overdueFees(): any[] {
     return (this.amortizationPlan ?? [])
-      .filter((fee: any) => this.getFeeStatus(fee) === 'vencida')
+      .filter((fee: any) => {
+        const status = this.getFeeStatus(fee);
+        const isActiveContract = this.contractData?.status !== 'preventa_inactiva';
+
+        if (status === 'vencida') return true;
+        if (status === 'parcial' && isActiveContract) return true;
+        return false;
+      })
       .map((fee: any) => {
         const installmentValue = Number(fee.installment_value || 0);
         const remainingBalance = Number(fee.remaining_balance ?? installmentValue ?? 0);
@@ -327,8 +355,39 @@ export class AmortizationComponent implements OnInit {
       .filter((fee: any) => Number(fee.installment_value || 0) > 0);
   }
 
+  get activeMoraFees(): any[] {
+    if (this.contractData?.status === 'preventa_inactiva') return [];
+    return this.overdueFees;
+  }
+
   get hasOverdueFees(): boolean {
     return this.overdueFees.length > 0;
+  }
+
+  get hasActiveMora(): boolean {
+    return this.activeMoraFees.length > 0;
+  }
+
+  get regularPaymentTotal(): number {
+    const regularPayments = (this.contractData?.transactions ?? []).filter((tx: any) => {
+      const type = String(tx.transaction_type ?? tx.type ?? '').toLowerCase();
+      return type === 'regular_payment' || type === 'regular payment';
+    });
+
+    return regularPayments.reduce((sum: number, tx: any) => sum + Number(tx.amount || 0), 0);
+  }
+
+  get activeMoraDebt(): number {
+    return this.activeMoraFees.reduce((sum, fee) => {
+      const debt = this.getFeeDebtValue(fee);
+      return sum + debt;
+    }, 0);
+  }
+
+  get activeMoraFeeLabel(): string {
+    const firstFee = this.activeMoraFees[0];
+    if (!firstFee) return 'Cuota';
+    return firstFee.installment_number === 0 ? 'Cuota inicial' : `Cuota #${firstFee.installment_number}`;
   }
 
   get overdueLevelLabel(): string {
@@ -406,7 +465,6 @@ export class AmortizationComponent implements OnInit {
         this.isProcessingPayment = false;
         this.isDrawerOpen = false;
         this.selectedFees = [];
-        this.currentView = 'preventa';
         this.cdr.detectChanges();
 
         this.contractService.getContractById(this.contractId).subscribe({

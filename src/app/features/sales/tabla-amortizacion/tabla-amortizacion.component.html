@@ -130,7 +130,7 @@
   <!-- ========================================== -->
   <!-- GESTIÓN DE CARTERA VENCIDA                -->
   <!-- ========================================== -->
-  <div *ngIf="hasOverdueFees" class="overdue-flow-card" style="margin-top: 1.5rem;">
+  <div *ngIf="hasActiveMora" class="overdue-flow-card" style="margin-top: 1.5rem;">
     <div class="overdue-header">
       <div>
         <span class="flow-label">Gestión de cartera vencida</span>
@@ -142,11 +142,11 @@
     <div class="overdue-content">
       <div class="overdue-kpi">
         <span class="kpi-label">Monto en mora</span>
-        <strong class="kpi-value">$ {{ overdueAmount | number:'1.0-0' }}</strong>
+        <strong class="kpi-value">$ {{ activeMoraDebt | number:'1.0-0' }}</strong>
       </div>
       <div class="overdue-kpi">
-        <span class="kpi-label">Cuotas vencidas</span>
-        <strong class="kpi-value">{{ overdueFees.length }}</strong>
+        <span class="kpi-label">Cuotas afectadas</span>
+        <strong class="kpi-value">{{ activeMoraFees.length }}</strong>
       </div>
       <div class="overdue-kpi warning">
         <span class="kpi-label">Estado</span>
@@ -155,7 +155,7 @@
     </div>
 
     <p class="overdue-note">
-      Se registró un abono menor al valor de la cuota. La cuota quedó en estado vencida y entra al flujo de cobranza con revisión de antigüedad de la mora.
+      El pago realizado fue menor al valor de la cuota. La deuda que queda en mora es <strong>$ {{ activeMoraDebt | number:'1.0-0' }}</strong> en {{ activeMoraFeeLabel }}. Esta cuota queda en cartera vencida y requiere seguimiento.
     </p>
   </div>
 
@@ -230,7 +230,8 @@
           <th>Cuota Total</th>
           <th>Interés</th>
           <th>Capital</th>
-          <th>Saldo Pendiente</th>
+          <th>Deuda cuota</th>
+          <th>Saldo total pendiente</th>
           <th>Estado</th>
         </tr>
       </thead>
@@ -252,7 +253,8 @@
           <td style="font-weight: 600; color: #1e293b;">$ {{ fee.installment_value | number:'1.2-2' }}</td>
           <td style="color: #64748b;">$ {{ fee.interest_value | number:'1.2-2' }}</td>
           <td style="color: #059669;">$ {{ fee.principal_value | number:'1.2-2' }}</td>
-          <td style="font-weight: 600; color: #dc2626;">$ {{ (fee.remaining_balance ?? fee.installment_value ?? 0) | number:'1.2-2' }}</td>
+          <td style="font-weight: 600; color: #dc2626;">$ {{ getFeeDebtValue(fee) | number:'1.2-2' }}</td>
+          <td style="font-weight: 600; color: #0f172a;">$ {{ (fee.remaining_balance ?? 0) | number:'1.2-2' }}</td>
           <td>
             <span class="badge-status" 
                   [ngClass]="{

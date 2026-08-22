@@ -90,20 +90,26 @@ export class DrawerPagoComponent implements OnInit {
     return Number(this.paymentForm.get('amount')?.value) || 0;
   }
 
-  private getFeeDebtValue(fee: any): number {
+  getFeeDebtValue(fee: any): number {
+    const status = String(fee?.status ?? '').toLowerCase();
+
+    if (status === 'pagada' || status === 'paid') {
+      return 0;
+    }
+
     const installmentValue = Number(fee.installment_value ?? 0);
     const overdueBalance = Number(fee.overdue_balance ?? 0);
     const remainingBalance = Number(fee.remaining_balance ?? 0);
 
-    let effectiveDebt = installmentValue;
-
     if (overdueBalance > 0) {
-      effectiveDebt = Math.min(overdueBalance, installmentValue || overdueBalance);
-    } else if (remainingBalance > 0) {
-      effectiveDebt = Math.min(remainingBalance, installmentValue || remainingBalance);
+      return Math.max(0, Math.min(overdueBalance, installmentValue || overdueBalance));
     }
 
-    return Math.max(0, effectiveDebt);
+    if (remainingBalance > 0 && remainingBalance < installmentValue) {
+      return Math.max(0, remainingBalance);
+    }
+
+    return Math.max(0, installmentValue);
   }
 
   calculateDebt() {

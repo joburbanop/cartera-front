@@ -12,9 +12,12 @@ export class AuthService {
   login(credentials: { email: string; password: string }): Observable<any> {
     return this.http.post(`${this.apiUrl}/login`, credentials).pipe(
       tap((response: any) => {
-        // Cuando Laravel responde con éxito (status: "success"), guardamos el token bajo llave
-        if (response.data && response.data.access_token) {
-          localStorage.setItem('auth_token', response.data.access_token);
+        const payload = response?.data ?? response;
+
+        if (payload?.access_token) {
+          localStorage.setItem('auth_token', payload.access_token);
+        } else if (response?.access_token) {
+          localStorage.setItem('auth_token', response.access_token);
         }
       })
     );
