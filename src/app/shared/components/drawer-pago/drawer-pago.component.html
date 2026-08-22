@@ -1,0 +1,89 @@
+<div *ngIf="isOpen">
+  <!-- Fondo borroso oscuro -->
+  <div class="side-panel-overlay" (click)="close()"></div>
+  
+  <!-- Panel Lateral Blanco -->
+  <div class="side-panel">
+    <div class="panel-header">
+      <h3>Registrar pago</h3>
+      <button (click)="close()">✖</button>
+    </div>
+
+    <div class="panel-body">
+      <form [formGroup]="paymentForm" style="display: flex; flex-direction: column; gap: 1.25rem;">
+        
+        <div>
+          <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #1e293b; margin-bottom: 0.4rem;">Monto a pagar</label>
+          <input type="number" formControlName="amount" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1.1rem; color: #1e293b;">
+          <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem; font-weight: 500;">
+            Deuda de las cuotas seleccionadas: <strong>$ {{ totalSelectedAmount | number:'1.0-0' }}</strong>
+          </div>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #1e293b; margin-bottom: 0.4rem;">Método de pago</label>
+          <select formControlName="payment_method" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; background-color: white;">
+            <option value="transfer">Transferencia</option>
+            <option value="cash">Efectivo</option>
+            <option value="card">Tarjeta</option>
+            <option value="barter">Permuta</option>
+          </select>
+        </div>
+
+        <div *ngIf="paymentForm.get('payment_method')?.value === 'transfer'" style="animation: fadeIn 0.3s;">
+          <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #1e293b; margin-bottom: 0.4rem;">Cuenta de destino</label>
+          <select formControlName="bank_account_id" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; background-color: white;" [ngStyle]="{'border-color': (paymentForm.get('bank_account_id')?.invalid && paymentForm.get('bank_account_id')?.touched) ? '#dc2626' : '#cbd5e1'}">
+            <option value="">-- Seleccione la cuenta bancaria --</option>
+            
+            <!-- Recorremos las cuentas que nos mande el componente padre -->
+            <option *ngFor="let acc of bankAccounts" [value]="acc.id">
+              {{ acc.bank_name }} - {{ acc.account_number }}
+            </option>
+          </select>
+          
+          <!-- Mensaje de error si intenta pagar sin seleccionar cuenta -->
+          <div *ngIf="paymentForm.get('bank_account_id')?.invalid && paymentForm.get('bank_account_id')?.touched" style="color: #dc2626; font-size: 0.75rem; margin-top: 0.4rem; font-weight: 500;">
+            * La cuenta es obligatoria para transferencias.
+          </div>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #1e293b; margin-bottom: 0.4rem;">Fecha de pago</label>
+          <input type="date" formControlName="transaction_date" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+        </div>
+
+        <!-- MENSAJES DE ESTADO DE PAGO -->
+        <!-- 1. PAGO EXACTO -->
+        <div *ngIf="currentPaymentAmount === totalSelectedAmount" style="background-color: #ecfdf5; border: 1px solid #a7f3d0; padding: 1rem; border-radius: 8px;">
+          <h5 style="margin: 0 0 0.25rem 0; color: #065f46; font-size: 0.9rem;">Pago exacto</h5>
+          <p style="margin: 0; color: #047857; font-size: 0.8rem;">Cubre completo lo seleccionado. Las cuotas quedarán marcadas como pagadas.</p>
+        </div>
+
+        <!-- 2. PAGO PARCIAL -->
+        <div *ngIf="currentPaymentAmount < totalSelectedAmount" style="background-color: #fffbeb; border: 1px solid #fde68a; padding: 1rem; border-radius: 8px;">
+          <h5 style="margin: 0 0 0.25rem 0; color: #92400e; font-size: 0.9rem;">Pago parcial</h5>
+          <p style="margin: 0; color: #b45309; font-size: 0.8rem;">Quedará un saldo pendiente en la última cuota seleccionada.</p>
+        </div>
+
+        <!-- 3. ABONO A CAPITAL (Sobra plata) -->
+        <div *ngIf="currentPaymentAmount > totalSelectedAmount" style="background-color: #eff6ff; border: 1px solid #bfdbfe; padding: 1rem; border-radius: 8px;">
+          <h5 style="margin: 0 0 0.25rem 0; color: #1e40af; font-size: 0.9rem;">Excedente de abono a capital ($ {{ currentPaymentAmount - totalSelectedAmount | number:'1.0-0' }})</h5>
+          <p style="margin: 0 0 0.75rem 0; color: #1d4ed8; font-size: 0.8rem;">¿Cómo aplicarás la diferencia?</p>
+          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <label style="font-size: 0.85rem; color: #1e3a8a;"><input type="radio" formControlName="surplus_action" value="reduce_time"> Reducir plazo (meses)</label>
+            <label style="font-size: 0.85rem; color: #1e3a8a;"><input type="radio" formControlName="surplus_action" value="reduce_quota"> Reducir valor de cuotas</label>
+            <label style="font-size: 0.85rem; color: #1e3a8a;"><input type="radio" formControlName="surplus_action" value="transfer">Adelanto de Cuotas</label>
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+    <div class="panel-footer">
+      <button class="btn-outline" (click)="close()">Cancelar</button>
+      <button class="btn-success" (click)="submit()" [disabled]="paymentForm.invalid || isProcessing">
+        {{ isProcessing ? 'Registrando...' : 'Confirmar pago' }}
+      </button>
+    </div>
+  </div>
+</div>
