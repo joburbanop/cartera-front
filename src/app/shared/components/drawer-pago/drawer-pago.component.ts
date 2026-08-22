@@ -39,6 +39,27 @@ export class DrawerPagoComponent implements OnInit {
     surplus_action: ['']
   });
 
+  get excessAmount(): number {
+    return Math.max(0, (Number(this.paymentForm.get('amount')?.value) || 0) - this.totalSelectedAmount);
+  }
+
+  get hasSurplus(): boolean {
+    return this.excessAmount > 0;
+  }
+
+  private syncSurplusValidation(): void {
+    const surplusControl = this.paymentForm.get('surplus_action');
+
+    if (this.hasSurplus) {
+      surplusControl?.setValidators([Validators.required]);
+    } else {
+      surplusControl?.clearValidators();
+      surplusControl?.setValue('');
+    }
+
+    surplusControl?.updateValueAndValidity();
+  }
+
   ngOnInit() {
     // MAGIA DE ANGULAR: Escuchar cuando cambie el método de pago
     this.paymentForm.get('payment_method')?.valueChanges.subscribe(method => {
@@ -51,6 +72,10 @@ export class DrawerPagoComponent implements OnInit {
         accountControl?.setValue('');      // Limpiamos el valor por si había algo
       }
       accountControl?.updateValueAndValidity(); // Aplicamos el cambio
+    });
+
+    this.paymentForm.get('amount')?.valueChanges.subscribe(() => {
+      this.syncSurplusValidation();
     });
   }
 
@@ -153,10 +178,17 @@ export class DrawerPagoComponent implements OnInit {
   }
 
   submit() {
+    if (this.hasSurplus && !this.paymentForm.get('surplus_action')?.value) {
+      this.paymentForm.get('surplus_action')?.markAsTouched();
+      alert('Seleccione el destino del excedente antes de confirmar el pago.');
+      return;
+    }
+
     if (this.paymentForm.valid && this.selectedFile) {
       const paymentData = {
         ...this.paymentForm.value,
-        receipt: this.selectedFile
+        receipt: this.selectedFile,
+        payment_option: this.paymentForm.get('surplus_action')?.value || ''
       };
 
       this.confirmPayment.emit(paymentData);

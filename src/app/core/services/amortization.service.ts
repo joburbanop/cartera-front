@@ -7,16 +7,25 @@ import { Observable } from 'rxjs';
 })
 export class AmortizationService {
   private http = inject(HttpClient);
-  // Base URL apuntando a tus rutas de Laravel
   private apiUrl = 'http://127.0.0.1:8000/api/contracts';
 
-  // GET: Obtener el plan de un contrato
-  getPlan(contractId: number): Observable<any> {
+  getPlan(contractId: number, version?: number): Observable<any> {
+    const url = version !== undefined ? `${this.apiUrl}/${contractId}/amortization?version=${version}` : `${this.apiUrl}/${contractId}/amortization`;
+    return this.http.get(url);
+  }
+
+  getVersions(contractId: number): Observable<any> {
     return this.http.get(`${this.apiUrl}/${contractId}/amortization`);
   }
 
-  // POST: Generar el plan por primera vez
   generatePlan(contractId: number): Observable<any> {
     return this.http.post(`${this.apiUrl}/${contractId}/generate-amortization`, {});
+  }
+
+  downloadPdf(contractId: number, version?: number, type: 'internal' | 'client' = 'internal'): Observable<Blob> {
+    const targetVersion = version ?? 1;
+    return this.http.get(`${this.apiUrl}/${contractId}/download-pdf?version=${targetVersion}&type=${type}`, {
+      responseType: 'blob'
+    });
   }
 }

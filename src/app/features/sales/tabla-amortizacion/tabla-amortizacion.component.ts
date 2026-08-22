@@ -5,13 +5,13 @@ import { AmortizationService } from '../../../core/services/amortization.service
 import { ContractService } from '../../../core/services/contract.service';
 import { FinancialService } from '../../../core/services/financial.service'; 
 import { DrawerPagoComponent } from '../../../shared/components/drawer-pago/drawer-pago.component';
-import { ReactiveFormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RecaudoService } from '../../../core/services/recaudo.service';
 
 @Component({
   selector: 'app-tabla-amortizacion',
   standalone: true,
-  imports: [CommonModule, RouterModule, ReactiveFormsModule, DrawerPagoComponent],
+  imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule, DrawerPagoComponent],
   templateUrl: './tabla-amortizacion.component.html',
   styleUrl: './tabla-amortizacion.component.scss'
 })
@@ -30,7 +30,9 @@ export class AmortizationComponent implements OnInit {
   totalWithInterest: number = 0;
   isLoading = true;
   isGenerating = false;
-  
+  availableVersions: number[] = [];
+  selectedVersion: number | null = null;
+
   // Variables del Cajero (Drawer)
   selectedFees: any[] = [];
   isDrawerOpen = false;
@@ -58,10 +60,17 @@ export class AmortizationComponent implements OnInit {
     });
   }
 
-  loadAmortizationPlan() {
-    this.amortizationService.getPlan(this.contractId).subscribe({
+  loadAmortizationPlan(version?: number) {
+    this.amortizationService.getPlan(this.contractId, version).subscribe({
       next: (response) => {
-        const plan = response.data || [];
+        const payload = response.data ?? response;
+        const plan = Array.isArray(payload) ? payload : (payload.rows ?? []);
+        const versions = Array.isArray(payload) ? [] : (payload.versions ?? []);
+
+        if (versions.length > 0) {
+          this.availableVersions = versions;
+          this.selectedVersion = this.selectedVersion ?? Number(versions.at(-1));
+        }
 
         if (Array.isArray(plan) && plan.length === 0) {
           this.generatePlan();
@@ -75,6 +84,32 @@ export class AmortizationComponent implements OnInit {
       error: (err) => {
         console.error('Error cargando plan', err);
         this.isLoading = false;
+      }
+    });
+  }
+
+  onVersionChange(version: number | null): void {
+    if (version === null) {
+      return;
+    }
+
+    this.selectedVersion = version;
+    this.loadAmortizationPlan(version);
+  }
+
+  downloadPdf(type: 'internal' | 'client' = 'internal'): void {
+    const versionToDownload = this.selectedVersion ?? this.availableVersions.at(-1) ?? 1;
+    this.amortizationService.downloadPdf(this.contractId, versionToDownload, type).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `extracto-amortizacion-${type}-v${versionToDownload}.pdf`;
+        anchor.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        console.error('Error descargando PDF', err);
       }
     });
   }
@@ -462,6 +497,7 @@ export class AmortizationComponent implements OnInit {
     formData.append('transaction_date', paymentData.transaction_date);
     formData.append('payment_method', paymentData.payment_method);
     formData.append('transaction_type', transactionType);
+    formData.append('payment_option', paymentData.payment_option || paymentData.surplus_action || '');
 
     if (this.selectedFees.length) {
       this.selectedFees.forEach((fee: any) => {

@@ -20,6 +20,23 @@
           </div>
         </div>
 
+        <div *ngIf="hasSurplus" style="background-color: #eff6ff; border: 1px solid #bfdbfe; padding: 1rem; border-radius: 8px;">
+          <h5 style="margin: 0 0 0.25rem 0; color: #1e40af; font-size: 0.9rem;">¡Se ha detectado un excedente de $ {{ excessAmount | number:'1.0-0' }}!</h5>
+          <p style="margin: 0; color: #1d4ed8; font-size: 0.8rem;">Por favor, seleccione el destino de este abono extraordinario.</p>
+        </div>
+
+        <div *ngIf="hasSurplus" style="display: flex; flex-direction: column; gap: 0.65rem; background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px;">
+          <label style="font-size: 0.85rem; color: #1e3a8a; display: flex; align-items: center; gap: 0.5rem;">
+            <input type="radio" formControlName="surplus_action" value="reducir_plazo"> Reducir Plazo (mantener cuota, acortar tiempo)
+          </label>
+          <label style="font-size: 0.85rem; color: #1e3a8a; display: flex; align-items: center; gap: 0.5rem;">
+            <input type="radio" formControlName="surplus_action" value="reducir_cuota"> Reducir Cuota (mantener plazo, cuota más baja)
+          </label>
+          <label style="font-size: 0.85rem; color: #1e3a8a; display: flex; align-items: center; gap: 0.5rem;">
+            <input type="radio" formControlName="surplus_action" value="adelantar_cuotas"> Adelanto de Cuotas (pagar meses futuros)
+          </label>
+        </div>
+
         <div>
           <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #1e293b; margin-bottom: 0.4rem;">Método de pago</label>
           <select formControlName="payment_method" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; background-color: white;">
@@ -74,16 +91,6 @@
           <p style="margin: 0; color: #b45309; font-size: 0.8rem;">Quedará un saldo pendiente en la última cuota seleccionada.</p>
         </div>
 
-        <!-- 3. ABONO A CAPITAL (Sobra plata) -->
-        <div *ngIf="currentPaymentAmount > totalSelectedAmount" style="background-color: #eff6ff; border: 1px solid #bfdbfe; padding: 1rem; border-radius: 8px;">
-          <h5 style="margin: 0 0 0.25rem 0; color: #1e40af; font-size: 0.9rem;">Excedente de abono a capital ($ {{ currentPaymentAmount - totalSelectedAmount | number:'1.0-0' }})</h5>
-          <p style="margin: 0 0 0.75rem 0; color: #1d4ed8; font-size: 0.8rem;">¿Cómo aplicarás la diferencia?</p>
-          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-            <label style="font-size: 0.85rem; color: #1e3a8a;"><input type="radio" formControlName="surplus_action" value="reduce_time"> Reducir plazo (meses)</label>
-            <label style="font-size: 0.85rem; color: #1e3a8a;"><input type="radio" formControlName="surplus_action" value="reduce_quota"> Reducir valor de cuotas</label>
-            <label style="font-size: 0.85rem; color: #1e3a8a;"><input type="radio" formControlName="surplus_action" value="transfer">Adelanto de Cuotas</label>
-          </div>
-        </div>
 
       </form>
     </div>
