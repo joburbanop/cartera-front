@@ -51,8 +51,171 @@
 .badge-overdue { background: #fee2e2; color: #dc2626; }
 
 /* BOTONES */
-.btn-primary { 
-  background-color: #2563eb; color: white; border: none; border-radius: 8px; 
-  padding: 0.75rem 1.5rem; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: 0.2s; 
-  &:hover { background-color: #1d4ed8; } 
+.btn-primary {
+  background-color: #347769;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.65rem 1.25rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-primary:hover { opacity: 0.9; }
+
+.view-switch {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem;
+  background: #f1f5f9;
+  border: 1px solid #dfe7ef;
+  border-radius: 12px;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.view-switch button {
+  border: none;
+  background: transparent;
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.82rem;
+  border-radius: 10px;
+  padding: 0.65rem 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.02em;
+}
+
+.view-switch button.active {
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  color: #ffffff;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.22);
+}
+
+.view-switch button:not(.active):hover {
+  background: rgba(148, 163, 184, 0.08);
+  color: #1e293b;
+}
+
+.btn-success {
+  background-color: #347769;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.65rem 1.25rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-success:hover:not(:disabled) { opacity: 0.9; }
+
+.btn-success:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.progress-bg {
+  width: 100%;
+  height: 12px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid #dfe7ef;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2f7a63 0%, #34d399 100%);
+  box-shadow: inset 0 -1px 0 rgba(255,255,255,0.2);
+  transition: width 0.35s ease;
+}
+
+.overdue-flow-card {
+  background: linear-gradient(135deg, #fff7ed 0%, #fffaf0 100%);
+  border: 1px solid #fed7aa;
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 8px 20px rgba(120, 53, 15, 0.06);
+}
+
+.overdue-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.flow-label {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #c2410c;
+  margin-bottom: 0.35rem;
+}
+
+.overdue-header h3 {
+  margin: 0;
+  color: #7c2d12;
+  font-size: 1.3rem;
+}
+
+.overdue-badge {
+  display: inline-flex;
+  align-items: center;
+  background: #fff7ed;
+  color: #9a4d11;
+  border: 1px solid #fdba74;
+  border-radius: 999px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.overdue-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.9rem;
+}
+
+.overdue-kpi {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid #f5d0a8;
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+}
+
+.kpi-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9a5b2a;
+  margin-bottom: 0.35rem;
+}
+
+.kpi-value {
+  color: #7c2d12;
+  font-size: 1.2rem;
+}
+
+.overdue-kpi.warning .kpi-value {
+  color: #b45309;
+  font-size: 1rem;
+}
+
+.overdue-note {
+  margin: 1rem 0 0;
+  color: #7c2d12;
+  font-size: 0.9rem;
+  line-height: 1.5;
 }

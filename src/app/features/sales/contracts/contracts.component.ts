@@ -4,7 +4,7 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ContractService } from '../../../core/services/contract.service';
 import { ProjectService } from '../../../core/services/project.service';
 import { LotService } from '../../../core/services/lot.service';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FinancialService } from '../../../core/services/financial.service';
 
 @Component({
@@ -21,11 +21,14 @@ export class ContractsComponent implements OnInit {
   private lotService = inject(LotService);
   private cdr = inject(ChangeDetectorRef);
   private financialService = inject(FinancialService);
+  private route = inject(ActivatedRoute);
 
   contracts: any[] = [];
   customers: any[] = []; 
   projects: any[] = [];
   availableLots: any[] = []; 
+  selectedLotId: number | null = null;
+  selectedLot: any = null;
   
   isLoading = false;
   successMessage = '';
@@ -86,7 +89,12 @@ export class ContractsComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadContracts();
+    this.route.queryParamMap.subscribe(params => {
+      const lotId = params.get('lotId');
+      this.selectedLotId = lotId ? Number(lotId) : null;
+      this.loadContracts();
+    });
+
     this.loadProjects();
 
     // VIGILANTE REACTIVO: Escucha cada vez que cambia el select de proyecto
@@ -118,22 +126,14 @@ export class ContractsComponent implements OnInit {
             console.log('🔍 ESTADO CRUDO DEL LOTE 1:', allLots[0].status);
           }
 
-          // Filtramos (ampliamos las opciones por si acaso)
           this.availableLots = allLots.filter((lot: any) => {
             const statusStr = typeof lot.status === 'object' ? (lot.status?.value || lot.status?.name) : lot.status;
             const statusLimpio = String(statusStr).toLowerCase().trim();
-            
+
             return statusLimpio === 'available' || statusLimpio === 'disponible';
           });
 
-          // 🚨 SALVAVIDAS: Si el filtro los oculta todos, pero SÍ existen lotes en el proyecto,
-          // mostramos todos temporalmente para que tu Select funcione y puedas guardar el contrato.
-          if (this.availableLots.length === 0 && allLots.length > 0) {
-            console.warn('⚠️ El filtro falló. Mostrando todos los lotes temporalmente.');
-            this.availableLots = allLots;
-          }
-
-          console.log('Lotes que se mostrarán en el Select:', this.availableLots);
+          console.log('Lotes disponibles para contrato:', this.availableLots);
           this.cdr.detectChanges(); // Repintamos la pantalla
         },
         error: (err) => console.error('Error cargando lotes:', err)
@@ -144,10 +144,32 @@ export class ContractsComponent implements OnInit {
     });
   }
 
+  private applyLotFilter(): void {
+    if (!this.selectedLotId) {
+      this.selectedLot = null;
+      return;
+    }
+
+    const filtered = this.contracts.filter((contract: any) => {
+      const contractLotId = Number(contract.lot_id ?? contract.lot?.id ?? 0);
+      return contractLotId === this.selectedLotId;
+    });
+
+    this.contracts = filtered;
+    this.selectedLot = filtered[0]?.lot ?? { id: this.selectedLotId };
+  }
+
   loadContracts() {
     this.contractService.getContracts().subscribe({
       next: (response) => {
-        this.contracts = response.data?.data || response.data || [];
+        const allContracts = response.data?.data || response.data || [];
+        this.contracts = [...allContracts];
+
+        if (this.selectedLotId) {
+          this.applyLotFilter();
+        }
+
+        this.calculateKPIs();
         this.cdr.detectChanges();
       }
     });
@@ -175,6 +197,23 @@ export class ContractsComponent implements OnInit {
     });
   }
 
+  getContractStatusLabel(status: string): string {
+    const normalized = String(status || '').toLowerCase();
+
+    switch (normalized) {
+      case 'preventa_inactiva':
+        return 'Preventa';
+      case 'activo':
+        return 'Activo';
+      case 'terminado':
+        return 'Terminado';
+      case 'rescindido':
+        return 'Rescindido';
+      default:
+        return status || 'Sin estado';
+    }
+  }
+
   onSubmit() {
     if (this.contractForm.invalid) {
       this.errorMessage = 'Por favor, complete todos los campos obligatorios.';
@@ -191,14 +230,12 @@ export class ContractsComponent implements OnInit {
       next: (response) => {
         this.isLoading = false;
         this.successMessage = 'Contrato registrado exitosamente.';
-        
-        // Limpiamos todo el formulario, devolviendo la tasa a 1.00
-        this.contractForm.reset({ interest_rate: '1.00', project_id: '' }); 
-        
-        // Como el reset dispara el valueChanges del project_id con un string vacío, 
-        // la lista de lotes se vaciará sola de forma segura.
-        
-        this.loadContracts(); 
+
+        this.contractForm.reset({ interest_rate: '1.00', project_id: '' });
+        this.availableLots = [];
+        this.isModalOpen = false;
+
+        this.loadContracts();
       },
       error: (err) => {
         this.isLoading = false;

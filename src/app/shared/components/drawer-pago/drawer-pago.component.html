@@ -52,6 +52,15 @@
           <input type="date" formControlName="transaction_date" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px;">
         </div>
 
+        <!-- CAMPO PARA EL SOPORTE DE PAGO -->
+        <div>
+          <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #1e293b; margin-bottom: 0.4rem;">Soporte de pago (Recibo)</label>
+          <input type="file" (change)="onFileSelected($event)" accept="image/*,application/pdf" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; background-color: #f8fafc;">
+          <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem;">
+            * Obligatorio. Formatos aceptados: JPG, PNG, PDF.
+          </div>
+        </div>
+
         <!-- MENSAJES DE ESTADO DE PAGO -->
         <!-- 1. PAGO EXACTO -->
         <div *ngIf="currentPaymentAmount === totalSelectedAmount" style="background-color: #ecfdf5; border: 1px solid #a7f3d0; padding: 1rem; border-radius: 8px;">

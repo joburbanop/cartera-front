@@ -13,12 +13,22 @@ export class DrawerPagoComponent implements OnInit {
   
   @Output() closeDrawer = new EventEmitter<void>();
   @Output() confirmPayment = new EventEmitter<any>();
-  @Input() isProcessing = false;
+
+  private _isProcessing = false;
+  @Input() set isProcessing(value: boolean) {
+    this._isProcessing = value;
+
+    if (!value) {
+      this.resetState();
+    }
+  }
+  get isProcessing(): boolean { return this._isProcessing; }
   
   // NUEVO: Lista de cuentas bancarias del proyecto
   @Input() bankAccounts: any[] = []; 
 
   private fb = inject(FormBuilder);
+  selectedFile: File | null = null;
   totalSelectedAmount = 0;
 
   paymentForm: FormGroup = this.fb.group({
@@ -44,6 +54,13 @@ export class DrawerPagoComponent implements OnInit {
     });
   }
 
+  onFileSelected(event: any) {
+    const file: File = event.target.files[0];
+    if (file) {
+      this.selectedFile = file;
+    }
+  }
+
   // ==========================================
   // SETTER PARA isOpen
   // ==========================================
@@ -52,7 +69,10 @@ export class DrawerPagoComponent implements OnInit {
     this._isOpen = value;
     if (value) {
       this.updateFormAmount();
+      return;
     }
+
+    this.resetState();
   }
   get isOpen(): boolean { return this._isOpen; }
 
@@ -70,14 +90,29 @@ export class DrawerPagoComponent implements OnInit {
     return Number(this.paymentForm.get('amount')?.value) || 0;
   }
 
+  private getFeeDebtValue(fee: any): number {
+    const installmentValue = Number(fee.installment_value ?? 0);
+    const overdueBalance = Number(fee.overdue_balance ?? 0);
+    const remainingBalance = Number(fee.remaining_balance ?? 0);
+
+    let effectiveDebt = installmentValue;
+
+    if (overdueBalance > 0) {
+      effectiveDebt = Math.min(overdueBalance, installmentValue || overdueBalance);
+    } else if (remainingBalance > 0) {
+      effectiveDebt = Math.min(remainingBalance, installmentValue || remainingBalance);
+    }
+
+    return Math.max(0, effectiveDebt);
+  }
+
   calculateDebt() {
-    this.totalSelectedAmount = this._selectedFees.reduce((sum, fee) => sum + Number(fee.installment_value || 0), 0);
+    this.totalSelectedAmount = this._selectedFees.reduce((sum, fee) => sum + this.getFeeDebtValue(fee), 0);
   }
 
   updateFormAmount() {
     this.calculateDebt();
     setTimeout(() => {
-      // Al abrir, restauramos a 'transfer' por defecto
       this.paymentForm.patchValue({
         amount: this.totalSelectedAmount,
         payment_method: 'transfer',
@@ -87,17 +122,38 @@ export class DrawerPagoComponent implements OnInit {
     });
   }
 
+  private resetState() {
+    this.selectedFile = null;
+    this.paymentForm.reset({
+      amount: this.totalSelectedAmount,
+      payment_method: 'transfer',
+      bank_account_id: '',
+      transaction_date: new Date().toISOString().substring(0, 10),
+      surplus_action: ''
+    });
+    this.paymentForm.markAsPristine();
+    this.paymentForm.markAsUntouched();
+  }
+
   close() {
+    this._isProcessing = false;
+    this.resetState();
     this.closeDrawer.emit();
   }
 
   submit() {
-    // Si el formulario es válido (es decir, llenó la cuenta si era transferencia)
-    if (this.paymentForm.valid) {
-      this.confirmPayment.emit(this.paymentForm.value);
+    if (this.paymentForm.valid && this.selectedFile) {
+      const paymentData = {
+        ...this.paymentForm.value,
+        receipt: this.selectedFile
+      };
+
+      this.confirmPayment.emit(paymentData);
     } else {
-      // Si intentan trampear, marcamos todos los campos como "tocados" para mostrar errores
       this.paymentForm.markAllAsTouched();
+      if (!this.selectedFile) {
+        alert('Por favor, adjunte el soporte de pago (Recibo).');
+      }
     }
   }
 }

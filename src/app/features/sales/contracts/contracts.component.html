@@ -35,10 +35,13 @@
           </div>
           <div>
             <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Lote a Separar</label>
-            <select formControlName="lot_id" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; background-color: white;">
-              <option value="">-- Seleccione Lote --</option>
+            <select formControlName="lot_id" [disabled]="availableLots.length === 0" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; background-color: white;">
+              <option value="">{{ availableLots.length === 0 ? '-- No hay lotes disponibles --' : '-- Seleccione Lote --' }}</option>
               <option *ngFor="let l of availableLots" [value]="l.id">Lote {{ l.number }}</option>
             </select>
+            <div *ngIf="availableLots.length === 0" style="margin-top: 0.5rem; font-size: 0.8rem; color: #dc2626; background: #fee2e2; border: 1px solid #fecaca; padding: 0.5rem 0.75rem; border-radius: 6px;">
+              Este proyecto no tiene lotes disponibles para registrar un contrato.
+            </div>
           </div>
           <div>
             <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Asesor Comercial</label>
@@ -121,9 +124,20 @@
   <div class="header-section">
     <div>
       <h1>Contratos y Amortizaciones</h1>
-      <p>Gestión de promesas de compraventa y planes de pago</p>
+      <p *ngIf="!selectedLotId">Gestión de promesas de compraventa y planes de pago</p>
+      <p *ngIf="selectedLotId">Hoja de vida del lote {{ selectedLot?.number || selectedLotId }}</p>
     </div>
     <button class="btn-primary" (click)="openModal()">+ Nuevo Contrato</button>
+  </div>
+
+  <div *ngIf="selectedLotId" style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+    <div>
+      <div style="font-size: 0.75rem; color: #1d4ed8; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;">Contexto del lote</div>
+      <div style="font-size: 1.1rem; font-weight: 700; color: #1e3a8a; margin-top: 0.2rem;">Lote {{ selectedLot?.number || selectedLotId }}</div>
+    </div>
+    <button class="btn-secondary" [routerLink]="['/lots']" [queryParams]="{ projectId: selectedLot?.project_id || '' }" style="background: white; border: 1px solid #93c5fd; color: #1d4ed8; padding: 0.6rem 1rem; border-radius: 6px; font-weight: 600; cursor: pointer;">
+      Volver al proyecto
+    </button>
   </div>
 
   <!-- TARJETAS KPI -->
@@ -150,7 +164,6 @@
     <table class="custom-table">
       <thead>
         <tr>
-          <!-- 1. CAMBIAMOS EL TÍTULO -->
           <th>Lote / Radicado</th>
           <th>Cliente</th>
           <th>Precio Pactado</th>
@@ -162,32 +175,37 @@
         <tr *ngIf="contracts.length === 0">
           <td colspan="5" style="text-align: center; color: #94a3b8; padding: 3rem;">No hay contratos registrados aún.</td>
         </tr>
-        
+
         <tr *ngFor="let c of contracts">
-          
-          <!-- 2. PRIMERA COLUMNA: EL LOTE COMO PROTAGONISTA -->
           <td>
-            <!-- Usamos c.lot?.number si el backend nos manda la relación, si no, mostramos el ID temporalmente -->
             <div class="main-text" style="color: #0284c7;">Lote {{ c.lot?.number || c.lot_id }}</div>
             <div class="sub-text">Radicado: {{ c.contract_number }}</div>
           </td>
-          
-          <!-- 3. SEGUNDA COLUMNA: EL CLIENTE Y LA FECHA -->
+
           <td>
             <div class="main-text">Cliente #{{ c.customer_id }}</div>
             <div class="sub-text">Firma: {{ c.start_date || 'N/A' }}</div>
           </td>
-          
+
           <td>
             <div class="main-text">$ {{ c.sale_price | number }}</div>
             <div class="sub-text">{{ c.term_months }} meses al {{ c.interest_rate }}%</div>
           </td>
+
           <td>
-            <span class="badge-status badge-active">{{ c.status }}</span>
+            <span class="badge-status"
+                  [ngClass]="{
+                    'badge-warning': c.status === 'preventa_inactiva',
+                    'badge-success': c.status === 'activo',
+                    'badge-default': c.status === 'terminado',
+                    'badge-danger': c.status === 'rescindido'
+                  }">
+              {{ getContractStatusLabel(c.status) }}
+            </span>
           </td>
+
           <td>
             <div class="action-buttons">
-              <!-- BOTÓN: VER AMORTIZACIÓN (Actualizado) -->
               <button class="action-btn amortization-btn" title="Ver Tabla de Amortización" [routerLink]="['/amortization', c.id]">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 16px; height: 16px;">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 0 1-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-1.5A1.125 1.125 0 0 1 18 18.375M20.625 4.5H3.375m17.25 0c.621 0 1.125.504 1.125 1.125M20.625 4.5h-1.5C18.504 4.5 18 5.004 18 5.625m3.75 0v1.5c0 .621-.504 1.125-1.125 1.125M3.375 4.5c-.621 0-1.125.504-1.125 1.125M3.375 4.5h1.5C5.496 4.5 6 5.004 6 5.625m-3.75 0v1.5c0 .621.504 1.125 1.125 1.125m0 0h1.5m-1.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m1.5-3.75C5.496 8.25 6 7.746 6 7.125v-1.5M4.875 8.25C5.496 8.25 6 8.754 6 9.375v1.5m0-5.25v5.25m0-5.25C6 5.004 6.504 4.5 7.125 4.5h9.75c.621 0 1.125.504 1.125 1.125m1.125 2.625h1.5m-1.5 0A1.125 1.125 0 0 1 18 7.125v-1.5m1.125 2.625c-.621 0-1.125.504-1.125 1.125v1.5m2.625-2.625c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125M18 5.625v5.25m0-5.25v5.25M7.125 18.375h9.75c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125H7.125c-.621 0-1.125.504-1.125 1.125v5.25c0 .621.504 1.125 1.125 1.125Z" />
@@ -199,5 +217,17 @@
         </tr>
       </tbody>
     </table>
+  </div>
+
+  <div *ngIf="selectedLotId" style="display: flex; justify-content: center; margin-top: 1.5rem;">
+    <button
+      type="button"
+      [routerLink]="['/contracts']"
+      style="display: inline-flex; align-items: center; justify-content: center; gap: 0.55rem; border: 1px solid #cbd5e1; background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); color: #1e293b; padding: 0.8rem 1.4rem; border-radius: 10px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width: 16px; height: 16px;">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+      </svg>
+      Ver todos los contratos
+    </button>
   </div>
 </div>

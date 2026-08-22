@@ -86,7 +86,17 @@
       </div>
       <div class="data-row">
         <span class="label">Estado:</span> 
-        <span class="value">{{ contractData?.status || 'Sin asignar' }}</span>
+        <span class="value">
+          <span class="badge-status"
+                [ngClass]="{
+                  'badge-warning': contractData?.status === 'preventa_inactiva',
+                  'badge-success': contractData?.status === 'activo',
+                  'badge-default': contractData?.status === 'terminado',
+                  'badge-danger': contractData?.status === 'rescindido'
+                }">
+            {{ getContractStatusLabel(contractData?.status) }}
+          </span>
+        </span>
       </div>
       
       <!-- VALOR FINAL CON INTERESES (Recuadro Verde) -->
@@ -95,6 +105,58 @@
         <span style="color: #15803d; font-size: 1.1rem; font-weight: 800;">$ {{ totalWithInterest | number:'1.0-0' }}</span>
       </div>
     </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- RESUMEN FINANCIERO                        -->
+  <!-- ========================================== -->
+  <div *ngIf="!isLoading && contractData" style="margin-top: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
+    <div style="background: #f8fafc; border: 1px solid #dfe7ef; border-radius: 12px; padding: 1rem 1.1rem; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);">
+      <div style="font-size: 0.75rem; color: #475569; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;">Total pagado</div>
+      <div style="font-size: 1.45rem; font-weight: 800; color: #0f172a; margin-top: 0.35rem;">$ {{ totalPaidAmount | number:'1.0-0' }}</div>
+    </div>
+
+    <div style="background: #eef3f8; border: 1px solid #d9e2ec; border-radius: 12px; padding: 1rem 1.1rem; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);">
+      <div style="font-size: 0.75rem; color: #475569; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;">Debe</div>
+      <div style="font-size: 1.45rem; font-weight: 800; color: #1e293b; margin-top: 0.35rem;">$ {{ totalOutstandingAmount | number:'1.0-0' }}</div>
+    </div>
+
+    <div style="background: #f3f6fb; border: 1px solid #dfe7ef; border-radius: 12px; padding: 1rem 1.1rem; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);">
+      <div style="font-size: 0.75rem; color: #475569; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;">Intereses pagados</div>
+      <div style="font-size: 1.45rem; font-weight: 800; color: #1e293b; margin-top: 0.35rem;">$ {{ totalInterestPaid | number:'1.0-0' }}</div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- GESTIÓN DE CARTERA VENCIDA                -->
+  <!-- ========================================== -->
+  <div *ngIf="hasOverdueFees" class="overdue-flow-card" style="margin-top: 1.5rem;">
+    <div class="overdue-header">
+      <div>
+        <span class="flow-label">Gestión de cartera vencida</span>
+        <h3>Cartera vencida</h3>
+      </div>
+      <span class="overdue-badge">{{ overdueLevelLabel }}</span>
+    </div>
+
+    <div class="overdue-content">
+      <div class="overdue-kpi">
+        <span class="kpi-label">Monto en mora</span>
+        <strong class="kpi-value">$ {{ overdueAmount | number:'1.0-0' }}</strong>
+      </div>
+      <div class="overdue-kpi">
+        <span class="kpi-label">Cuotas vencidas</span>
+        <strong class="kpi-value">{{ overdueFees.length }}</strong>
+      </div>
+      <div class="overdue-kpi warning">
+        <span class="kpi-label">Estado</span>
+        <strong class="kpi-value">Abono parcial aplicado</strong>
+      </div>
+    </div>
+
+    <p class="overdue-note">
+      Se registró un abono menor al valor de la cuota. La cuota quedó en estado vencida y entra al flujo de cobranza con revisión de antigüedad de la mora.
+    </p>
   </div>
 
   <!-- ========================================== -->
@@ -190,16 +252,16 @@
           <td style="font-weight: 600; color: #1e293b;">$ {{ fee.installment_value | number:'1.2-2' }}</td>
           <td style="color: #64748b;">$ {{ fee.interest_value | number:'1.2-2' }}</td>
           <td style="color: #059669;">$ {{ fee.principal_value | number:'1.2-2' }}</td>
-          <td style="font-weight: 600; color: #dc2626;">$ {{ fee.remaining_balance | number:'1.2-2' }}</td>
+          <td style="font-weight: 600; color: #dc2626;">$ {{ (fee.remaining_balance ?? fee.installment_value ?? 0) | number:'1.2-2' }}</td>
           <td>
             <span class="badge-status" 
                   [ngClass]="{
-                    'badge-unpaid': fee.status === 'sin_pagar',
-                    'badge-paid': fee.status === 'pagada',
-                    'badge-partial': fee.status === 'parcial',
-                    'badge-overdue': fee.status === 'vencida'
+                    'badge-unpaid': getFeeStatus(fee) === 'sin_pagar',
+                    'badge-paid': getFeeStatus(fee) === 'pagada',
+                    'badge-partial': getFeeStatus(fee) === 'parcial',
+                    'badge-overdue': getFeeStatus(fee) === 'vencida'
                   }">
-              {{ fee.status.replace('_', ' ') }}
+              {{ getFeeStatus(fee).replace('_', ' ') }}
             </span>
           </td>
         </tr>
@@ -213,21 +275,21 @@
   <!-- ========================================== -->
   <div *ngIf="!isLoading && currentView === 'preventa'" style="margin-top: 2rem; display: flex; flex-direction: column; gap: 1.5rem;">
     
-    <!-- ALERTA INTELIGENTE DEL 10% (Solo se muestra si está inactiva) -->
-    <div *ngIf="contractData?.status === 'preventa_inactiva'" style="background-color: #fffbeb; border: 1px solid #fde68a; padding: 1rem 1.5rem; border-radius: 12px; display: flex; align-items: center; gap: 1rem; animation: fadeIn 0.4s;">
+    <!-- ALERTA INTELIGENTE DEL 10% (Solo se muestra si está inactiva y la vista está en preventa) -->
+    <div *ngIf="currentView === 'preventa' && contractData?.status === 'preventa_inactiva'" style="background-color: #fffbeb; border: 1px solid #fde68a; padding: 1rem 1.5rem; border-radius: 12px; display: flex; align-items: center; gap: 1rem; animation: fadeIn 0.4s;">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 32px; height: 32px; color: #d97706; flex-shrink: 0;">
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
       </svg>
       <div>
         <h4 style="margin: 0 0 0.2rem 0; color: #92400e; font-size: 1rem;">Contrato en Preventa Inactiva</h4>
         <p style="margin: 0; color: #b45309; font-size: 0.85rem;">
-          Se requiere recaudar mínimo el 10% del valor del lote (<strong>$ {{ activationThreshold | number }}</strong>) para que el estado del contrato pase a Activo.
+          Se requiere completar la cuota inicial pactada (<strong>$ {{ activationThreshold | number }}</strong>) para que el contrato pase a Activo.
         </p>
       </div>
     </div>
 
-    <!-- Tarjeta Principal de Preventa (Barra de progreso) -->
-    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem;">
+    <!-- Tarjeta Principal de Preventa (solo visible cuando está en preventa) -->
+    <div *ngIf="currentView === 'preventa'" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem;">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
         <div>
           <h3 style="margin: 0 0 0.25rem 0; color: #0f172a; font-size: 1.2rem;">Cuota inicial pactada</h3>
@@ -250,18 +312,18 @@
         </div>
         
         <div style="margin-top: 0.75rem; font-size: 0.85rem; color: #64748b;">
-          Saldo pendiente de cuota para activación: <strong style="color: #dc2626;">$ {{ activationThreshold | number }}</strong>
+          Saldo pendiente de cuota inicial: <strong style="color: #dc2626;">$ {{ initialFeeBalance | number }}</strong>
         </div>
       </div>
     </div>
 
  <!-- Historial de Abonos Registrados -->
-    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem;">
+    <div *ngIf="currentView === 'preventa'" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem;">
       <h3 style="margin: 0 0 1rem 0; color: #0f172a; font-size: 1.1rem;">Abonos registrados</h3>
       
       <!-- SI HAY ABONOS -->
-      <ng-container *ngIf="contractData?.transactions?.length > 0; else noPayments">
-        <div *ngFor="let tx of contractData?.transactions" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 1rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+      <ng-container *ngIf="initialPaymentTransactions.length > 0; else noPayments">
+        <div *ngFor="let tx of initialPaymentTransactions" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 1rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
           <span style="color: #64748b; font-size: 0.9rem; text-transform: capitalize;">
             {{ tx.transaction_date | date:'dd MMM yyyy' }} · {{ getPaymentMethodName(tx.payment_method) }}
           </span>
@@ -290,7 +352,7 @@
     [isOpen]="isDrawerOpen"
     [selectedFees]="selectedFees"
     [isProcessing]="isProcessingPayment"
-    [bankAccounts]="contractData?.project?.bank_accounts || []" 
+    [bankAccounts]="contractData?.lot?.project?.bank_accounts || contractData?.project?.bank_accounts || []" 
     (closeDrawer)="closeDrawer()"
     (confirmPayment)="processPayment($event)">
   </app-drawer-pago>
