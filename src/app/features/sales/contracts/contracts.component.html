@@ -47,9 +47,21 @@
             <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Asesor Comercial</label>
             <input type="text" formControlName="seller_name" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
           </div>
-          <div style="grid-column: span 2;">
+          <div>
             <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Fecha de Inicio / Firma</label>
             <input type="date" formControlName="start_date" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Fecha de Cuota Inicial (Preventa)</label>
+            <input type="date" formControlName="initial_payment_date" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Fecha de Inicio Cuotas Ordinarias</label>
+            <input type="date" formControlName="regular_payment_start_date" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Cuotas en Etapa de Preventa</label>
+            <input type="number" formControlName="preventa_installments_count" min="0" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
           </div>
         </div>
       </div>

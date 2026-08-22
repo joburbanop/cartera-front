@@ -55,7 +55,10 @@ export class ContractsComponent implements OnInit {
     down_payment_pactada: ['', [Validators.required, Validators.min(0)]],
     term_months: ['', [Validators.required, Validators.min(1)]],
     interest_rate: ['1.00', [Validators.required, Validators.min(0)]],
-    start_date: ['', Validators.required]
+    start_date: ['', Validators.required],
+    initial_payment_date: ['', Validators.required],
+    regular_payment_start_date: ['', Validators.required],
+    preventa_installments_count: ['', [Validators.required, Validators.min(0)]]
   });
 
   calculateKPIs() {

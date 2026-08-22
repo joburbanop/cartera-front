@@ -186,9 +186,14 @@ export class AmortizationComponent implements OnInit {
       return 0;
     }
 
+    const quotaDebt = Number(fee?.quota_debt ?? 0);
     const installmentValue = Number(fee.installment_value ?? 0);
     const overdueBalance = Number(fee.overdue_balance ?? 0);
     const remainingBalance = Number(fee.remaining_balance ?? 0);
+
+    if (quotaDebt > 0) {
+      return Math.max(0, quotaDebt);
+    }
 
     if (overdueBalance > 0) {
       return Math.max(0, Math.min(overdueBalance, installmentValue || overdueBalance));
@@ -203,6 +208,16 @@ export class AmortizationComponent implements OnInit {
 
   get totalSelectedAmount(): number {
     return this.selectedFees.reduce((sum, fee) => sum + this.getFeeDebtValue(fee), 0);
+  }
+
+  get totalOverdueQuotaDebt(): number {
+    return (this.amortizationPlan ?? []).reduce((sum, fee) => {
+      const status = String(this.getFeeStatus(fee) ?? '').toLowerCase();
+      if (status === 'vencida' || status === 'overdue') {
+        return sum + this.getFeeDebtValue(fee);
+      }
+      return sum;
+    }, 0);
   }
 
 // ==========================================

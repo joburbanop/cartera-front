@@ -128,8 +128,30 @@
   </div>
 
   <!-- ========================================== -->
-  <!-- GESTIÓN DE CARTERA VENCIDA                -->
+  <!-- WIDGET: CARTERA VENCIDA                   -->
   <!-- ========================================== -->
+  <div *ngIf="totalOverdueQuotaDebt > 0; else noOverdueWidget" style="margin-top: 1.5rem; background: linear-gradient(135deg, #fff1f2, #ffe4e6); border: 1px solid #fecdd3; border-radius: 16px; padding: 1.25rem 1.4rem; box-shadow: 0 8px 20px rgba(190, 24, 93, 0.08);">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+      <div>
+        <div style="font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: #9f1239; font-weight: 800;">Amortización - Cartera Vencida 🚨</div>
+        <div style="font-size: 2.1rem; font-weight: 900; color: #be123c; margin-top: 0.35rem;">$ {{ totalOverdueQuotaDebt | number:'1.0-0' }}</div>
+      </div>
+      <span style="background: #fecdd3; color: #9f1239; border: 1px solid #fda4af; border-radius: 999px; padding: 0.45rem 0.8rem; font-weight: 800; letter-spacing: 0.04em;">CARTERA EN MORA</span>
+    </div>
+  </div>
+
+  <ng-template #noOverdueWidget>
+    <div style="margin-top: 1.5rem; background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 1px solid #a7f3d0; border-radius: 16px; padding: 1.25rem 1.4rem; box-shadow: 0 8px 20px rgba(6, 95, 70, 0.08);">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <div>
+          <div style="font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: #065f46; font-weight: 800;">Amortización - Cartera Vencida 🚨</div>
+          <div style="font-size: 2.1rem; font-weight: 900; color: #047857; margin-top: 0.35rem;">$ 0</div>
+        </div>
+        <span style="background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 999px; padding: 0.45rem 0.8rem; font-weight: 800; letter-spacing: 0.04em;">AL DÍA</span>
+      </div>
+    </div>
+  </ng-template>
+
   <div *ngIf="hasActiveMora" class="overdue-flow-card" style="margin-top: 1.5rem;">
     <div class="overdue-header">
       <div>
