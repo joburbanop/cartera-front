@@ -75,27 +75,26 @@ export class BankAccountsComponent implements OnInit {
 
   onSubmit() {
     if (this.accountForm.invalid) return;
-    this.closeModal()
-    this.calculateKPIs()
-    
 
     this.isLoading = true;
     this.successMessage = '';
     this.errorMessage = '';
 
-    this.bankAccountService.createAccount(this.accountForm.getRawValue()).subscribe({
+    const payload = this.accountForm.getRawValue();
+
+    this.bankAccountService.createAccount(payload).subscribe({
       next: (response) => {
         this.isLoading = false;
         this.successMessage = 'Cuenta bancaria registrada exitosamente.';
-        
-        // 3. AQUI: Al resetear el formulario, también usamos 'savings'
-        this.accountForm.reset({ account_type: 'savings' }); 
-        
-        this.loadAccounts(); 
+
+        this.accountForm.reset({ account_type: 'savings' });
+        this.isModalOpen = false;
+        this.calculateKPIs();
+        this.loadAccounts();
       },
       error: (err) => {
         this.isLoading = false;
-        console.log('Error 422 capturado:', err.error); // Para ver el mensaje de Laravel
+        console.log('Error 422 capturado:', err.error);
 
         if (err.status === 422 && err.error?.errors) {
           const primerCampoConError = Object.keys(err.error.errors)[0];

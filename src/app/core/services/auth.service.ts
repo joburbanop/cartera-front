@@ -7,28 +7,31 @@ import { Observable, tap } from 'rxjs';
 })
 export class AuthService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://127.0.0.1:8000/api'; // La URL de tu backend en Laravel
+  private apiUrl = 'http://127.0.0.1:8000/api';
+  private readonly tokenKey = 'auth_token';
 
   login(credentials: { email: string; password: string }): Observable<any> {
     return this.http.post(`${this.apiUrl}/login`, credentials).pipe(
       tap((response: any) => {
         const payload = response?.data ?? response;
+        const token = payload?.access_token ?? response?.access_token ?? null;
 
-        if (payload?.access_token) {
-          localStorage.setItem('auth_token', payload.access_token);
-        } else if (response?.access_token) {
-          localStorage.setItem('auth_token', response.access_token);
+        if (token) {
+          localStorage.setItem(this.tokenKey, token);
+          return;
         }
+
+        localStorage.removeItem(this.tokenKey);
       })
     );
   }
 
   logout(): void {
-    localStorage.removeItem('auth_token');
+    localStorage.removeItem(this.tokenKey);
   }
 
   getToken(): string | null {
-    return localStorage.getItem('auth_token');
+    return localStorage.getItem(this.tokenKey);
   }
 
   isLoggedIn(): boolean {

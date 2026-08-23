@@ -4,6 +4,7 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ContractService } from '../../../core/services/contract.service';
 import { ProjectService } from '../../../core/services/project.service';
 import { LotService } from '../../../core/services/lot.service';
+import { CustomerService, Customer } from '../../../core/services/customer.service';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FinancialService } from '../../../core/services/financial.service';
 
@@ -19,12 +20,13 @@ export class ContractsComponent implements OnInit {
   private contractService = inject(ContractService);
   private projectService = inject(ProjectService);
   private lotService = inject(LotService);
+  private customerService = inject(CustomerService);
   private cdr = inject(ChangeDetectorRef);
   private financialService = inject(FinancialService);
   private route = inject(ActivatedRoute);
 
   contracts: any[] = [];
-  customers: any[] = []; 
+  customers: Customer[] = [];
   projects: any[] = [];
   availableLots: any[] = []; 
   selectedLotId: number | null = null;
@@ -44,21 +46,29 @@ export class ContractsComponent implements OnInit {
 
   // Control del Modal
   isModalOpen = false;
+  showCustomerModal = false;
+
+  customerForm = this.fb.group({
+    name: ['', Validators.required],
+    document: ['', Validators.required],
+    phone: [''],
+    email: ['', [Validators.pattern(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/)]],
+  });
 
   contractForm = this.fb.group({
     contract_number: ['', Validators.required],
     customer_id: ['', Validators.required],
-    project_id: [''], // Auxiliar
+    project_id: ['', Validators.required],
     lot_id: ['', Validators.required],
-    seller_name: [''], 
-    sale_price: ['', [Validators.required, Validators.min(1)]],
-    down_payment_pactada: ['', [Validators.required, Validators.min(0)]],
-    term_months: ['', [Validators.required, Validators.min(1)]],
-    interest_rate: ['1.00', [Validators.required, Validators.min(0)]],
+    seller_name: [''],
+    sale_price: [null, [Validators.required, Validators.min(0)]],
+    down_payment_pactada: [null, [Validators.required, Validators.min(0)]],
+    term_months: [null, [Validators.required, Validators.min(1)]],
+    interest_rate: [1.00, [Validators.required, Validators.min(0)]],
     start_date: ['', Validators.required],
-    initial_payment_date: ['', Validators.required],
-    regular_payment_start_date: ['', Validators.required],
-    preventa_installments_count: ['', [Validators.required, Validators.min(0)]]
+    down_payment_date: ['', Validators.required],
+    first_installment_date: ['', Validators.required],
+    preventa_stages: [7, [Validators.required, Validators.min(0)]]
   });
 
   calculateKPIs() {
@@ -98,6 +108,7 @@ export class ContractsComponent implements OnInit {
       this.loadContracts();
     });
 
+    this.loadCustomers();
     this.loadProjects();
 
     // VIGILANTE REACTIVO: Escucha cada vez que cambia el select de proyecto
@@ -200,6 +211,52 @@ export class ContractsComponent implements OnInit {
     });
   }
 
+  loadCustomers() {
+    this.customerService.getCustomers().subscribe({
+      next: (response: any) => {
+        const customers = response.data?.data || response.data || response || [];
+        this.customers = Array.isArray(customers) ? customers : [];
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('Error cargando clientes', err)
+    });
+  }
+
+  saveQuickCustomer() {
+    if (this.customerForm.invalid) {
+      this.customerForm.markAllAsTouched();
+      return;
+    }
+
+    const rawCustomer = this.customerForm.getRawValue();
+    const documentValue = String(rawCustomer.document ?? '').trim();
+
+    const payload: Partial<Customer> = {
+      name: String(rawCustomer.name ?? '').trim(),
+      document_type: 'CC',
+      document_number: documentValue,
+      phone: rawCustomer.phone?.trim() || '3000000000',
+      email: rawCustomer.email?.trim() || undefined,
+    };
+
+    this.customerService.createCustomer(payload).subscribe({
+      next: (response: any) => {
+        const customer = response.customer ?? response.data ?? response;
+
+        this.customers = [...this.customers, customer];
+        this.contractForm.patchValue({ customer_id: customer.id });
+        this.customerForm.reset();
+        this.showCustomerModal = false;
+        this.successMessage = 'Cliente registrado y seleccionado correctamente.';
+        this.errorMessage = '';
+      },
+      error: (err) => {
+        console.error('Error al crear cliente', err);
+        this.errorMessage = err.error?.message || 'No se pudo crear el cliente.';
+      }
+    });
+  }
+
   getContractStatusLabel(status: string): string {
     const normalized = String(status || '').toLowerCase();
 
@@ -227,14 +284,23 @@ export class ContractsComponent implements OnInit {
     this.successMessage = '';
     this.errorMessage = '';
 
-    const { project_id, ...contractData } = this.contractForm.value;
+    const formValue = this.contractForm.getRawValue();
+    const { project_id, down_payment_date, preventa_stages, ...rest } = formValue;
 
-    this.contractService.createContract(contractData).subscribe({
+    const payload = {
+      ...rest,
+      initial_payment_date: down_payment_date,
+      regular_payment_start_date: formValue.first_installment_date,
+      first_installment_date: formValue.first_installment_date,
+      preventa_installments_count: preventa_stages,
+    };
+
+    this.contractService.createContract(payload).subscribe({
       next: (response) => {
         this.isLoading = false;
         this.successMessage = 'Contrato registrado exitosamente.';
 
-        this.contractForm.reset({ interest_rate: '1.00', project_id: '' });
+        this.contractForm.reset({ interest_rate: 1.00, project_id: '', preventa_stages: 7 });
         this.availableLots = [];
         this.isModalOpen = false;
 

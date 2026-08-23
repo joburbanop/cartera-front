@@ -21,10 +21,17 @@
           </div>
           <div>
             <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Cliente</label>
-            <select formControlName="customer_id" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; background-color: white;">
-              <option value="">-- Seleccione Cliente --</option>
-              <option value="1">Juan Pérez (Ejemplo)</option>
-            </select>
+            <div style="display: flex; gap: 0.5rem; align-items: stretch;">
+              <select formControlName="customer_id" style="flex: 1; width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; background-color: white;">
+                <option value="">-- Seleccione Cliente --</option>
+                <option *ngFor="let customer of customers" [value]="customer.id">
+                  {{ customer.name }} ({{ customer.document_number || customer.document || 'Sin documento' }})
+                </option>
+              </select>
+              <button type="button" (click)="showCustomerModal = true" style="padding: 0.6rem 0.9rem; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; cursor: pointer; font-weight: 600; color: #1e293b;">
+                + Nuevo
+              </button>
+            </div>
           </div>
           <div>
             <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Proyecto</label>
@@ -53,15 +60,15 @@
           </div>
           <div>
             <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Fecha de Cuota Inicial (Preventa)</label>
-            <input type="date" formControlName="initial_payment_date" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+            <input type="date" formControlName="down_payment_date" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
           </div>
           <div>
-            <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Fecha de Inicio Cuotas Ordinarias</label>
-            <input type="date" formControlName="regular_payment_start_date" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+            <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Fecha de Primera Cuota Ordinaria</label>
+            <input type="date" formControlName="first_installment_date" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
           </div>
           <div>
             <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Cuotas en Etapa de Preventa</label>
-            <input type="number" formControlName="preventa_installments_count" min="0" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+            <input type="number" formControlName="preventa_stages" min="0" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
           </div>
         </div>
       </div>
@@ -123,6 +130,49 @@
       </button>
 
      
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" *ngIf="showCustomerModal" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); display: flex; align-items: center; justify-content: center; z-index: 1200;">
+  <div class="modal-content-custom" style="background: white; border-radius: 12px; padding: 1.5rem; width: min(520px, 90vw); box-shadow: 0 16px 40px rgba(15, 23, 42, 0.2);">
+    <h3 style="margin: 0 0 1rem; color: #1e293b;">Registrar Nuevo Cliente</h3>
+    <form [formGroup]="customerForm" (ngSubmit)="saveQuickCustomer()" style="display: flex; flex-direction: column; gap: 1rem;">
+      <div>
+        <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Nombre Completo *</label>
+        <input type="text" formControlName="name" class="form-control" placeholder="Ej: William Rojas" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+      </div>
+      <div>
+        <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Cédula / Documento *</label>
+        <input type="text" formControlName="document" class="form-control" placeholder="Ej: 94526871" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+      </div>
+      <div>
+        <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Teléfono</label>
+        <input type="text" formControlName="phone" class="form-control" placeholder="Ej: 3150000000" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+      </div>
+      <div>
+        <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Correo Electrónico</label>
+        <input type="email" formControlName="email" class="form-control" placeholder="Ej: correo@ejemplo.com" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+      </div>
+
+      <div style="background: #fee2e2; color: #991b1b; padding: 10px; margin-bottom: 10px; border-radius: 4px; font-size: 0.85rem;">
+        <strong>Estado del Formulario:</strong> {{ customerForm.valid ? 'VÁLIDO' : 'INVÁLIDO' }} <br>
+        <strong>Errores detectados:</strong>
+        <ul>
+          <li *ngIf="customerForm.get('name')?.errors">Nombre obligatorio vacío</li>
+          <li *ngIf="customerForm.get('document')?.errors">Cédula obligatoria vacía</li>
+          <li *ngIf="customerForm.get('email')?.errors">El formato del Correo es incorrecto</li>
+        </ul>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 0.5rem;">
+        <button type="button" (click)="showCustomerModal = false" style="padding: 0.7rem 1rem; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer; color: #334155; font-weight: 600;">
+          Cancelar
+        </button>
+        <button type="submit" [disabled]="customerForm.invalid" style="padding: 0.7rem 1rem; border: none; border-radius: 6px; background: #2563eb; color: white; cursor: pointer; font-weight: 700;">
+          Guardar y Seleccionar
+        </button>
+      </div>
     </form>
   </div>
 </div>
