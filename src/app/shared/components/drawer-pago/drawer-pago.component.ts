@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, inject, OnInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 
@@ -10,8 +10,8 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
   styleUrl: './drawer-pago.component.scss'
 })
 export class DrawerPagoComponent implements OnInit {
-  
   @Output() closeDrawer = new EventEmitter<void>();
+  @Output() onClose = new EventEmitter<void>();
   @Output() confirmPayment = new EventEmitter<any>();
 
   private _isProcessing = false;
@@ -171,10 +171,22 @@ export class DrawerPagoComponent implements OnInit {
     this.paymentForm.markAsUntouched();
   }
 
+  @HostListener('document:keydown.escape', ['$event'])
+  onKeydownHandler(event: Event): void {
+    if (!this.isOpen) {
+      return;
+    }
+
+    const keyboardEvent = event as KeyboardEvent;
+    keyboardEvent.preventDefault();
+    this.close();
+  }
+
   close() {
     this._isProcessing = false;
     this.resetState();
     this.closeDrawer.emit();
+    this.onClose.emit();
   }
 
   submit() {

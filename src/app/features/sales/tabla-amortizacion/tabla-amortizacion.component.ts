@@ -3,17 +3,32 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AmortizationService } from '../../../core/services/amortization.service';
 import { ContractService } from '../../../core/services/contract.service';
-import { FinancialService } from '../../../core/services/financial.service'; 
+import { FinancialService } from '../../../core/services/financial.service';
 import { DrawerPagoComponent } from '../../../shared/components/drawer-pago/drawer-pago.component';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RecaudoService } from '../../../core/services/recaudo.service';
+import { AmortizationFinancialsService } from '../../../core/services/amortization-financials.service';
+import { AmortizationSelectionService } from './amortization-selection.service';
+import { ContractStatusLabelPipe } from '../../../shared/pipes/contract-status-label.pipe';
+import { PaymentMethodNamePipe } from '../../../shared/pipes/payment-method-name.pipe';
+import { AmortizationTablePresenterComponent } from '../../../shared/components/amortization-table-presenter/amortization-table-presenter.component';
 
 @Component({
   selector: 'app-tabla-amortizacion',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, ReactiveFormsModule, DrawerPagoComponent],
+  imports: [
+    CommonModule,
+    RouterModule,
+    FormsModule,
+    ReactiveFormsModule,
+    DrawerPagoComponent,
+    ContractStatusLabelPipe,
+    PaymentMethodNamePipe,
+    AmortizationTablePresenterComponent,
+  ],
   templateUrl: './tabla-amortizacion.component.html',
-  styleUrl: './tabla-amortizacion.component.scss'
+  styleUrl: './tabla-amortizacion.component.scss',
+  providers: [AmortizationSelectionService],
 })
 export class AmortizationComponent implements OnInit {
   private route = inject(ActivatedRoute);
@@ -23,21 +38,30 @@ export class AmortizationComponent implements OnInit {
   private financialService = inject(FinancialService);
   private cdr = inject(ChangeDetectorRef);
   private recaudoService = inject(RecaudoService);
+  private financials = inject(AmortizationFinancialsService);
+  private selection = inject(AmortizationSelectionService);
 
   contractId!: number;
   contractData: any = null;
   amortizationPlan: any[] = [];
-  totalWithInterest: number = 0;
+  totalWithInterest = 0;
   isLoading = true;
   isGenerating = false;
-
-  // Variables del Cajero (Drawer)
-  selectedFees: any[] = [];
   isDrawerOpen = false;
   isProcessingPayment = false;
+  currentView: 'venta' | 'preventa' = 'venta';
+  resetSelectionFlag = false;
+
+  get selectedFees(): any[] {
+    return this.selection.selectedFees;
+  }
+
+  set selectedFees(value: any[]) {
+    this.selection.selectedFees = value ?? [];
+  }
 
   ngOnInit(): void {
-    this.route.params.subscribe(params => {
+    this.route.params.subscribe((params) => {
       if (params['id']) {
         this.contractId = Number(params['id']);
         this.loadContractData();
@@ -46,7 +70,7 @@ export class AmortizationComponent implements OnInit {
     });
   }
 
-  loadContractData() {
+  loadContractData(): void {
     this.contractService.getContractById(this.contractId).subscribe({
       next: (response) => {
         this.contractData = response.data || response;
@@ -54,15 +78,15 @@ export class AmortizationComponent implements OnInit {
         this.calculateFinancials();
         this.cdr.detectChanges();
       },
-      error: () => this.router.navigate(['/contracts'])
+      error: () => this.router.navigate(['/contracts']),
     });
   }
 
-  loadAmortizationPlan() {
+  loadAmortizationPlan(): void {
     this.amortizationService.getPlan(this.contractId).subscribe({
       next: (response) => {
         const payload = response.data ?? response;
-        const plan = Array.isArray(payload) ? payload : (payload.rows ?? []);
+        const plan = Array.isArray(payload) ? payload : payload.rows ?? [];
 
         if (Array.isArray(plan) && plan.length === 0) {
           this.generatePlan();
@@ -70,12 +94,13 @@ export class AmortizationComponent implements OnInit {
         }
 
         this.amortizationPlan = plan;
+        this.selection.setPlan(this.amortizationPlan);
         this.isLoading = false;
         this.cdr.detectChanges();
       },
       error: () => {
         this.isLoading = false;
-      }
+      },
     });
   }
 
@@ -89,55 +114,11 @@ export class AmortizationComponent implements OnInit {
         anchor.click();
         window.URL.revokeObjectURL(url);
       },
-      error: () => {
-        // noop
-      }
+      error: () => undefined,
     });
   }
 
-  private syncInitialFeeStatusFromPayment(amount: number) {
-    if (!this.amortizationPlan.length) return;
-
-    const contractDownPayment = Number(this.contractData?.down_payment_pactada || 0);
-    const currentPaid = this.initialFeePaid + Number(amount || 0);
-    const nextStatus = currentPaid >= contractDownPayment
-      ? 'pagada'
-      : currentPaid > 0
-        ? 'parcial'
-        : 'sin_pagar';
-
-    this.amortizationPlan = this.amortizationPlan.map((fee: any) => {
-      if (fee.installment_number !== 0) return fee;
-
-      return {
-        ...fee,
-        status: nextStatus,
-        installment_value: Number(fee.installment_value || contractDownPayment)
-      };
-    });
-  }
-
-  private syncSelectedPaymentRowsFromBackend() {
-    const selectedNumbers = this.selectedFees.map((fee: any) => Number(fee.installment_number));
-
-    if (!selectedNumbers.length) {
-      this.loadAmortizationPlan();
-      return;
-    }
-
-    this.amortizationService.getPlan(this.contractId).subscribe({
-      next: (response) => {
-        const plan = response.data || [];
-        this.amortizationPlan = plan;
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        this.loadAmortizationPlan();
-      }
-    });
-  }
-
-  generatePlan() {
+  generatePlan(): void {
     this.isGenerating = true;
     this.amortizationService.generatePlan(this.contractId).subscribe({
       next: () => {
@@ -146,18 +127,19 @@ export class AmortizationComponent implements OnInit {
       },
       error: () => {
         this.isGenerating = false;
-      }
+      },
     });
   }
 
-  calculateFinancials() {
-    if (!this.contractData) return;
+  calculateFinancials(): void {
+    if (!this.contractData) {
+      return;
+    }
 
     const salePrice = Number(this.contractData.sale_price) || 0;
     const downPayment = Number(this.contractData.down_payment_pactada) || 0;
     const months = Number(this.contractData.term_months) || 0;
     const interestRate = Number(this.contractData.interest_rate) || 0;
-
     const principal = salePrice - downPayment;
 
     if (principal > 0 && months > 0) {
@@ -168,104 +150,50 @@ export class AmortizationComponent implements OnInit {
     }
   }
 
+  setDefaultView(): void {
+    this.currentView = this.contractData?.status === 'preventa_inactiva' ? 'preventa' : 'venta';
+  }
+
   isFeeSelectable(fee: any): boolean {
-    const status = this.getFeeStatus(fee);
-    return status !== 'pagada';
+    return this.financials.isFeeSelectable(fee, this.amortizationPlan, this.contractData);
   }
 
-  // ==========================================
-  // LÓGICA DE SELECCIÓN Y SUMA (AQUÍ ESTÁ LA MAGIA)
-  // ==========================================
-  toggleFeeSelection(fee: any, event: any) {
-    const status = this.getFeeStatus(fee)?.toLowerCase() ?? '';
-    const rawStatus = String(fee?.status ?? '').toLowerCase();
-
-    if (status === 'pagada' || rawStatus === 'paid' || !this.isFeeSelectable(fee)) {
-      if (event?.target) {
-        event.target.checked = false;
-      }
-      this.selectedFees = this.selectedFees.filter(f => f.installment_number !== fee.installment_number);
-      return;
-    }
-
-    if (event?.target?.checked) {
-      this.selectedFees = [...this.selectedFees, fee];
-    } else {
-      this.selectedFees = this.selectedFees.filter(f => f.installment_number !== fee.installment_number);
-    }
+  toggleFeeSelection(fee: any, event: any): void {
+    this.selection.toggleFeeSelection(fee, event, this.isFeeSelectable(fee));
   }
 
-  toggleSelectAll(event: any) {
-    const isChecked = !!event?.target?.checked;
+  onInstallmentSelectionChange(selected: any[]): void {
+    this.selectedFees = selected;
+  }
 
-    if (isChecked) {
-      this.selectedFees = this.amortizationPlan.filter((fee: any) => {
-        const status = this.getFeeStatus(fee)?.toLowerCase() ?? '';
-        const rawStatus = String(fee?.status ?? '').toLowerCase();
-        return status !== 'pagada' && rawStatus !== 'paid';
-      });
-    } else {
-      this.selectedFees = [];
-    }
+  toggleSelectAll(event: any): void {
+    this.selection.toggleSelectAll(event, this.amortizationPlan, (item: any) => this.isFeeSelectable(item));
   }
 
   allInstallmentsPaid(): boolean {
     return this.amortizationPlan.length > 0 && this.amortizationPlan.every((fee: any) => {
-      const status = this.getFeeStatus(fee)?.toLowerCase() ?? '';
-      const rawStatus = String(fee?.status ?? '').toLowerCase();
-      return status === 'pagada' || rawStatus === 'paid';
+      const status = this.getFeeStatus(fee).toLowerCase();
+      return status === 'pagada' || status === 'paid';
     });
   }
 
   isSelected(fee: any): boolean {
-    return this.selectedFees.some(f => f.installment_number === fee.installment_number);
+    return this.selection.isSelected(fee);
   }
 
   getFeeDebtValue(fee: any): number {
-    const status = String(this.getFeeStatus(fee) ?? fee?.status ?? '').toLowerCase();
-
-    if (status === 'pagada' || status === 'paid') {
-      return 0;
-    }
-
-    const quotaDebt = Number(fee?.quota_debt ?? 0);
-    const installmentValue = Number(fee.installment_value ?? 0);
-    const overdueBalance = Number(fee.overdue_balance ?? 0);
-    const remainingBalance = Number(fee.remaining_balance ?? 0);
-
-    if (quotaDebt > 0) {
-      return Math.max(0, quotaDebt);
-    }
-
-    if (overdueBalance > 0) {
-      return Math.max(0, Math.min(overdueBalance, installmentValue || overdueBalance));
-    }
-
-    if (remainingBalance > 0 && remainingBalance < installmentValue) {
-      return Math.max(0, remainingBalance);
-    }
-
-    return Math.max(0, installmentValue);
+    return this.selection.getFeeDebtValue(fee);
   }
 
   get totalSelectedAmount(): number {
-    return this.selectedFees.reduce((sum, fee) => sum + this.getFeeDebtValue(fee), 0);
+    return this.selection.totalSelectedAmount;
   }
 
   get totalOverdueQuotaDebt(): number {
-    return (this.amortizationPlan ?? []).reduce((sum, fee) => {
-      const status = String(this.getFeeStatus(fee) ?? '').toLowerCase();
-      if (status === 'vencida' || status === 'overdue') {
-        return sum + this.getFeeDebtValue(fee);
-      }
-      return sum;
-    }, 0);
+    return this.selection.totalOverdueQuotaDebt;
   }
 
-// ==========================================
-  // CONTROLADOR DEL DRAWER (LEGO)
-  // ==========================================
-  openDrawer() {
+  openDrawer(): void {
     this.selectedFees = this.selectedFees.filter((fee: any) => this.isFeeSelectable(fee));
 
     if (this.selectedFees.length === 0) {
@@ -276,102 +204,54 @@ export class AmortizationComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
-  closeDrawer() {
+  closeDrawer(): void {
     this.isProcessingPayment = false;
     this.isDrawerOpen = false;
+    this.resetSelectionFlag = true;
     this.selectedFees = [];
+    this.selection.clearSelection();
     this.cdr.detectChanges();
+
+    setTimeout(() => {
+      this.resetSelectionFlag = false;
+      this.cdr.detectChanges();
+    });
   }
 
-
-  // ==========================================
-  // VISTAS: VENTA vs PREVENTA
-  // ==========================================
-  currentView: 'venta' | 'preventa' = 'venta';
-
-  // Llama a esta función dentro de loadContractData() justo después de que llegue la respuesta
-  setDefaultView() {
-    // Si el contrato viene como inactivo desde la base de datos, lo forzamos a la vista Preventa
-    if (this.contractData?.status === 'preventa_inactiva') {
-      this.currentView = 'preventa';
-    } else {
-      this.currentView = 'venta';
-    }
-  }
-
-  // --- LÓGICA DE PREVENTA ---
   get initialFee(): any {
-    return this.amortizationPlan.find(f => f.installment_number === 0);
+    return this.financials.initialFee(this.amortizationPlan, this.contractData);
   }
 
   get initialFeeTotal(): number {
-    return Number(this.initialFee?.installment_value || this.contractData?.down_payment_pactada || 0);
+    return this.financials.initialFeeTotal(this.amortizationPlan, this.contractData);
   }
 
   get initialFeeBalance(): number {
-    return Math.max(0, this.initialFeeTotal - this.initialFeePaid);
+    return this.financials.initialFeeBalance(this.amortizationPlan, this.contractData);
   }
 
   get initialFeePaid(): number {
-    const transactions = this.contractData?.transactions ?? [];
-
-    if (Array.isArray(transactions) && transactions.length > 0) {
-      return transactions
-        .filter((tx: any) => {
-          const type = String(tx.transaction_type ?? tx.type ?? '').toLowerCase();
-          return type === 'down_payment' || type === 'down-payment';
-        })
-        .reduce((sum: number, tx: any) => sum + Number(tx.amount || 0), 0);
-    }
-
-    if (!this.initialFee) return 0;
-
-    if (this.initialFee.status === 'pagada') {
-      return this.initialFeeTotal;
-    }
-
-    if (this.initialFee.status === 'parcial') {
-      return Number(this.initialFee.amount_paid || 0);
-    }
-
-    return 0;
+    return this.financials.initialFeePaid(this.amortizationPlan, this.contractData);
   }
 
   get initialFeeProgress(): number {
-    if (this.initialFeeTotal === 0) return 0;
-    
-    const progress = (this.initialFeePaid / this.initialFeeTotal) * 100;
-    
-    // Aseguramos que la barra no se desborde del 100% ni baje del 0%
-    return Math.min(100, Math.max(0, progress));
+    return this.financials.initialFeeProgress(this.amortizationPlan, this.contractData);
+  }
+
+  get activationThreshold(): number {
+    return this.financials.activationThreshold(this.contractData);
   }
 
   getFeeStatus(fee: any): string {
-    if (fee?.installment_number === 0) {
-      const paid = this.initialFeePaid;
-      const threshold = this.activationThreshold;
-
-      if (paid >= threshold) return 'pagada';
-      if (paid > 0) return 'parcial';
-      return 'sin_pagar';
-    }
-
-    return String(fee?.status || 'sin_pagar');
-  }
-
-// --- LÓGICA DE PREVENTA: activar cuando se complete la cuota inicial pactada ---
-  get activationThreshold(): number {
-    return Number(this.contractData?.down_payment_pactada || 0);
+    return this.financials.getFeeStatus(fee, this.amortizationPlan, this.contractData);
   }
 
   get totalPaidAmount(): number {
-    return (this.contractData?.transactions ?? []).reduce((sum: number, tx: any) => {
-      return sum + Number(tx.amount || 0);
-    }, 0);
+    return this.financials.totalPaidAmount(this.contractData);
   }
 
   get totalOutstandingAmount(): number {
-    return Math.max(0, this.totalWithInterest - this.totalPaidAmount);
+    return this.financials.totalOutstandingAmount(this.totalWithInterest, this.contractData);
   }
 
   get overallPendingBalance(): number {
@@ -379,13 +259,7 @@ export class AmortizationComponent implements OnInit {
   }
 
   get totalInterestPaid(): number {
-    return (this.amortizationPlan ?? []).reduce((sum: number, fee: any) => {
-      const status = this.getFeeStatus(fee);
-      if (status === 'pagada' || status === 'parcial') {
-        return sum + Number(fee.interest_value || 0);
-      }
-      return sum;
-    }, 0);
+    return this.financials.totalInterestPaid(this.amortizationPlan, this.contractData);
   }
 
   get initialPaymentTransactions(): any[] {
@@ -396,30 +270,11 @@ export class AmortizationComponent implements OnInit {
   }
 
   get overdueFees(): any[] {
-    return (this.amortizationPlan ?? [])
-      .filter((fee: any) => {
-        const status = this.getFeeStatus(fee);
-        const isActiveContract = this.contractData?.status !== 'preventa_inactiva';
-
-        if (status === 'vencida') return true;
-        if (status === 'parcial' && isActiveContract) return true;
-        return false;
-      })
-      .map((fee: any) => {
-        const installmentValue = Number(fee.installment_value || 0);
-        const remainingBalance = Number(fee.remaining_balance ?? installmentValue ?? 0);
-
-        return {
-          ...fee,
-          overdue_balance: Math.max(0, Math.min(installmentValue, Math.max(0, remainingBalance)))
-        };
-      })
-      .filter((fee: any) => Number(fee.installment_value || 0) > 0);
+    return this.financials.overdueFees(this.amortizationPlan, this.contractData);
   }
 
   get activeMoraFees(): any[] {
-    if (this.contractData?.status === 'preventa_inactiva') return [];
-    return this.overdueFees;
+    return this.financials.activeMoraFees(this.amortizationPlan, this.contractData);
   }
 
   get hasOverdueFees(): boolean {
@@ -427,7 +282,7 @@ export class AmortizationComponent implements OnInit {
   }
 
   get hasActiveMora(): boolean {
-    return this.activeMoraFees.length > 0;
+    return this.financials.hasActiveMora(this.amortizationPlan, this.contractData);
   }
 
   get regularPaymentTotal(): number {
@@ -440,10 +295,7 @@ export class AmortizationComponent implements OnInit {
   }
 
   get activeMoraDebt(): number {
-    return this.activeMoraFees.reduce((sum, fee) => {
-      const debt = this.getFeeDebtValue(fee);
-      return sum + debt;
-    }, 0);
+    return this.financials.activeMoraDebt(this.amortizationPlan, this.contractData, (fee: any) => this.getFeeDebtValue(fee));
   }
 
   get activeMoraFeeLabel(): string {
@@ -475,12 +327,10 @@ export class AmortizationComponent implements OnInit {
     return 0;
   }
 
-  // Función para abrir el cajero EXCLUSIVAMENTE para la cuota inicial
-  openPreventaPayment() {
+  openPreventaPayment(): void {
     if (!this.initialFee) return;
 
     const remainingInitialFee = this.initialFeeBalance;
-
     if (remainingInitialFee <= 0) {
       return;
     }
@@ -489,18 +339,16 @@ export class AmortizationComponent implements OnInit {
       ...this.initialFee,
       installment_value: remainingInitialFee,
       remaining_balance: remainingInitialFee,
-      overdue_balance: remainingInitialFee
+      overdue_balance: remainingInitialFee,
     }];
 
     this.openDrawer();
   }
 
-  
-
-  processPayment(paymentData: any) {
+  processPayment(paymentData: any): void {
     this.isProcessingPayment = true;
 
-    const transactionType = this.selectedFees.some(f => Number(f.installment_number) === 0)
+    const transactionType = this.selectedFees.some((fee: any) => Number(fee.installment_number) === 0)
       ? 'down_payment'
       : 'regular_payment';
 
@@ -515,9 +363,8 @@ export class AmortizationComponent implements OnInit {
     if (this.selectedFees.length) {
       this.selectedFees.forEach((fee: any) => {
         const selectedId = fee.id ?? fee.installment_number;
-        const normalizedId = Number(selectedId);
-        formData.append('installment_numbers[]', String(normalizedId));
-        formData.append('selected_installments[]', String(normalizedId));
+        formData.append('installment_numbers[]', String(Number(selectedId)));
+        formData.append('selected_installments[]', String(Number(selectedId)));
       });
     }
 
@@ -532,66 +379,33 @@ export class AmortizationComponent implements OnInit {
     this.recaudoService.registerPayment(this.contractId, formData, transactionType).subscribe({
       next: () => {
         this.isProcessingPayment = false;
-        this.isDrawerOpen = false;
-        this.selectedFees = [];
-        this.cdr.detectChanges();
+        this.closeDrawer();
 
         this.contractService.getContractById(this.contractId).subscribe({
           next: (response) => {
             this.contractData = response.data || response;
             this.setDefaultView();
             this.calculateFinancials();
-
-            if (transactionType === 'down_payment') {
-              this.syncInitialFeeStatusFromPayment(Number(paymentData.amount || 0));
-            }
-
             this.loadAmortizationPlan();
             this.cdr.detectChanges();
           },
-          error: () => {
-            if (transactionType === 'down_payment') {
-              this.syncInitialFeeStatusFromPayment(Number(paymentData.amount || 0));
-            }
-            this.loadContractData();
-          }
+          error: () => this.loadContractData(),
         });
-
       },
       error: () => {
         this.isProcessingPayment = false;
         this.cdr.detectChanges();
-      }
+      },
     });
   }
 
-  // ==========================================
-  // HELPERS (Agrega esto al final de tu clase)
-  // ==========================================
   getContractStatusLabel(status: string): string {
-    const normalized = String(status || '').toLowerCase();
-
-    switch (normalized) {
-      case 'preventa_inactiva':
-        return 'Preventa';
-      case 'activo':
-        return 'Activo';
-      case 'terminado':
-        return 'Terminado';
-      case 'rescindido':
-        return 'Rescindido';
-      default:
-        return status || 'Sin estado';
-    }
+    const pipe = new ContractStatusLabelPipe();
+    return pipe.transform(status);
   }
 
   getPaymentMethodName(method: string): string {
-    const methods: { [key: string]: string } = {
-      'transfer': 'Transferencia',
-      'cash': 'Efectivo',
-      'card': 'Tarjeta',
-      'barter': 'Permuta'
-    };
-    return methods[method] || method;
+    const pipe = new PaymentMethodNamePipe();
+    return pipe.transform(method);
   }
 }
