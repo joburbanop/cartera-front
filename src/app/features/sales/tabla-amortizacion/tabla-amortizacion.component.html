@@ -231,13 +231,6 @@
           </button>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 0.5rem; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0.2rem 0.4rem;">
-          <label for="versionSelect" style="font-size: 0.8rem; color: #475569; font-weight: 600;">Versión</label>
-          <select id="versionSelect" [ngModel]="selectedVersion" (ngModelChange)="onVersionChange($event)" style="border: none; background: transparent; outline: none; color: #0f172a; font-weight: 600; padding: 0.4rem 0.2rem;">
-            <option *ngFor="let version of availableVersions" [ngValue]="version">{{ version }}</option>
-          </select>
-        </div>
-
         <div style="display: flex; align-items: center; gap: 0.5rem;">
           <button type="button" (click)="downloadPdf('internal')" style="background: white; border: 1px solid #cbd5e1; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; color: #475569; cursor: pointer; display: flex; align-items: center; gap: 0.4rem;">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 16px; height: 16px;">
@@ -259,7 +252,14 @@
     <table class="custom-table">
       <thead>
         <tr>
-          <th style="width: 40px; text-align: center;"></th>
+          <th style="width: 40px; text-align: center;">
+            <input
+              type="checkbox"
+              class="custom-checkbox disabled:opacity-50 disabled:cursor-not-allowed"
+              [disabled]="allInstallmentsPaid()"
+              (change)="toggleSelectAll($event)"
+            />
+          </th>
           <th>Cuota</th>
           <th>Fecha Vencimiento</th>
           <th>Fecha de Pago</th>
@@ -274,10 +274,13 @@
       <tbody>
         <tr *ngFor="let fee of amortizationPlan" [ngClass]="{'row-disabled': !isFeeSelectable(fee)}">
           <td style="text-align: center;">
-            <input type="checkbox" class="custom-checkbox"
-                   [disabled]="!isFeeSelectable(fee)"
-                   [checked]="isSelected(fee)"
-                   (change)="toggleFeeSelection(fee, $event)">
+            <input
+              type="checkbox"
+              class="custom-checkbox disabled:opacity-50 disabled:cursor-not-allowed"
+              [disabled]="!isFeeSelectable(fee)"
+              [checked]="isSelected(fee)"
+              (change)="toggleFeeSelection(fee, $event)"
+            >
           </td>
 
           <td style="font-weight: 700; color: #1e293b;">

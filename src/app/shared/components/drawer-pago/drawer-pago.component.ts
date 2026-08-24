@@ -178,13 +178,18 @@ export class DrawerPagoComponent implements OnInit {
   }
 
   submit() {
+    if (this.isProcessing || this._isProcessing) {
+      return;
+    }
+
     if (this.hasSurplus && !this.paymentForm.get('surplus_action')?.value) {
       this.paymentForm.get('surplus_action')?.markAsTouched();
-      alert('Seleccione el destino del excedente antes de confirmar el pago.');
       return;
     }
 
     if (this.paymentForm.valid && this.selectedFile) {
+      this._isProcessing = true;
+
       const paymentData = {
         ...this.paymentForm.value,
         receipt: this.selectedFile,
@@ -192,11 +197,9 @@ export class DrawerPagoComponent implements OnInit {
       };
 
       this.confirmPayment.emit(paymentData);
-    } else {
-      this.paymentForm.markAllAsTouched();
-      if (!this.selectedFile) {
-        alert('Por favor, adjunte el soporte de pago (Recibo).');
-      }
+      return;
     }
+
+    this.paymentForm.markAllAsTouched();
   }
 }

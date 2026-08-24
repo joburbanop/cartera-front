@@ -30,8 +30,6 @@ export class AmortizationComponent implements OnInit {
   totalWithInterest: number = 0;
   isLoading = true;
   isGenerating = false;
-  availableVersions: number[] = [];
-  selectedVersion: number | null = null;
 
   // Variables del Cajero (Drawer)
   selectedFees: any[] = [];
@@ -60,17 +58,11 @@ export class AmortizationComponent implements OnInit {
     });
   }
 
-  loadAmortizationPlan(version?: number) {
-    this.amortizationService.getPlan(this.contractId, version).subscribe({
+  loadAmortizationPlan() {
+    this.amortizationService.getPlan(this.contractId).subscribe({
       next: (response) => {
         const payload = response.data ?? response;
         const plan = Array.isArray(payload) ? payload : (payload.rows ?? []);
-        const versions = Array.isArray(payload) ? [] : (payload.versions ?? []);
-
-        if (versions.length > 0) {
-          this.availableVersions = versions;
-          this.selectedVersion = this.selectedVersion ?? Number(versions.at(-1));
-        }
 
         if (Array.isArray(plan) && plan.length === 0) {
           this.generatePlan();
@@ -81,35 +73,24 @@ export class AmortizationComponent implements OnInit {
         this.isLoading = false;
         this.cdr.detectChanges();
       },
-      error: (err) => {
-        console.error('Error cargando plan', err);
+      error: () => {
         this.isLoading = false;
       }
     });
   }
 
-  onVersionChange(version: number | null): void {
-    if (version === null) {
-      return;
-    }
-
-    this.selectedVersion = version;
-    this.loadAmortizationPlan(version);
-  }
-
   downloadPdf(type: 'internal' | 'client' = 'internal'): void {
-    const versionToDownload = this.selectedVersion ?? this.availableVersions.at(-1) ?? 1;
-    this.amortizationService.downloadPdf(this.contractId, versionToDownload, type).subscribe({
+    this.amortizationService.downloadPdf(this.contractId, type).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
         const anchor = document.createElement('a');
         anchor.href = url;
-        anchor.download = `extracto-amortizacion-${type}-v${versionToDownload}.pdf`;
+        anchor.download = `extracto-amortizacion-${type}-v1.pdf`;
         anchor.click();
         window.URL.revokeObjectURL(url);
       },
-      error: (err) => {
-        console.error('Error descargando PDF', err);
+      error: () => {
+        // noop
       }
     });
   }
@@ -163,8 +144,7 @@ export class AmortizationComponent implements OnInit {
         this.isGenerating = false;
         this.loadAmortizationPlan();
       },
-      error: (err) => {
-        console.error('Error generando plan', err);
+      error: () => {
         this.isGenerating = false;
       }
     });
@@ -197,17 +177,44 @@ export class AmortizationComponent implements OnInit {
   // LÓGICA DE SELECCIÓN Y SUMA (AQUÍ ESTÁ LA MAGIA)
   // ==========================================
   toggleFeeSelection(fee: any, event: any) {
-    if (!this.isFeeSelectable(fee)) {
-      event.target.checked = false;
+    const status = this.getFeeStatus(fee)?.toLowerCase() ?? '';
+    const rawStatus = String(fee?.status ?? '').toLowerCase();
+
+    if (status === 'pagada' || rawStatus === 'paid' || !this.isFeeSelectable(fee)) {
+      if (event?.target) {
+        event.target.checked = false;
+      }
+      this.selectedFees = this.selectedFees.filter(f => f.installment_number !== fee.installment_number);
       return;
     }
 
-    if (event.target.checked) {
-      // AQUÍ ELIMINAMOS EL .PUSH(). ESTO OBLIGA A ANGULAR A REACCIONAR INMEDIATAMENTE
+    if (event?.target?.checked) {
       this.selectedFees = [...this.selectedFees, fee];
     } else {
       this.selectedFees = this.selectedFees.filter(f => f.installment_number !== fee.installment_number);
     }
+  }
+
+  toggleSelectAll(event: any) {
+    const isChecked = !!event?.target?.checked;
+
+    if (isChecked) {
+      this.selectedFees = this.amortizationPlan.filter((fee: any) => {
+        const status = this.getFeeStatus(fee)?.toLowerCase() ?? '';
+        const rawStatus = String(fee?.status ?? '').toLowerCase();
+        return status !== 'pagada' && rawStatus !== 'paid';
+      });
+    } else {
+      this.selectedFees = [];
+    }
+  }
+
+  allInstallmentsPaid(): boolean {
+    return this.amortizationPlan.length > 0 && this.amortizationPlan.every((fee: any) => {
+      const status = this.getFeeStatus(fee)?.toLowerCase() ?? '';
+      const rawStatus = String(fee?.status ?? '').toLowerCase();
+      return status === 'pagada' || rawStatus === 'paid';
+    });
   }
 
   isSelected(fee: any): boolean {
@@ -259,9 +266,14 @@ export class AmortizationComponent implements OnInit {
   // CONTROLADOR DEL DRAWER (LEGO)
   // ==========================================
   openDrawer() {
-    console.log('¡Clic detectado! Abriendo el cajero...'); // Para comprobar en consola
+    this.selectedFees = this.selectedFees.filter((fee: any) => this.isFeeSelectable(fee));
+
+    if (this.selectedFees.length === 0) {
+      return;
+    }
+
     this.isDrawerOpen = true;
-    this.cdr.detectChanges(); // ⚡ ¡Electrochoque! Fuerza a Angular a pintar el panel lateral
+    this.cdr.detectChanges();
   }
 
   closeDrawer() {
@@ -495,17 +507,23 @@ export class AmortizationComponent implements OnInit {
     const formData = new FormData();
     formData.append('amount', paymentData.amount);
     formData.append('transaction_date', paymentData.transaction_date);
+    formData.append('payment_date', paymentData.transaction_date);
     formData.append('payment_method', paymentData.payment_method);
     formData.append('transaction_type', transactionType);
     formData.append('payment_option', paymentData.payment_option || paymentData.surplus_action || '');
 
     if (this.selectedFees.length) {
       this.selectedFees.forEach((fee: any) => {
-        formData.append('installment_numbers[]', String(fee.installment_number));
+        const selectedId = fee.id ?? fee.installment_number;
+        const normalizedId = Number(selectedId);
+        formData.append('installment_numbers[]', String(normalizedId));
+        formData.append('selected_installments[]', String(normalizedId));
       });
     }
 
-    formData.append('receipt', paymentData.receipt);
+    if (paymentData.receipt) {
+      formData.append('receipt', paymentData.receipt);
+    }
 
     if (paymentData.bank_account_id) {
       formData.append('bank_account_id', paymentData.bank_account_id);
@@ -539,18 +557,10 @@ export class AmortizationComponent implements OnInit {
           }
         });
 
-        alert('¡Abono registrado con éxito!');
       },
-      error: (err) => {
+      error: () => {
         this.isProcessingPayment = false;
         this.cdr.detectChanges();
-        console.error('Error del API:', err);
-
-        if (err.error && err.error.message) {
-          alert('Error de validación: ' + err.error.message);
-        } else {
-          alert('Ocurrió un error inesperado al registrar el pago en el servidor.');
-        }
       }
     });
   }

@@ -11,9 +11,12 @@ export class RecaudoService {
   // Apuntamos a tu base local directamente
   private apiUrl = 'http://127.0.0.1:8000/api';
 
-  registerPayment(contractId: number, formData: FormData, transactionType: string = 'down_payment'): Observable<any> {
-    formData.append('transaction_type', transactionType);
-    return this.http.post(`${this.apiUrl}/contracts/${contractId}/transactions/down-payment`, formData);
+  registerPayment(contractId: number, formData: FormData, transactionType: string = 'regular_payment'): Observable<any> {
+    const endpoint = transactionType === 'down_payment'
+      ? `${this.apiUrl}/contracts/${contractId}/transactions/down-payment`
+      : `${this.apiUrl}/contracts/${contractId}/transactions`;
+
+    return this.http.post(endpoint, formData);
   }
 
   /**

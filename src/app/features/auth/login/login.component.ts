@@ -32,12 +32,21 @@ export class LoginComponent {
 
     this.authService.login(this.loginForm.getRawValue()).subscribe({
       next: () => {
-        this.router.navigate(['/dashboard']); 
+        this.router.navigate(['/dashboard']);
       },
       error: (err) => {
         this.isLoading = false;
-        this.errorMessage = 'Credenciales incorrectas o servidor no disponible.';
-        console.error(err);
+
+        const backendErrors = err?.error?.errors ?? null;
+        const firstMessage = backendErrors
+          ? Object.values(backendErrors).flat().find((msg: unknown) => typeof msg === 'string')
+          : null;
+
+        this.errorMessage = firstMessage
+          ? String(firstMessage)
+          : 'Credenciales incorrectas o servidor no disponible.';
+
+        console.error('Login error:', err);
       }
     });
   }
