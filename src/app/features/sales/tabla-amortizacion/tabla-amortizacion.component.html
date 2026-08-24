@@ -259,22 +259,20 @@
     <table class="custom-table">
       <thead>
         <tr>
-          <!-- CHECKBOX HEADER -->
           <th style="width: 40px; text-align: center;"></th>
           <th>Cuota</th>
-          <th>Vencimiento</th>
-          <th>Cuota Total</th>
-          <th>Interés</th>
-          <th>Capital</th>
-          <th>Deuda cuota</th>
+          <th>Fecha Vencimiento</th>
+          <th>Fecha de Pago</th>
+          <th>Cuota</th>
+          <th>Abono Extra</th>
+          <th>Intereses</th>
+          <th>Capital Pagado</th>
           <th>Saldo total pendiente</th>
           <th>Estado</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let fee of amortizationPlan" [ngClass]="{'row-disabled': !isFeeSelectable(fee)}">
-          
-          <!-- COLUMNA CHECKBOX -->
           <td style="text-align: center;">
             <input type="checkbox" class="custom-checkbox"
                    [disabled]="!isFeeSelectable(fee)"
@@ -286,10 +284,11 @@
             {{ fee.installment_number === 0 ? 'Inicial' : '#' + fee.installment_number }}
           </td>
           <td>{{ fee.due_date | date:'dd/MM/yyyy' }}</td>
+          <td>{{ fee.payment_date ? (fee.payment_date | date:'dd/MM/yyyy') : '--' }}</td>
           <td style="font-weight: 600; color: #1e293b;">$ {{ fee.installment_value | number:'1.2-2' }}</td>
+          <td style="font-weight: 600; color: #0f172a;">$ {{ (fee.extra_payment ?? 0) | number:'1.2-2' }}</td>
           <td style="color: #64748b;">$ {{ fee.interest_value | number:'1.2-2' }}</td>
           <td style="color: #059669;">$ {{ fee.principal_value | number:'1.2-2' }}</td>
-          <td style="font-weight: 600; color: #dc2626;">$ {{ getFeeDebtValue(fee) | number:'1.2-2' }}</td>
           <td style="font-weight: 600; color: #0f172a;">$ {{ (fee.remaining_balance ?? 0) | number:'1.2-2' }}</td>
           <td>
             <span class="badge-status" 
