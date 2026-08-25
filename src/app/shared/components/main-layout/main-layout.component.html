@@ -1,90 +1,118 @@
-<div style="display: flex; height: 100vh; background-color: #f4f5f7; font-family: 'Inter', sans-serif;">
+<!-- Contenedor Principal (Flex Row por defecto en :host) -->
+<div class="layout-container" style="display: contents;"> 
   
-  <!-- BARRA LATERAL OSCURA (SIDEBAR) -->
-  <aside style="width: 260px; background-color: #16202a; border-right: 1px solid #1e293b; display: flex; flex-direction: column;">
+  <!-- IZQUIERDA: Sidebar -->
+  <aside class="sidebar">
     
-    <!-- Logo y Título -->
-    <div style="display: flex; align-items: center; gap: 12px; padding: 1.5rem; margin-bottom: 1rem;">
-      <div style="width: 36px; height: 36px; background-color: #347769; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 1.1rem; letter-spacing: -0.5px;">
-        CI
-      </div>
+    <div class="brand-area">
+      <div class="logo-box">CI</div>
       <div>
-        <h2 style="margin: 0; font-size: 1.05rem; color: #ffffff; font-weight: 600;">Cartera Inmobiliaria</h2>
-        <span style="font-size: 0.75rem; color: #94a3b8;">Panel de gestión</span>
+        <h2>Cartera Inmobiliaria</h2>
+        <span>Casas y Lotes</span>
       </div>
     </div>
 
-    <!-- Navegación Plana (Sin acordeones) -->
-    <nav style="display: flex; flex-direction: column; padding: 0 1rem;">
+    <nav class="nav-menu">
       
-      <!-- Enlace: Dashboard -->
-      <a routerLink="/dashboard" routerLinkActive="active-link" class="sidebar-link">
-        <div class="bullet-icon"></div>
+      <a routerLink="/dashboard" routerLinkActive="active" class="menu-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
         Dashboard
       </a>
 
-      <!-- CATEGORÍA: INVENTARIO -->
-      <div class="sidebar-category">Inventario</div>
+      <div class="category-title">Inventario</div>
       
-      <a routerLink="/projects" routerLinkActive="active-link" class="sidebar-link">
-        <div class="bullet-icon"></div>
-        Proyectos y Lotes
+      <a routerLink="/projects" routerLinkActive="active" class="menu-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg>
+        Proyectos
       </a>
 
-     
+      <a routerLink="/lots" routerLinkActive="active" class="menu-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+        Lotes
+      </a>
 
-      <!-- CATEGORÍA: CARTERA -->
-      <div class="sidebar-category">Cartera</div>
+      <div class="category-title">Personas</div>
 
-      <a routerLink="/bank-accounts" routerLinkActive="active-link" class="sidebar-link">
-        <div class="bullet-icon"></div>
+      <a routerLink="/clientes" routerLinkActive="active" class="menu-link disabled">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        Clientes
+        <span class="badge-prox">Próx.</span>
+      </a>
+
+      <a routerLink="/usuarios" routerLinkActive="active" class="menu-link disabled">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        Usuarios
+        <span class="badge-prox">Próx.</span>
+      </a>
+
+      <div class="category-title">Cartera y Pagos</div>
+
+      <a routerLink="/bank-accounts" routerLinkActive="active" class="menu-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="21" x2="21" y2="21"></line><line x1="3" y1="10" x2="21" y2="10"></line><path d="M5 6l7-3 7 3"></path><line x1="4" y1="10" x2="4" y2="21"></line><line x1="20" y1="10" x2="20" y2="21"></line><line x1="8" y1="14" x2="8" y2="17"></line><line x1="12" y1="14" x2="12" y2="17"></line><line x1="16" y1="14" x2="16" y2="17"></line></svg>
         Cuentas bancarias
       </a>
 
-      <a routerLink="/contracts" routerLinkActive="active-link" class="sidebar-link">
-        <div class="bullet-icon"></div>
+      <a routerLink="/contracts" routerLinkActive="active" class="menu-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
         Contratos
       </a>
 
-      <a routerLink="/historial-pagos" routerLinkActive="active-link" class="sidebar-link">
-        <div class="bullet-icon"></div>
+      <a routerLink="/historial-pagos" routerLinkActive="active" class="menu-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M12 18v-6"></path><path d="M9 15l3 3 3-3"></path></svg>
         Historial de pagos
+      </a>
+
+      <a class="menu-link disabled">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+        Registrar abono
+        <span class="badge-prox">Próx.</span>
+      </a>
+
+      <a class="menu-link disabled">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        Cartera vencida
+        <span class="badge-prox">Próx.</span>
       </a>
 
     </nav>
   </aside>
 
-  <!-- CONTENIDO PRINCIPAL -->
-  <main style="flex: 1; display: flex; flex-direction: column; overflow-y: auto;">
+  <!-- DERECHA: Contenido Principal -->
+  <main class="main-wrapper">
     
-    <!-- Barra Superior (Header Rediseñado según el Mockup) -->
-    <header style="padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; background: white; height: 70px; box-sizing: border-box;">
+    <header class="top-bar">
+       <!-- Reemplaza tu div .breadcrumbs actual por esto -->
+      <nav class="breadcrumbs">
+        <ng-container *ngFor="let crumb of breadcrumbs; let last = last">
+          
+          <!-- Usa [routerLink] con corchetes porque crumb.url es una variable -->
+          <a *ngIf="!last" [routerLink]="crumb.url" class="breadcrumb-link">
+            {{ crumb.label }}
+          </a>
+          
+          <span *ngIf="!last" class="breadcrumb-separator">/</span>
+          
+          <!-- El último no lleva enlace -->
+          <span *ngIf="last" class="breadcrumb-current">{{ crumb.label }}</span>
+          
+        </ng-container>
+      </nav>
        
-       <!-- Breadcrumbs (Migas de pan) -->
-       <div style="color: #64748b; font-size: 0.95rem;">
-         Inventario / <span style="color: #1e293b; font-weight: 600;">Proyectos y Lotes</span>
-       </div>
-       
-       <!-- Lado Derecho: Buscador y Usuario -->
-       <div style="display: flex; align-items: center; gap: 1rem;">
-         
-         <!-- Buscador Gris -->
-         <div style="position: relative;">
-           <input type="text" placeholder="Buscar proyecto..." style="background: #f1f5f9; border: 1px solid #e2e8f0; padding: 0.55rem 1rem; border-radius: 8px; font-size: 0.85rem; width: 220px; outline: none; color: #334155;">
+       <div class="actions-right">
+         <div class="search-box">
+           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+           <input type="text" placeholder="Buscar cliente o proyecto...">
          </div>
 
-         <!-- Avatar de Usuario -->
-         <div style="width: 36px; height: 36px; background: #e0f2fe; color: #0369a1; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem; cursor: pointer; border: 1px solid #bae6fd;">
-           JD
+         <div class="user-profile">
+           <div class="avatar">JD</div>
          </div>
        </div>
     </header>
 
-    <!-- Inyección de las Vistas (Tus formularios y tablas aparecerán aquí) -->
-    <div style="padding: 2rem;">
+    <section class="content-area">
       <router-outlet></router-outlet>
-    </div>
+    </section>
 
   </main>
-
 </div>

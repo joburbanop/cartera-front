@@ -47,11 +47,19 @@ export class LotsComponent implements OnInit {
   ngOnInit(): void {
     this.loadProjects();
 
-    // 1. Leer la URL para ver si llegamos desde el Dashboard
-    this.route.queryParams.subscribe(params => {
-      if (params['projectId']) {
-        this.selectProject(Number(params['projectId']));
+    this.route.paramMap.subscribe(params => {
+      const routeProjectId = params.get('projectId');
+      const queryProjectId = this.route.snapshot.queryParamMap.get('projectId');
+      const selectedProjectId = routeProjectId ? Number(routeProjectId) : queryProjectId ? Number(queryProjectId) : null;
+
+      if (selectedProjectId) {
+        this.selectProject(selectedProjectId);
+        return;
       }
+
+      this.selectedProjectId = null;
+      this.activeProject = null;
+      this.loadLots();
     });
   }
 
@@ -98,22 +106,40 @@ export class LotsComponent implements OnInit {
   }
 
   loadLots() {
-    if (!this.selectedProjectId) return;
-    
-    this.lotService.getLotsByProject(this.selectedProjectId).subscribe({
+    const request$ = this.selectedProjectId
+      ? this.lotService.getLotsByProject(this.selectedProjectId)
+      : this.lotService.getAllLots();
+
+    request$.subscribe({
       next: (response) => {
-        // Extracción inteligente
         let allLots: any[] = [];
+
         if (Array.isArray(response)) {
           allLots = response;
-        } else if (response.data && Array.isArray(response.data)) {
+        } else if (response?.data && Array.isArray(response.data)) {
           allLots = response.data;
-        } else if (response.data?.data && Array.isArray(response.data.data)) {
+        } else if (response?.data?.data && Array.isArray(response.data.data)) {
           allLots = response.data.data;
         }
 
         this.lots = allLots;
-        this.calculateProjectKPIs(); // Calculamos métricas
+
+        if (this.selectedProjectId) {
+          this.calculateProjectKPIs();
+        } else {
+          this.projectTotalLots = this.lots.length;
+          this.projectAvailableLots = this.lots.filter(lot => {
+            const status = typeof lot.status === 'object' ? (lot.status?.value || lot.status?.name) : lot.status;
+            return String(status).toLowerCase().trim() === 'disponible';
+          }).length;
+          this.projectTotalValue = this.lots.reduce((sum, lot) => sum + Number(lot.list_price || 0), 0);
+        }
+
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error cargando lotes', err);
+        this.lots = [];
         this.cdr.detectChanges();
       }
     });

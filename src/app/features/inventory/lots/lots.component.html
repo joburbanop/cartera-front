@@ -49,23 +49,15 @@
 <div>
 
   <!-- BARRA DE NAVEGACIÓN SUPERIOR -->
-  <div class="top-navigation">
+  <div class="top-navigation" *ngIf="selectedProjectId">
     <a routerLink="/projects" class="back-link">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 16px; height: 16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" /></svg>
       Volver a Proyectos
     </a>
-    
-   
-  </div>
-
-  <!-- PANTALLA VACÍA (Si no hay ID) -->
-  <div *ngIf="!selectedProjectId" style="text-align: center; padding: 4rem; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">
-    <h3 style="color: #1e293b; margin-bottom: 0.5rem;">Ningún proyecto seleccionado</h3>
-    <p style="color: #64748b;">Selecciona un proyecto en la barra superior para gestionar su inventario.</p>
   </div>
 
   <!-- CONTENIDO DEL PROYECTO (Si hay ID) -->
-  <div *ngIf="selectedProjectId">
+  <div>
     
     <!-- Cabecera del Proyecto -->
     <div class="header-section">
@@ -101,25 +93,28 @@
     </div>
 
     <!-- Tabla de Lotes -->
-<!-- Tabla de Lotes -->
     <div class="table-container">
       <table class="custom-table">
         <thead>
           <tr>
+            <th>Proyecto</th>
             <th>Identificador</th>
             <th>Dimensiones</th>
             <th>Precio de Lista</th>
             <th>Estado</th>
-            <th>Contrato</th> <!-- NUEVA COLUMNA -->
+            <th>Contrato</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
           <tr *ngIf="lots.length === 0">
-            <td colspan="6" style="text-align: center; color: #94a3b8; padding: 3rem;">No hay lotes en este proyecto.</td>
+            <td colspan="7" style="text-align: center; color: #94a3b8; padding: 3rem;">No hay lotes registrados.</td>
           </tr>
-          
+
           <tr *ngFor="let lot of lots">
+            <td>
+              <span style="color: #1e293b; font-weight: 600;">{{ lot.project?.name || 'Sin asignar' }}</span>
+            </td>
             <td>
               <div class="lot-name">Lote {{ lot.number }}</div>
               <div class="lot-detail">ID: #{{ lot.id }}</div>
@@ -131,17 +126,15 @@
               <span style="color: #1e293b; font-weight: 500;">$ {{ lot.list_price | number }}</span>
             </td>
             <td>
-              <span class="badge-status" 
+              <span class="badge-status"
                     [ngClass]="{'badge-green': lot.status === 'disponible', 'badge-yellow': lot.status === 'preventa' || lot.status === 'reservado', 'badge-red': lot.status === 'vendido'}">
                 {{ lot.status }}
               </span>
             </td>
-            
-            <!-- NUEVA CELDA: CONTRATO -->
+
             <td>
-              <!-- Si NO está disponible, mostramos el link al contrato -->
-              <a *ngIf="lot.status !== 'disponible'" 
-                 [routerLink]="['/contracts']" 
+              <a *ngIf="lot.status !== 'disponible'"
+                 [routerLink]="['/contracts']"
                  [queryParams]="{ lotId: lot.id }"
                  title="Ir a Contratos"
                  style="display: inline-flex; align-items: center; gap: 0.25rem; color: #0284c7; font-size: 0.85rem; font-weight: 600; text-decoration: none; cursor: pointer;">
@@ -150,8 +143,7 @@
                 </svg>
                 Ver contrato
               </a>
-              
-              <!-- Si está disponible, mostramos texto gris -->
+
               <span *ngIf="lot.status === 'disponible'" style="color: #94a3b8; font-size: 0.85rem;">
                 Sin contrato
               </span>
@@ -159,7 +151,6 @@
 
             <td>
               <div class="action-buttons">
-                <!-- Botón para Editar Lote -->
                 <button class="action-btn" title="Editar Lote">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 18px; height:18px;">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />

@@ -9,17 +9,25 @@ export class LotService {
   private http = inject(HttpClient);
   private apiUrl = 'http://127.0.0.1:8000/api/lots';
 
-  // Obtenemos los lotes filtrados por proyecto
+  getLots(projectId?: number): Observable<any> {
+    const params: Record<string, string | number> = {};
+
+    if (projectId) {
+      params['project_id'] = projectId;
+    }
+
+    return this.http.get(this.apiUrl, { params });
+  }
+
   getLotsByProject(projectId: number): Observable<any> {
-    return this.http.get(`${this.apiUrl}?project_id=${projectId}`);
+    return this.getLots(projectId);
   }
 
   createLot(data: any): Observable<any> {
     return this.http.post(this.apiUrl, data);
   }
-  // Obtener todos los lotes sin filtro de proyecto (Para el KPI general)
-  getAllLots(): Observable<any> {
-    return this.http.get(this.apiUrl);
-  }
 
+  getAllLots(): Observable<any> {
+    return this.getLots();
+  }
 }
