@@ -82,7 +82,7 @@ export class AmortizationComponent implements OnInit {
     });
   }
 
-  loadAmortizationPlan(): void {
+  cargarTablaAmortizacion(): void {
     this.amortizationService.getPlan(this.contractId).subscribe({
       next: (response) => {
         const payload = response.data ?? response;
@@ -102,6 +102,10 @@ export class AmortizationComponent implements OnInit {
         this.isLoading = false;
       },
     });
+  }
+
+  loadAmortizationPlan(): void {
+    this.cargarTablaAmortizacion();
   }
 
   downloadPdf(type: 'internal' | 'client' = 'internal'): void {
@@ -345,7 +349,7 @@ export class AmortizationComponent implements OnInit {
     this.openDrawer();
   }
 
-  processPayment(paymentData: any): void {
+  procesarPago(paymentData: any): void {
     this.isProcessingPayment = true;
 
     const transactionType = this.selectedFees.some((fee: any) => Number(fee.installment_number) === 0)
@@ -353,12 +357,17 @@ export class AmortizationComponent implements OnInit {
       : 'regular_payment';
 
     const formData = new FormData();
-    formData.append('amount', paymentData.amount);
-    formData.append('transaction_date', paymentData.transaction_date);
-    formData.append('payment_date', paymentData.transaction_date);
-    formData.append('payment_method', paymentData.payment_method);
+
+    formData.append('amount', String(paymentData.amount ?? 0));
+    formData.append('payment_method', paymentData.payment_method ?? '');
+    formData.append('transaction_date', paymentData.transaction_date ?? '');
+    formData.append('payment_date', paymentData.transaction_date ?? '');
     formData.append('transaction_type', transactionType);
-    formData.append('payment_option', paymentData.payment_option || paymentData.surplus_action || '');
+
+    const paymentOption = paymentData.payment_option ?? paymentData.surplus_action;
+    if (paymentOption) {
+      formData.append('payment_option', String(paymentOption));
+    }
 
     if (this.selectedFees.length) {
       this.selectedFees.forEach((fee: any) => {
@@ -368,34 +377,40 @@ export class AmortizationComponent implements OnInit {
       });
     }
 
-    if (paymentData.receipt) {
-      formData.append('receipt', paymentData.receipt);
+    if (paymentData.bank_account_id) {
+      formData.append('bank_account_id', String(paymentData.bank_account_id));
     }
 
-    if (paymentData.bank_account_id) {
-      formData.append('bank_account_id', paymentData.bank_account_id);
+    if (paymentData.receipt) {
+      formData.append('receipt', paymentData.receipt);
     }
 
     this.recaudoService.registerPayment(this.contractId, formData, transactionType).subscribe({
       next: () => {
         this.isProcessingPayment = false;
-        this.closeDrawer();
+        this.isDrawerOpen = false;
+        this.selection.clearSelection();
+        this.selectedFees = [];
 
-        this.contractService.getContractById(this.contractId).subscribe({
-          next: (response) => {
-            this.contractData = response.data || response;
-            this.setDefaultView();
-            this.calculateFinancials();
-            this.loadAmortizationPlan();
-            this.cdr.detectChanges();
-          },
-          error: () => this.loadContractData(),
-        });
+        alert('Pago registrado correctamente.');
+
+        this.cargarTablaAmortizacion();
+        this.loadContractData();
       },
-      error: () => {
+      error: (err) => {
         this.isProcessingPayment = false;
+
+        const backendErrors = err?.error?.errors ?? null;
+        const firstMessage = backendErrors
+          ? Object.values(backendErrors)
+              .flat()
+              .find((msg: unknown) => typeof msg === 'string')
+          : null;
+
+        alert(firstMessage ? String(firstMessage) : 'No se pudo registrar el pago.');
+        console.error('Error al registrar pago:', err);
         this.cdr.detectChanges();
-      },
+      }
     });
   }
 

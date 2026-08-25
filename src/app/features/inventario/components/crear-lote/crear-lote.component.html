@@ -1,0 +1,54 @@
+<section class="crear-lote-card">
+  <div class="header">
+    <div>
+      <p class="eyebrow">Inventario</p>
+      <h2>Registrar nuevo lote</h2>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert-error">
+    {{ errorMessage }}
+  </div>
+
+  <div *ngIf="successMessage" class="alert-success">
+    {{ successMessage }}
+  </div>
+
+  <form [formGroup]="lotForm" (ngSubmit)="onSubmit()" class="form-grid">
+    <div class="field">
+      <label for="project_id">Proyecto</label>
+      <select id="project_id" formControlName="project_id">
+        <option value="">Seleccione un proyecto</option>
+        <option *ngFor="let project of projects" [value]="project.id">
+          {{ project.name }}
+        </option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="number">Número del lote</label>
+      <input id="number" type="text" formControlName="number" placeholder="Ej: L-101" />
+    </div>
+
+    <div class="field">
+      <label for="area_m2">Área (m²)</label>
+      <input id="area_m2" type="number" min="0" step="0.01" formControlName="area_m2" placeholder="0.00" />
+    </div>
+
+    <div class="field">
+      <label for="price_m2">Precio por m²</label>
+      <input id="price_m2" type="number" min="0" step="0.01" formControlName="price_m2" placeholder="0.00" />
+    </div>
+
+    <div class="field full-width">
+      <label for="list_price">Precio de lista</label>
+      <input id="list_price" type="number" min="0" step="0.01" formControlName="list_price" placeholder="0.00" />
+    </div>
+
+    <div class="actions full-width">
+      <button type="submit" class="btn-primary" [disabled]="lotForm.invalid || isLoading">
+        {{ isLoading ? 'Guardando...' : 'Guardar' }}
+      </button>
+    </div>
+  </form>
+</section>

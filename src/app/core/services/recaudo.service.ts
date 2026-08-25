@@ -12,9 +12,13 @@ export class RecaudoService {
   private apiUrl = 'http://127.0.0.1:8000/api';
 
   registerPayment(contractId: number, formData: FormData, transactionType: string = 'regular_payment'): Observable<any> {
+    if (!formData.has('contract_id')) {
+      formData.append('contract_id', contractId.toString());
+    }
+
     const endpoint = transactionType === 'down_payment'
       ? `${this.apiUrl}/contracts/${contractId}/transactions/down-payment`
-      : `${this.apiUrl}/contracts/${contractId}/transactions`;
+      : `${this.apiUrl}/collections/cascade`;
 
     return this.http.post(endpoint, formData);
   }
