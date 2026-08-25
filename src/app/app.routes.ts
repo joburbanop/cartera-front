@@ -39,6 +39,10 @@ export const routes: Routes = [
         path:'amortization/:id',
         loadComponent: () => import('./features/sales/tabla-amortizacion/tabla-amortizacion.component').then(m => m.AmortizationComponent)
       },
+      {
+        path: 'historial-pagos',
+        loadComponent: () => import('./features/sales/historial-pagos/historial-pagos.component').then(m => m.HistorialPagosComponent)
+      },
 
       {
         path: '',

@@ -1,0 +1,67 @@
+<section style="display: flex; flex-direction: column; gap: 1.5rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+    <div>
+      <div style="font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b;">Cartera</div>
+      <h2 style="margin: 0.25rem 0 0; font-size: 2rem; color: #0f172a; font-weight: 800;">Historial de Pagos</h2>
+    </div>
+  </div>
+
+  <div style="background: white; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1rem 1.25rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: end;">
+    <div style="display: flex; flex-direction: column; gap: 0.4rem; min-width: 220px;">
+      <label style="font-size: 0.75rem; font-weight: 700; color: #475569;">Cliente</label>
+      <input type="text" [(ngModel)]="customerId" placeholder="ID del cliente" style="padding: 0.7rem 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem;" />
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 0.4rem; min-width: 220px;">
+      <label style="font-size: 0.75rem; font-weight: 700; color: #475569;">Lote</label>
+      <input type="text" [(ngModel)]="lotId" placeholder="ID del lote" style="padding: 0.7rem 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem;" />
+    </div>
+
+    <button class="btn-primary" (click)="applyFilters()" [disabled]="isLoading">
+      {{ isLoading ? 'Cargando...' : 'Filtrar' }}
+    </button>
+  </div>
+
+  <div style="background: white; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden;">
+    <div style="overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; min-width: 980px;">
+        <thead>
+          <tr style="background: #f8fafc; color: #475569; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.06em;">
+            <th style="padding: 0.9rem 1rem; text-align: left; border-bottom: 1px solid #e2e8f0;">Fecha</th>
+            <th style="padding: 0.9rem 1rem; text-align: left; border-bottom: 1px solid #e2e8f0;">Cliente</th>
+            <th style="padding: 0.9rem 1rem; text-align: left; border-bottom: 1px solid #e2e8f0;">Lote</th>
+            <th style="padding: 0.9rem 1rem; text-align: left; border-bottom: 1px solid #e2e8f0;">Tipo</th>
+            <th style="padding: 0.9rem 1rem; text-align: left; border-bottom: 1px solid #e2e8f0;">Método</th>
+            <th style="padding: 0.9rem 1rem; text-align: left; border-bottom: 1px solid #e2e8f0;">Monto</th>
+            <th style="padding: 0.9rem 1rem; text-align: right; border-bottom: 1px solid #e2e8f0;">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody *ngIf="transactions.length; else emptyState">
+          <tr *ngFor="let tx of transactions" style="border-bottom: 1px solid #edf2f7;">
+            <td style="padding: 0.9rem 1rem; color: #1e293b;">{{ tx.created_at || tx.transaction_date || '--' }}</td>
+            <td style="padding: 0.9rem 1rem; color: #1e293b;">{{ tx.customer_name || 'Sin Cliente' }}</td>
+            <td style="padding: 0.9rem 1rem; color: #1e293b;">{{ tx.lot_number || 'Sin Lote' }}</td>
+            <td style="padding: 0.9rem 1rem; color: #1e293b;">{{ tx.transaction_type === 'down_payment' ? 'Cuota Inicial' : tx.transaction_type === 'regular_payment' ? 'Cuota Regular' : (tx.transaction_type || '--') }}</td>
+            <td style="padding: 0.9rem 1rem; color: #1e293b; text-transform: capitalize;">{{ tx.payment_method || '--' }}</td>
+            <td style="padding: 0.9rem 1rem; color: #0f172a; font-weight: 700;">$ {{ tx.amount | number:'1.0-0' }}</td>
+            <td style="padding: 0.9rem 1rem; text-align: right;">
+              <button *ngIf="tx.receipt" type="button" class="btn-outline" (click)="verComprobante(tx.receipt)">Ver Recibo</button>
+              <span *ngIf="!tx.receipt" style="color: #94a3b8; font-size: 0.8rem;">Sin recibo</span>
+            </td>
+          </tr>
+        </tbody>
+
+        <ng-template #emptyState>
+          <tbody>
+            <tr>
+              <td colspan="7" style="padding: 2rem 1rem; text-align: center; color: #64748b;">
+                No hay transacciones para mostrar.
+              </td>
+            </tr>
+          </tbody>
+        </ng-template>
+      </table>
+    </div>
+  </div>
+</section>

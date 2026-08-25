@@ -51,6 +51,8 @@ export class AmortizationComponent implements OnInit {
   isProcessingPayment = false;
   currentView: 'venta' | 'preventa' = 'venta';
   resetSelectionFlag = false;
+  transactions: any[] = [];
+  isHistoryModalOpen = false;
 
   get selectedFees(): any[] {
     return this.selection.selectedFees;
@@ -264,6 +266,32 @@ export class AmortizationComponent implements OnInit {
 
   get totalInterestPaid(): number {
     return this.financials.totalInterestPaid(this.amortizationPlan, this.contractData);
+  }
+
+  abrirHistorialPagos(): void {
+    this.recaudoService.getTransactionsByContract(this.contractId).subscribe({
+      next: (response) => {
+        const payload = response?.data ?? response ?? [];
+        this.transactions = Array.isArray(payload) ? payload : [];
+        this.isHistoryModalOpen = true;
+      },
+      error: () => {
+        this.transactions = [];
+        this.isHistoryModalOpen = true;
+      },
+    });
+  }
+
+  cerrarHistorialPagos(): void {
+    this.isHistoryModalOpen = false;
+  }
+
+  verComprobante(receiptUrl: string): void {
+    if (!receiptUrl) {
+      return;
+    }
+
+    window.open(receiptUrl, '_blank');
   }
 
   get initialPaymentTransactions(): any[] {

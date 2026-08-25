@@ -9,11 +9,54 @@
       </svg>
       Volver a Contratos
     </a>
-    
-    <!-- SWITCH (Segmented Control) -->
-    <div class="view-switch">
-      <button [class.active]="currentView === 'venta'" (click)="currentView = 'venta'">Venta</button>
-      <button [class.active]="currentView === 'preventa'" (click)="currentView = 'preventa'">Preventa</button>
+
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <button class="btn-outline" (click)="abrirHistorialPagos()">Ver Historial de Pagos</button>
+      <div class="view-switch">
+        <button [class.active]="currentView === 'venta'" (click)="currentView = 'venta'">Venta</button>
+        <button [class.active]="currentView === 'preventa'" (click)="currentView = 'preventa'">Preventa</button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="isHistoryModalOpen" class="modal-overlay" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: flex; align-items: center; justify-content: center; z-index: 1200; padding: 1rem;">
+    <div style="background: white; border-radius: 16px; width: min(900px, 100%); max-height: 80vh; overflow: auto; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-bottom: 1px solid #e2e8f0;">
+        <h3 style="margin: 0; color: #0f172a; font-size: 1.2rem;">Historial de Pagos</h3>
+        <button (click)="cerrarHistorialPagos()" style="border: none; background: transparent; font-size: 1.5rem; cursor: pointer; color: #475569;">✕</button>
+      </div>
+
+      <div style="padding: 1.5rem;">
+        <div *ngIf="transactions.length === 0" style="padding: 1.2rem; color: #64748b; text-align: center;">
+          No hay transacciones registradas para este contrato.
+        </div>
+
+        <div *ngIf="transactions.length > 0" style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; min-width: 700px;">
+            <thead>
+              <tr style="background-color: #f8fafc; color: #475569; text-align: left; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                <th style="padding: 0.9rem 0.75rem; border-bottom: 1px solid #e2e8f0;">Fecha</th>
+                <th style="padding: 0.9rem 0.75rem; border-bottom: 1px solid #e2e8f0;">Monto</th>
+                <th style="padding: 0.9rem 0.75rem; border-bottom: 1px solid #e2e8f0;">Tipo</th>
+                <th style="padding: 0.9rem 0.75rem; border-bottom: 1px solid #e2e8f0;">Método</th>
+                <th style="padding: 0.9rem 0.75rem; border-bottom: 1px solid #e2e8f0; text-align: right;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let t of transactions" style="border-bottom: 1px solid #edf2f7;">
+                <td style="padding: 0.9rem 0.75rem; color: #1e293b;">{{ t.transaction_date || t.created_at || '--' }}</td>
+                <td style="padding: 0.9rem 0.75rem; color: #0f172a; font-weight: 700;">$ {{ t.amount | number:'1.0-0' }}</td>
+                <td style="padding: 0.9rem 0.75rem; color: #334155;">{{ t.transaction_type }}</td>
+                <td style="padding: 0.9rem 0.75rem; color: #334155;">{{ t.payment_method }}</td>
+                <td style="padding: 0.9rem 0.75rem; text-align: right;">
+                  <button *ngIf="t.receipt" type="button" class="btn-outline" (click)="verComprobante(t.receipt)">Ver Recibo</button>
+                  <span *ngIf="!t.receipt" style="color: #94a3b8; font-size: 0.8rem;">Sin recibo</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 

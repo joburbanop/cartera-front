@@ -30,4 +30,13 @@ export class RecaudoService {
   registerDownPayment(contractId: number, formData: FormData): Observable<any> {
     return this.registerPayment(contractId, formData, 'down_payment');
   }
+
+  getTransactionsByContract(contractId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/contracts/${contractId}/transactions`);
+  }
+
+  getAllTransactions(filters?: any): Observable<any> {
+    const params = filters ? { ...filters } : {};
+    return this.http.get(`${this.apiUrl}/transactions`, { params });
+  }
 }
