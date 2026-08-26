@@ -12,6 +12,8 @@ import { AmortizationSelectionService } from './amortization-selection.service';
 import { ContractStatusLabelPipe } from '../../../shared/pipes/contract-status-label.pipe';
 import { PaymentMethodNamePipe } from '../../../shared/pipes/payment-method-name.pipe';
 import { AmortizationTablePresenterComponent } from '../../../shared/components/amortization-table-presenter/amortization-table-presenter.component';
+import { PaymentPromiseService } from '../../../core/services/payment-promise.service';
+import { PaymentPromise } from '../../../core/models/payment-promise.model';
 
 @Component({
   selector: 'app-tabla-amortizacion',
@@ -40,8 +42,10 @@ export class AmortizationComponent implements OnInit {
   private recaudoService = inject(RecaudoService);
   private financials = inject(AmortizationFinancialsService);
   private selection = inject(AmortizationSelectionService);
+  private paymentPromiseService = inject(PaymentPromiseService);
 
   contractId!: number;
+  activeTab: 'amortizacion' | 'promesa' = 'amortizacion';
   contractData: any = null;
   amortizationPlan: any[] = [];
   totalWithInterest = 0;
@@ -53,6 +57,7 @@ export class AmortizationComponent implements OnInit {
   resetSelectionFlag = false;
   transactions: any[] = [];
   isHistoryModalOpen = false;
+  paymentPromises: PaymentPromise[] = [];
 
   get selectedFees(): any[] {
     return this.selection.selectedFees;
@@ -78,9 +83,23 @@ export class AmortizationComponent implements OnInit {
         this.contractData = response.data || response;
         this.setDefaultView();
         this.calculateFinancials();
+        this.loadPaymentPromises();
         this.cdr.detectChanges();
       },
       error: () => this.router.navigate(['/contracts']),
+    });
+  }
+
+  loadPaymentPromises(): void {
+    this.paymentPromiseService.getPromisesByContract(this.contractId).subscribe({
+      next: (response: any) => {
+        const payload = response?.data ?? response ?? [];
+        this.paymentPromises = Array.isArray(payload) ? payload : [];
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.paymentPromises = [];
+      }
     });
   }
 

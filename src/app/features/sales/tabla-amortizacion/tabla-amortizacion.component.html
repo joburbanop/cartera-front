@@ -257,17 +257,65 @@
 
   <!-- ========================================== -->
   <!-- VISTA 1: TABLA DE AMORTIZACIÓN (VENTA)     -->
-  <!-- ========================================== -->
-  <div *ngIf="!isLoading && amortizationPlan.length > 0 && currentView === 'venta'" style="margin-top: 2rem;">
-    <app-amortization-table-presenter
-      [installments]="amortizationPlan"
-      [selectable]="true"
-      [currentView]="currentView"
-      [resetSelection]="resetSelectionFlag"
-      (selectionChanged)="onInstallmentSelectionChange($event)"
-      (downloadPdf)="downloadPdf($event)"
-      (paySelected)="openDrawer()">
-    </app-amortization-table-presenter>
+  <div style="display: flex; gap: 1.5rem; border-bottom: 2px solid #e2e8f0; margin-bottom: 1.5rem; margin-top: 2rem;">
+    <button (click)="activeTab = 'amortizacion'" [style.border-bottom]="activeTab === 'amortizacion' ? '3px solid #0284c7' : '3px solid transparent'" [style.color]="activeTab === 'amortizacion' ? '#0284c7' : '#64748b'" style="background: none; border: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding: 0.75rem 0.5rem; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: all 0.2s;">
+      📊 Amortización Financiera (Cuenta Corriente)
+    </button>
+    <button (click)="activeTab = 'promesa'" [style.border-bottom]="activeTab === 'promesa' ? '3px solid #0284c7' : '3px solid transparent'" [style.color]="activeTab === 'promesa' ? '#0284c7' : '#64748b'" style="background: none; border: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding: 0.75rem 0.5rem; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: all 0.2s;">
+      📝 Cronograma Pactado (Promesa Comercial)
+    </button>
+  </div>
+
+  <div *ngIf="activeTab === 'amortizacion'">
+    <div *ngIf="!isLoading && amortizationPlan.length > 0 && currentView === 'venta'" style="margin-top: 0.5rem;">
+      <app-amortization-table-presenter
+        [installments]="amortizationPlan"
+        [selectable]="true"
+        [currentView]="currentView"
+        [resetSelection]="resetSelectionFlag"
+        (selectionChanged)="onInstallmentSelectionChange($event)"
+        (downloadPdf)="downloadPdf($event)"
+        (paySelected)="openDrawer()">
+      </app-amortization-table-presenter>
+    </div>
+  </div>
+
+  <div *ngIf="activeTab === 'promesa'" style="margin-top: 1rem; background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+    <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid #e2e8f0; background: #f8fafc; display: flex; align-items: center; justify-content: space-between;">
+      <h3 style="margin: 0; color: #0f172a; font-size: 1.05rem;">Cronograma pactado por promesa de pago</h3>
+      <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">{{ paymentPromises.length }} registros</span>
+    </div>
+
+    <div *ngIf="paymentPromises.length === 0" style="padding: 2rem 1.5rem; text-align: center; color: #64748b;">
+      No hay promesas de pago registradas para este contrato.
+    </div>
+
+    <div *ngIf="paymentPromises.length > 0" style="overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; min-width: 700px;">
+        <thead>
+          <tr style="background: #f8fafc; color: #475569; text-transform: uppercase; font-size: 0.74rem; letter-spacing: 0.05em;">
+            <th style="padding: 0.9rem 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0;">#</th>
+            <th style="padding: 0.9rem 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0;">Fecha esperada</th>
+            <th style="padding: 0.9rem 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0;">Monto</th>
+            <th style="padding: 0.9rem 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0;">Descripción</th>
+            <th style="padding: 0.9rem 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0;">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let promise of paymentPromises" style="border-bottom: 1px solid #edf2f7;">
+            <td style="padding: 0.9rem 0.75rem; color: #0f172a; font-weight: 700;">{{ promise.payment_number }}</td>
+            <td style="padding: 0.9rem 0.75rem; color: #1e293b;">{{ promise.expected_date | date:'dd/MM/yyyy' }}</td>
+            <td style="padding: 0.9rem 0.75rem; color: #0f172a; font-weight: 700;">$ {{ promise.expected_amount | number:'1.0-0' }}</td>
+            <td style="padding: 0.9rem 0.75rem; color: #334155;">{{ promise.description || 'Sin descripción' }}</td>
+            <td style="padding: 0.9rem 0.75rem;">
+              <span [style.background]="promise.is_paid ? '#dcfce7' : '#f1f5f9'" [style.color]="promise.is_paid ? '#166534' : '#475569'" [style.border]="promise.is_paid ? '1px solid #86efac' : '1px solid #cbd5e1'" style="display: inline-flex; align-items: center; padding: 0.3rem 0.65rem; border-radius: 999px; font-size: 0.76rem; font-weight: 700;">
+                {{ promise.is_paid ? 'Pagado' : 'Pendiente' }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
 
