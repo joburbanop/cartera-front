@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators, FormArray, FormGroup } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, Validators, FormArray, FormGroup, FormsModule } from '@angular/forms';
 import { ContractService } from '../../../core/services/contract.service';
 import { ProjectService } from '../../../core/services/project.service';
 import { LotService } from '../../../core/services/lot.service';
@@ -11,7 +11,7 @@ import { FinancialService } from '../../../core/services/financial.service';
 @Component({
   selector: 'app-contracts',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule],
   templateUrl: './contracts.component.html',
   styleUrl: './contracts.component.scss'
 })
@@ -37,6 +37,18 @@ export class ContractsComponent implements OnInit {
   errorMessage = '';
   projectedQuota: number = 0;
   projectedTotal: number = 0;
+
+  batchCount: number = 1;
+  batchAmount: number = 0;
+  batchStartDate: string = '';
+  batchDescription: string = 'Cuota ordinaria';
+  showBatchAssistant = false;
+  batchErrorMessage = '';
+  private lastIsCustomPlanValue = false;
+  private isProgrammaticPlanReset = false;
+
+  // Controla si la lista de cuotas generadas se muestra expandida o colapsada
+  showGeneratedPromises = true;
 
 
   // Variables para KPIs
@@ -84,6 +96,52 @@ export class ContractsComponent implements OnInit {
     }, 0);
   }
 
+  get isCustomPlan(): boolean {
+    return this.contractForm.get('is_custom_plan')?.value === true;
+  }
+
+  get saldoAFinanciar(): number {
+    const precio = Number(this.contractForm.get('sale_price')?.value ?? 0);
+    const inicial = Number(this.contractForm.get('down_payment_pactada')?.value ?? 0);
+
+    return (Math.round(precio * 100) - Math.round(inicial * 100)) / 100;
+  }
+
+  get diferenciaFinanciera(): number {
+    const saldoCents = Math.round(this.saldoAFinanciar * 100);
+    const distribuidoCents = Math.round(this.totalCustomPromises * 100);
+
+    return (saldoCents - distribuidoCents) / 100;
+  }
+
+  get hasFinancialDifference(): boolean {
+    return Math.round(this.diferenciaFinanciera * 100) !== 0;
+  }
+
+  private updatePlanModeValidators(isCustom: boolean): void {
+    const termMonthsControl = this.contractForm.get('term_months');
+    const firstInstallmentDateControl = this.contractForm.get('first_installment_date');
+    const preventaStagesControl = this.contractForm.get('preventa_stages');
+
+    if (!termMonthsControl || !firstInstallmentDateControl || !preventaStagesControl) {
+      return;
+    }
+
+    if (isCustom) {
+      termMonthsControl.clearValidators();
+      firstInstallmentDateControl.clearValidators();
+      preventaStagesControl.clearValidators();
+    } else {
+      termMonthsControl.setValidators([Validators.required, Validators.min(1)]);
+      firstInstallmentDateControl.setValidators([Validators.required]);
+      preventaStagesControl.setValidators([Validators.required, Validators.min(0)]);
+    }
+
+    termMonthsControl.updateValueAndValidity({ emitEvent: false });
+    firstInstallmentDateControl.updateValueAndValidity({ emitEvent: false });
+    preventaStagesControl.updateValueAndValidity({ emitEvent: false });
+  }
+
   addPaymentPromise(): void {
     const promiseGroup = this.fb.group({
       expected_date: ['', Validators.required],
@@ -92,10 +150,95 @@ export class ContractsComponent implements OnInit {
     });
 
     this.paymentPromises.push(promiseGroup);
+    this.showGeneratedPromises = true;
   }
 
   removePaymentPromise(index: number): void {
     this.paymentPromises.removeAt(index);
+  }
+
+  private clearPaymentPromises(): void {
+    this.paymentPromises.clear();
+    this.batchErrorMessage = '';
+    this.showGeneratedPromises = true;
+  }
+
+  private formatDateYYYYMMDD(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  }
+
+  private addMonthsSafely(baseDate: Date, monthsToAdd: number): Date {
+    const baseYear = baseDate.getFullYear();
+    const baseMonth = baseDate.getMonth();
+    const baseDay = baseDate.getDate();
+
+    const targetMonthIndex = baseMonth + monthsToAdd;
+    const targetYear = baseYear + Math.floor(targetMonthIndex / 12);
+    const targetMonth = ((targetMonthIndex % 12) + 12) % 12;
+    const lastDayOfTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+    const targetDay = Math.min(baseDay, lastDayOfTargetMonth);
+
+    return new Date(targetYear, targetMonth, targetDay);
+  }
+
+  generateBatch(): void {
+    this.batchErrorMessage = '';
+
+    const count = Number(this.batchCount);
+    const amount = Number(this.batchAmount);
+    const startDate = String(this.batchStartDate || '').trim();
+    const description = String(this.batchDescription || '').trim() || 'Cuota ordinaria';
+
+    if (!Number.isFinite(count) || count <= 0 || !Number.isInteger(count)) {
+      this.batchErrorMessage = 'La cantidad de cuotas debe ser un numero entero mayor a cero.';
+      return;
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      this.batchErrorMessage = 'El valor por cuota debe ser mayor a cero.';
+      return;
+    }
+
+    if (!startDate) {
+      this.batchErrorMessage = 'Debes seleccionar la fecha inicial del lote.';
+      return;
+    }
+
+    const baseDate = new Date(`${startDate}T00:00:00`);
+
+    if (Number.isNaN(baseDate.getTime())) {
+      this.batchErrorMessage = 'La fecha inicial no es valida.';
+      return;
+    }
+
+    const totalBatchAmount = Math.round(count * amount * 100) / 100;
+    const projectedTotal = Math.round((this.totalCustomPromises + totalBatchAmount) * 100) / 100;
+
+    if (projectedTotal > this.saldoAFinanciar) {
+      this.batchErrorMessage = 'El lote excede el saldo pendiente por financiar. Ajusta cantidad o valor por cuota.';
+      return;
+    }
+
+    for (let i = 0; i < count; i++) {
+      const calculatedDate = this.addMonthsSafely(baseDate, i);
+      const promiseGroup = this.fb.group({
+        expected_date: [this.formatDateYYYYMMDD(calculatedDate), Validators.required],
+        expected_amount: [amount, [Validators.required, Validators.min(1)]],
+        description: [description, Validators.required],
+      });
+
+      this.paymentPromises.push(promiseGroup);
+    }
+
+    this.batchCount = 1;
+    this.batchAmount = 0;
+    this.batchStartDate = '';
+    this.batchDescription = 'Cuota ordinaria';
+    this.showGeneratedPromises = true;
   }
 
   calculateKPIs() {
@@ -104,6 +247,7 @@ export class ContractsComponent implements OnInit {
       return sum + Number(contract.sale_price || 0);
     }, 0);
   }
+
   alculatePreview(values: any) {
     const salePrice = Number(values.sale_price) || 0;
     const downPayment = Number(values.down_payment_pactada) || 0;
@@ -124,8 +268,18 @@ export class ContractsComponent implements OnInit {
   }
 
   closeModal() {
+    this.isProgrammaticPlanReset = true;
     this.isModalOpen = false;
     this.contractForm.reset();
+    this.clearPaymentPromises();
+    this.batchCount = 1;
+    this.batchAmount = 0;
+    this.batchStartDate = '';
+    this.batchDescription = 'Cuota ordinaria';
+    this.showBatchAssistant = false;
+    this.showGeneratedPromises = true;
+    this.lastIsCustomPlanValue = false;
+    this.isProgrammaticPlanReset = false;
   }
 
   ngOnInit(): void {
@@ -135,15 +289,30 @@ export class ContractsComponent implements OnInit {
       this.loadContracts();
     });
 
-    this.contractForm.get('is_custom_plan')?.valueChanges.subscribe((isCustom: boolean) => {
-      if (isCustom && this.paymentPromises.length === 0) {
+    this.lastIsCustomPlanValue = this.isCustomPlan;
+
+    this.contractForm.get('is_custom_plan')?.valueChanges.subscribe((isCustom: boolean | null) => {
+      const isCustomMode = isCustom === true;
+
+      this.updatePlanModeValidators(isCustomMode);
+
+      if (isCustomMode && this.paymentPromises.length === 0) {
         this.addPaymentPromise();
       }
 
-      if (!isCustom) {
-        this.paymentPromises.clear();
+      if (
+        !isCustomMode
+        && this.lastIsCustomPlanValue
+        && !this.isProgrammaticPlanReset
+      ) {
+        this.clearPaymentPromises();
+        this.showBatchAssistant = false;
       }
+
+      this.lastIsCustomPlanValue = isCustomMode;
     });
+
+    this.updatePlanModeValidators(this.isCustomPlan);
 
     this.loadCustomers();
     this.loadProjects();
@@ -313,10 +482,23 @@ export class ContractsComponent implements OnInit {
 
   onSubmit() {
     const isCustom = Boolean(this.contractForm.get('is_custom_plan')?.value);
+    const normalizedPromises = isCustom
+      ? this.paymentPromises.value.map((promise: any, index: number) => ({
+          payment_number: index + 1,
+          expected_date: promise.expected_date,
+          expected_amount: Number(promise.expected_amount),
+          description: promise.description,
+        }))
+      : [];
 
     if (isCustom && this.paymentPromises.invalid) {
       this.paymentPromises.markAllAsTouched();
       this.errorMessage = 'Complete cada promesa de pago con fecha, monto y descripción.';
+      return;
+    }
+
+    if (isCustom && this.hasFinancialDifference) {
+      this.errorMessage = 'La suma de cuotas personalizadas debe coincidir exactamente con el saldo a financiar.';
       return;
     }
 
@@ -330,16 +512,29 @@ export class ContractsComponent implements OnInit {
     this.errorMessage = '';
 
     const formValue = this.contractForm.getRawValue();
-    const { project_id, down_payment_date, preventa_stages, ...rest } = formValue;
+    const { project_id, down_payment_date, preventa_stages, payment_promises: _paymentPromises, ...rest } = formValue;
+
+    const effectiveFirstInstallmentDate = isCustom
+      ? (down_payment_date || formValue.start_date)
+      : formValue.first_installment_date;
+
+    const effectiveTermMonths = isCustom
+      ? Math.max(1, normalizedPromises.length)
+      : Number(formValue.term_months);
+
+    const effectivePreventaStages = isCustom
+      ? 0
+      : Number(preventa_stages ?? 0);
 
     const payload = {
       ...rest,
+      term_months: effectiveTermMonths,
       initial_payment_date: down_payment_date,
-      regular_payment_start_date: formValue.first_installment_date,
-      first_installment_date: formValue.first_installment_date,
-      preventa_installments_count: preventa_stages,
+      regular_payment_start_date: effectiveFirstInstallmentDate,
+      first_installment_date: effectiveFirstInstallmentDate,
+      preventa_installments_count: effectivePreventaStages,
       is_custom_plan: isCustom,
-      payment_promises: isCustom ? this.paymentPromises.value : [],
+      promises: normalizedPromises,
     };
 
     this.contractService.createContract(payload).subscribe({
@@ -347,7 +542,11 @@ export class ContractsComponent implements OnInit {
         this.isLoading = false;
         this.successMessage = 'Contrato registrado exitosamente.';
 
+        this.isProgrammaticPlanReset = true;
         this.contractForm.reset({ interest_rate: 1.00, project_id: '', preventa_stages: 7 });
+        this.clearPaymentPromises();
+        this.lastIsCustomPlanValue = false;
+        this.isProgrammaticPlanReset = false;
         this.availableLots = [];
         this.isModalOpen = false;
 

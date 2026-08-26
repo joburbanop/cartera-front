@@ -34,6 +34,11 @@ export class LotsComponent implements OnInit {
   isLoading = false;
   isModalOpen = false;
   errorMessage = '';
+  hasProjectInRoute = false;
+
+  get isGlobalView(): boolean {
+    return !this.selectedProjectId;
+  }
 
   lotForm = this.fb.group({
     project_id: ['', Validators.required],
@@ -45,20 +50,25 @@ export class LotsComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.loadProjects();
+    this.route.queryParams.subscribe(params => {
+      const projectId = params['projectId'];
 
-    this.route.paramMap.subscribe(params => {
-      const routeProjectId = params.get('projectId');
-      const queryProjectId = this.route.snapshot.queryParamMap.get('projectId');
-      const selectedProjectId = routeProjectId ? Number(routeProjectId) : queryProjectId ? Number(queryProjectId) : null;
-
-      if (selectedProjectId) {
-        this.selectProject(selectedProjectId);
+      if (projectId) {
+        const selectedProjectId = Number(projectId);
+        this.hasProjectInRoute = true;
+        this.selectedProjectId = selectedProjectId;
+        this.lotForm.patchValue({ project_id: selectedProjectId.toString() });
+        this.activeProject = this.projects.find(p => p.id === selectedProjectId) ?? null;
+        this.loadProjects();
+        this.loadLots();
         return;
       }
 
+      this.hasProjectInRoute = false;
       this.selectedProjectId = null;
       this.activeProject = null;
+      this.lotForm.patchValue({ project_id: '' });
+      this.loadProjects();
       this.loadLots();
     });
   }
@@ -168,13 +178,21 @@ export class LotsComponent implements OnInit {
   openModal() {
     this.isModalOpen = true;
     this.errorMessage = '';
-    // Nos aseguramos de mantener el ID del proyecto y estado
-    this.lotForm.patchValue({ project_id: this.selectedProjectId?.toString(), status: 'disponible' });
+
+    const projectId = this.selectedProjectId ?? this.lotForm.get('project_id')?.value;
+    this.lotForm.patchValue({
+      project_id: projectId ? String(projectId) : '',
+      status: 'disponible'
+    });
   }
 
   closeModal() {
     this.isModalOpen = false;
-    this.lotForm.reset({ project_id: this.selectedProjectId?.toString(), status: 'disponible', price_m2: '0' });
+    this.lotForm.reset({
+      project_id: this.selectedProjectId ? String(this.selectedProjectId) : '',
+      status: 'disponible',
+      price_m2: '0'
+    });
   }
 
   // --- GUARDADO ---

@@ -257,16 +257,85 @@
 
   <!-- ========================================== -->
   <!-- VISTA 1: TABLA DE AMORTIZACIÓN (VENTA)     -->
-  <div style="display: flex; gap: 1.5rem; border-bottom: 2px solid #e2e8f0; margin-bottom: 1.5rem; margin-top: 2rem;">
-    <button (click)="activeTab = 'amortizacion'" [style.border-bottom]="activeTab === 'amortizacion' ? '3px solid #0284c7' : '3px solid transparent'" [style.color]="activeTab === 'amortizacion' ? '#0284c7' : '#64748b'" style="background: none; border: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding: 0.75rem 0.5rem; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: all 0.2s;">
-      📊 Amortización Financiera (Cuenta Corriente)
+<div style="display: flex; gap: 1.5rem; border-bottom: 2px solid #e2e8f0; margin-bottom: 1.5rem; margin-top: 2rem;">
+    <button (click)="activeTab = 'amortizacion'" [style.border-bottom]="activeTab === 'amortizacion' ? '3px solid #0284c7' : '3px solid transparent'" [style.color]="activeTab === 'amortizacion' ? '#0284c7' : '#64748b'" style="background: none; border: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding: 0.75rem 0.5rem; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.4rem;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px; flex-shrink: 0;">
+        <path d="M4 20V10M10 20V4M16 20v-7M22 20V13" />
+      </svg>
+      Amortización Financiera
     </button>
     <button (click)="activeTab = 'promesa'" [style.border-bottom]="activeTab === 'promesa' ? '3px solid #0284c7' : '3px solid transparent'" [style.color]="activeTab === 'promesa' ? '#0284c7' : '#64748b'" style="background: none; border: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding: 0.75rem 0.5rem; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: all 0.2s;">
-      📝 Cronograma Pactado (Promesa Comercial)
+       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px; flex-shrink: 0;">
+        <path d="M4 20V10M10 20V4M16 20v-7M22 20V13" />
+      </svg>
+      Cronograma Pactado en Promesa Comercial
     </button>
   </div>
 
   <div *ngIf="activeTab === 'amortizacion'">
+    <div *ngIf="!isLoading && currentView === 'preventa'" style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
+      <div *ngIf="contractData?.status === 'preventa_inactiva'" style="background-color: #fffbeb; border: 1px solid #fde68a; padding: 1rem 1.5rem; border-radius: 12px; display: flex; align-items: center; gap: 1rem; animation: fadeIn 0.4s;">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 32px; height: 32px; color: #d97706; flex-shrink: 0;">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <div>
+          <h4 style="margin: 0 0 0.2rem 0; color: #92400e; font-size: 1rem;">Contrato en Preventa Inactiva</h4>
+          <p style="margin: 0; color: #b45309; font-size: 0.85rem;">
+            Se requiere completar la cuota inicial pactada (<strong>$ {{ activationThreshold | number }}</strong>) para que el contrato pase a Activo.
+          </p>
+        </div>
+      </div>
+
+      <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+          <div>
+            <h3 style="margin: 0 0 0.25rem 0; color: #0f172a; font-size: 1.2rem;">Cuota inicial pactada</h3>
+            <p style="margin: 0; color: #64748b; font-size: 0.85rem;">Se paga por abonos, segun lo acordado en la promesa de compraventa.</p>
+          </div>
+          <button class="btn-success" (click)="openPreventaPayment()" [disabled]="initialFeeBalance === 0">
+            + Registrar abono
+          </button>
+        </div>
+
+        <div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.5rem;">
+            <span style="color: #1e293b;">Pagado: <strong>$ {{ initialFeePaid | number }}</strong></span>
+            <span style="color: #64748b;">de <strong>$ {{ activationThreshold | number }}</strong></span>
+          </div>
+
+          <div class="progress-bg">
+            <div class="progress-fill" [style.width.%]="initialFeeProgress"></div>
+          </div>
+
+          <div style="margin-top: 0.75rem; font-size: 0.85rem; color: #64748b;">
+            Saldo pendiente de cuota inicial: <strong style="color: #dc2626;">$ {{ initialFeeBalance | number }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem;">
+        <h3 style="margin: 0 0 1rem 0; color: #0f172a; font-size: 1.1rem;">Abonos registrados</h3>
+
+        <ng-container *ngIf="initialPaymentTransactions.length > 0; else noPayments">
+          <div *ngFor="let tx of initialPaymentTransactions" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 1rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #64748b; font-size: 0.9rem; text-transform: capitalize;">
+              {{ tx.transaction_date | date:'dd MMM yyyy' }} · {{ tx.payment_method | paymentMethodName }}
+            </span>
+            <strong style="color: #059669; font-size: 1rem;">$ {{ tx.amount | number:'1.0-0' }}</strong>
+          </div>
+        </ng-container>
+
+        <ng-template #noPayments>
+          <div style="text-align: center; padding: 2rem 0; color: #94a3b8; font-size: 0.9rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 32px; height: 32px; margin: 0 auto 0.5rem auto; display: block; opacity: 0.5;">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+            No hay pagos registrados aun.
+          </div>
+        </ng-template>
+      </div>
+    </div>
+
     <div *ngIf="!isLoading && amortizationPlan.length > 0 && currentView === 'venta'" style="margin-top: 0.5rem;">
       <app-amortization-table-presenter
         [installments]="amortizationPlan"
@@ -281,6 +350,33 @@
   </div>
 
   <div *ngIf="activeTab === 'promesa'" style="margin-top: 1rem; background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+    <div *ngIf="currentView === 'preventa'" style="padding: 1.25rem 1.5rem; border-bottom: 1px solid #e2e8f0; background: #fffdf7;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+        <div>
+          <h4 style="margin: 0 0 0.35rem 0; color: #0f172a; font-size: 1rem;">Cuota inicial pactada</h4>
+          <p style="margin: 0; color: #64748b; font-size: 0.82rem;">Seguimiento rapido del recaudo de preventa.</p>
+        </div>
+        <button class="btn-success" (click)="openPreventaPayment()" [disabled]="initialFeeBalance === 0">
+          + Registrar abono
+        </button>
+      </div>
+
+      <div style="margin-top: 0.8rem;">
+        <div style="display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 0.45rem;">
+          <span style="color: #1e293b;">Pagado: <strong>$ {{ initialFeePaid | number }}</strong></span>
+          <span style="color: #64748b;">de <strong>$ {{ activationThreshold | number }}</strong></span>
+        </div>
+
+        <div class="progress-bg">
+          <div class="progress-fill" [style.width.%]="initialFeeProgress"></div>
+        </div>
+
+        <div style="margin-top: 0.6rem; font-size: 0.82rem; color: #64748b;">
+          Saldo pendiente: <strong style="color: #dc2626;">$ {{ initialFeeBalance | number }}</strong>
+        </div>
+      </div>
+    </div>
+
     <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid #e2e8f0; background: #f8fafc; display: flex; align-items: center; justify-content: space-between;">
       <h3 style="margin: 0; color: #0f172a; font-size: 1.05rem;">Cronograma pactado por promesa de pago</h3>
       <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">{{ paymentPromises.length }} registros</span>
@@ -317,81 +413,6 @@
       </table>
     </div>
   </div>
-
-
-  <!-- ========================================== -->
-  <!-- VISTA 2: PREVENTA (ABONOS A CUOTA INICIAL) -->
-  <!-- ========================================== -->
-  <div *ngIf="!isLoading && currentView === 'preventa'" style="margin-top: 2rem; display: flex; flex-direction: column; gap: 1.5rem;">
-    
-    <!-- ALERTA INTELIGENTE DEL 10% (Solo se muestra si está inactiva y la vista está en preventa) -->
-    <div *ngIf="currentView === 'preventa' && contractData?.status === 'preventa_inactiva'" style="background-color: #fffbeb; border: 1px solid #fde68a; padding: 1rem 1.5rem; border-radius: 12px; display: flex; align-items: center; gap: 1rem; animation: fadeIn 0.4s;">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 32px; height: 32px; color: #d97706; flex-shrink: 0;">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-      </svg>
-      <div>
-        <h4 style="margin: 0 0 0.2rem 0; color: #92400e; font-size: 1rem;">Contrato en Preventa Inactiva</h4>
-        <p style="margin: 0; color: #b45309; font-size: 0.85rem;">
-          Se requiere completar la cuota inicial pactada (<strong>$ {{ activationThreshold | number }}</strong>) para que el contrato pase a Activo.
-        </p>
-      </div>
-    </div>
-
-    <!-- Tarjeta Principal de Preventa (solo visible cuando está en preventa) -->
-    <div *ngIf="currentView === 'preventa'" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem;">
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
-        <div>
-          <h3 style="margin: 0 0 0.25rem 0; color: #0f172a; font-size: 1.2rem;">Cuota inicial pactada</h3>
-          <p style="margin: 0; color: #64748b; font-size: 0.85rem;">Se paga por abonos, según lo acordado en la promesa de compraventa.</p>
-        </div>
-        <button class="btn-success" (click)="openPreventaPayment()" [disabled]="initialFeeBalance === 0">
-          + Registrar abono
-        </button>
-      </div>
-
-      <!-- Barra de Progreso -->
-      <div>
-        <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.5rem;">
-          <span style="color: #1e293b;">Pagado: <strong>$ {{ initialFeePaid | number }}</strong></span>
-          <span style="color: #64748b;">de <strong>$ {{ activationThreshold | number }}</strong></span>
-        </div>
-        
-        <div class="progress-bg">
-          <div class="progress-fill" [style.width.%]="initialFeeProgress"></div>
-        </div>
-        
-        <div style="margin-top: 0.75rem; font-size: 0.85rem; color: #64748b;">
-          Saldo pendiente de cuota inicial: <strong style="color: #dc2626;">$ {{ initialFeeBalance | number }}</strong>
-        </div>
-      </div>
-    </div>
-
- <!-- Historial de Abonos Registrados -->
-    <div *ngIf="currentView === 'preventa'" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem;">
-      <h3 style="margin: 0 0 1rem 0; color: #0f172a; font-size: 1.1rem;">Abonos registrados</h3>
-      
-      <!-- SI HAY ABONOS -->
-      <ng-container *ngIf="initialPaymentTransactions.length > 0; else noPayments">
-        <div *ngFor="let tx of initialPaymentTransactions" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 1rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
-          <span style="color: #64748b; font-size: 0.9rem; text-transform: capitalize;">
-            {{ tx.transaction_date | date:'dd MMM yyyy' }} · {{ tx.payment_method | paymentMethodName }}
-          </span>
-          <strong style="color: #059669; font-size: 1rem;">$ {{ tx.amount | number:'1.0-0' }}</strong>
-        </div>
-      </ng-container>
-
-      <!-- SI NO HAY ABONOS (Mensaje de estado vacío) -->
-      <ng-template #noPayments>
-        <div style="text-align: center; padding: 2rem 0; color: #94a3b8; font-size: 0.9rem;">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 32px; height: 32px; margin: 0 auto 0.5rem auto; display: block; opacity: 0.5;">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-          </svg>
-          No hay pagos registrados aún.
-        </div>
-      </ng-template>
-    </div>
-
-  </div> <!-- ¡ESTE ES EL DIV QUE FALTABA! CIERRA LA VISTA 2 (PREVENTA) -->
 
 
   <!-- ========================================== -->

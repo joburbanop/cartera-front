@@ -35,9 +35,42 @@ export class DrawerPagoComponent implements OnInit {
     amount: ['', [Validators.required, Validators.min(1)]],
     payment_method: ['transfer', Validators.required],
     bank_account_id: ['', Validators.required], // Inicia requerido porque por defecto es 'transfer'
-    transaction_date: [new Date().toISOString().substring(0, 10), Validators.required],
+    transaction_date: [this.todayIsoDate(), Validators.required],
     surplus_action: ['']
   });
+
+  private todayIsoDate(): string {
+    return new Date().toISOString().substring(0, 10);
+  }
+
+  private normalizeSelectedDate(value: unknown): string {
+    if (!value) {
+      return this.todayIsoDate();
+    }
+
+    if (value instanceof Date) {
+      return value.toISOString().substring(0, 10);
+    }
+
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+
+      if (!trimmed) {
+        return this.todayIsoDate();
+      }
+
+      if (trimmed.includes('/')) {
+        const [day, month, year] = trimmed.split('/');
+        if (day && month && year) {
+          return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
+      }
+
+      return trimmed.substring(0, 10);
+    }
+
+    return String(value).substring(0, 10);
+  }
 
   get excessAmount(): number {
     return Math.max(0, (Number(this.paymentForm.get('amount')?.value) || 0) - this.totalSelectedAmount);
@@ -164,7 +197,7 @@ export class DrawerPagoComponent implements OnInit {
       amount: this.totalSelectedAmount,
       payment_method: 'transfer',
       bank_account_id: '',
-      transaction_date: new Date().toISOString().substring(0, 10),
+      transaction_date: this.todayIsoDate(),
       surplus_action: ''
     });
     this.paymentForm.markAsPristine();
@@ -202,8 +235,13 @@ export class DrawerPagoComponent implements OnInit {
     if (this.paymentForm.valid && this.selectedFile) {
       this._isProcessing = true;
 
+      const selectedDate = this.paymentForm.get('transaction_date')?.value;
+      const normalizedDate = this.normalizeSelectedDate(selectedDate);
+
       const paymentData = {
         ...this.paymentForm.value,
+        transaction_date: normalizedDate,
+        payment_date: normalizedDate,
         receipt: this.selectedFile,
         payment_option: this.paymentForm.get('surplus_action')?.value || ''
       };

@@ -67,6 +67,18 @@ export class AmortizationComponent implements OnInit {
     this.selection.selectedFees = value ?? [];
   }
 
+  private clearTableSelection(): void {
+    this.selection.clearSelection();
+    this.selectedFees = [];
+    this.resetSelectionFlag = true;
+    this.cdr.detectChanges();
+
+    setTimeout(() => {
+      this.resetSelectionFlag = false;
+      this.cdr.detectChanges();
+    });
+  }
+
   ngOnInit(): void {
     this.route.params.subscribe((params) => {
       if (params['id']) {
@@ -115,6 +127,7 @@ export class AmortizationComponent implements OnInit {
         }
 
         this.amortizationPlan = plan;
+        this.clearTableSelection();
         this.selection.setPlan(this.amortizationPlan);
         this.isLoading = false;
         this.cdr.detectChanges();
@@ -184,6 +197,14 @@ export class AmortizationComponent implements OnInit {
   }
 
   toggleFeeSelection(fee: any, event: any): void {
+    const status = String(fee?.status ?? fee?.estado ?? '').toLowerCase();
+    if (status === 'pagada' || status === 'paid') {
+      if (event?.target) {
+        event.target.checked = false;
+      }
+      return;
+    }
+
     this.selection.toggleFeeSelection(fee, event, this.isFeeSelectable(fee));
   }
 
@@ -232,15 +253,7 @@ export class AmortizationComponent implements OnInit {
   closeDrawer(): void {
     this.isProcessingPayment = false;
     this.isDrawerOpen = false;
-    this.resetSelectionFlag = true;
-    this.selectedFees = [];
-    this.selection.clearSelection();
-    this.cdr.detectChanges();
-
-    setTimeout(() => {
-      this.resetSelectionFlag = false;
-      this.cdr.detectChanges();
-    });
+    this.clearTableSelection();
   }
 
   get initialFee(): any {
@@ -436,8 +449,7 @@ export class AmortizationComponent implements OnInit {
       next: () => {
         this.isProcessingPayment = false;
         this.isDrawerOpen = false;
-        this.selection.clearSelection();
-        this.selectedFees = [];
+        this.clearTableSelection();
 
         alert('Pago registrado correctamente.');
 

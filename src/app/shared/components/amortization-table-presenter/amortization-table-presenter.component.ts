@@ -37,6 +37,15 @@ export class AmortizationTablePresenterComponent {
   }
 
   toggleFeeSelection(fee: any, event: Event): void {
+    const status = String(fee?.status ?? fee?.estado ?? '').toLowerCase();
+    if (status === 'pagada' || status === 'paid') {
+      const statusTarget = event.target as HTMLInputElement;
+      if (statusTarget) {
+        statusTarget.checked = false;
+      }
+      return;
+    }
+
     const target = event.target as HTMLInputElement;
     const checked = !!target?.checked;
 
@@ -76,6 +85,21 @@ export class AmortizationTablePresenterComponent {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['installments']) {
+      const validInstallmentNumbers = new Set((this.installments ?? []).map((fee: any) => fee.installment_number));
+      const nextSelection = this.selectedInstallments.filter((item: any) => {
+        const stillExists = validInstallmentNumbers.has(item.installment_number);
+        const status = String(item?.status ?? item?.estado ?? '').toLowerCase();
+        const isPaid = status === 'pagada' || status === 'paid';
+        return stillExists && !isPaid;
+      });
+
+      if (nextSelection.length !== this.selectedInstallments.length) {
+        this.selectedInstallments = nextSelection;
+        this.selectionChanged.emit([...this.selectedInstallments]);
+      }
+    }
+
     if (changes['resetSelection'] && this.resetSelection) {
       this.selectedInstallments = [];
       this.selectionChanged.emit([]);

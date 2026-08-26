@@ -54,22 +54,13 @@
     <tbody>
       <tr *ngFor="let fee of installments" [ngClass]="{'row-disabled': !isFeeSelectable(fee)}">
         <td style="text-align: center;">
-          <ng-container *ngIf="isFeeSelectable(fee); else disabledCheck">
-            <input
-              type="checkbox"
-              class="custom-checkbox"
-              [checked]="isSelected(fee)"
-              (change)="toggleFeeSelection(fee, $event)"
-            />
-          </ng-container>
-          <ng-template #disabledCheck>
-            <input
-              type="checkbox"
-              class="custom-checkbox"
-              disabled
-              [checked]="false"
-            />
-          </ng-template>
+          <input
+            type="checkbox"
+            class="custom-checkbox"
+            [checked]="isSelected(fee)"
+            [disabled]="!isFeeSelectable(fee)"
+            (change)="toggleFeeSelection(fee, $event)"
+          />
         </td>
 
         <td style="font-weight: 700; color: #1e293b;">{{ fee.installment_number === 0 ? 'Inicial' : '#' + fee.installment_number }}</td>

@@ -11,6 +11,16 @@
     <form [formGroup]="lotForm" (ngSubmit)="onSubmit()">
       
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group" *ngIf="!hasProjectInRoute" style="grid-column: span 2;">
+          <label>Proyecto</label>
+          <select formControlName="project_id">
+            <option value="">Seleccione un proyecto</option>
+            <option *ngFor="let project of projects" [value]="project.id">
+              {{ project.name }}
+            </option>
+          </select>
+        </div>
+
         <div class="form-group" style="grid-column: span 2;">
           <label>Identificador del Lote</label>
           <input type="text" formControlName="number" placeholder="Ej. Lote 12 - Mz B">
@@ -48,8 +58,14 @@
 <!-- ============================================ -->
 <div>
 
+  <!-- CABECERA GLOBAL -->
+  <div class="mb-6" *ngIf="isGlobalView">
+    <h1 class="text-2xl font-bold text-slate-800">Inventario General de Lotes</h1>
+    <p class="text-sm text-slate-500">Listado completo de lotes registrados en el sistema.</p>
+  </div>
+
   <!-- BARRA DE NAVEGACIÓN SUPERIOR -->
-  <div class="top-navigation" *ngIf="selectedProjectId">
+  <div class="top-navigation" *ngIf="!isGlobalView">
     <a routerLink="/projects" class="back-link">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 16px; height: 16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" /></svg>
       Volver a Proyectos
@@ -60,9 +76,9 @@
   <div>
     
     <!-- Cabecera del Proyecto -->
-    <div class="header-section">
+    <div class="header-section" *ngIf="!isGlobalView">
       <div>
-        <h1>{{ activeProject?.name || 'Cargando...' }}</h1>
+        <h1>{{ activeProject?.name || 'Proyecto' }}</h1>
         <p>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 14px; height: 14px; color: #ef4444;"><path fill-rule="evenodd" d="m11.54 22.351.07.04.028.016a.76.76 0 0 0 .723 0l.028-.015.071-.041a16.975 16.975 0 0 0 1.144-.742 19.58 19.58 0 0 0 2.683-2.282c1.944-1.99 3.963-4.98 3.963-8.827a8.25 8.25 0 0 0-16.5 0c0 3.846 2.02 6.837 3.963 8.827a19.58 19.58 0 0 0 2.682 2.282 16.975 16.975 0 0 0 1.145.742ZM12 13.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" /></svg>
           {{ activeProject?.location || 'Ubicación no disponible' }}
@@ -71,8 +87,12 @@
       <button class="btn-new-lot" (click)="openModal()">+ Añadir Lote</button>
     </div>
 
+    <div class="header-section" *ngIf="isGlobalView" style="justify-content: flex-end;">
+      <button class="btn-new-lot" (click)="openModal()">+ Añadir Lote</button>
+    </div>
+
     <!-- KPIs Específicos del Proyecto -->
-    <div class="kpi-grid">
+    <div class="kpi-grid" *ngIf="!isGlobalView">
       <div class="kpi-card">
         <h4>Lotes Disponibles</h4>
         <p class="kpi-value">{{ projectAvailableLots }}</p>
