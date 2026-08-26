@@ -20,7 +20,7 @@
   </div>
 
   <div *ngIf="isHistoryModalOpen" class="modal-overlay" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: flex; align-items: center; justify-content: center; z-index: 1200; padding: 1rem;">
-    <div style="background: white; border-radius: 16px; width: min(900px, 100%); max-height: 80vh; overflow: auto; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);">
+    <div style="background: white; border-radius: 16px; width: min(900px, 100%); max-height: 80vh; overflow: auto; box-shadow: 0 20px 40px #347769;">
       <div style="display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-bottom: 1px solid #e2e8f0;">
         <h3 style="margin: 0; color: #0f172a; font-size: 1.2rem;">Historial de Pagos</h3>
         <button (click)="cerrarHistorialPagos()" style="border: none; background: transparent; font-size: 1.5rem; cursor: pointer; color: #475569;">✕</button>
@@ -60,9 +60,39 @@
     </div>
   </div>
 
+<!-- ========================================== -->
+  <!-- BARRA DE OPERACIONES DEL CONTRATO          -->
   <!-- ========================================== -->
-  <!-- TARJETAS DE INFORMACIÓN SUPERIOR           -->
-  <!-- ========================================== -->
+  <div *ngIf="contractData" style="display: flex; align-items: center; justify-content: space-between; background-color: #ffffff; border: 1px solid #e2e8f0; padding: 1rem 1.5rem; border-radius: 8px; margin-top: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+    
+    <div style="display: flex; flex-direction: column;">
+      <span style="font-size: 0.9rem; color: #1e293b; font-weight: 500;">Modifica o cancela las condiciones de este contrato</span>
+    </div>
+    
+    <div style="display: flex; gap: 0.75rem;">
+      <!-- Botón Refinanciar -->
+      <button [routerLink]="['/contracts', contractData.id, 'refinanciar']" style="background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem;" onmouseover="this.style.backgroundColor='#dbeafe'" onmouseout="this.style.backgroundColor='#eff6ff'">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 16px; height: 16px;">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+        </svg>
+        Refinanciar
+         <span class="badge-prox">Próx.</span>
+      </button>
+      
+      <!-- Botón Desistimiento -->
+      <button [routerLink]="['/contracts', contractData.id, 'desistimiento']" style="background-color: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem;" onmouseover="this.style.backgroundColor='#fee2e2'" onmouseout="this.style.backgroundColor='#fef2f2'">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 16px; height: 16px;">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        Desistimiento
+         <span class="badge-prox">Próx.</span>
+      </button>
+      
+      
+    </div>
+  </div>
+
+
   <div class="summary-grid">
     
     <!-- Info del Lote -->
@@ -150,38 +180,12 @@
     </div>
   </div>
 
-  <!-- ========================================== -->
-  <!-- RESUMEN FINANCIERO                        -->
-  <!-- ========================================== -->
-  <div *ngIf="!isLoading && contractData" style="margin-top: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
-    <div style="background: #f8fafc; border: 1px solid #dfe7ef; border-radius: 12px; padding: 1rem 1.1rem; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);">
-      <div style="font-size: 0.75rem; color: #475569; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;">Total pagado</div>
-      <div style="font-size: 1.45rem; font-weight: 800; color: #0f172a; margin-top: 0.35rem;">$ {{ totalPaidAmount | number:'1.0-0' }}</div>
-    </div>
 
-    <div style="background: #eef3f8; border: 1px solid #d9e2ec; border-radius: 12px; padding: 1rem 1.1rem; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);">
-      <div style="font-size: 0.75rem; color: #475569; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;">Debe</div>
-      <div style="font-size: 1.45rem; font-weight: 800; color: #1e293b; margin-top: 0.35rem;">$ {{ totalOutstandingAmount | number:'1.0-0' }}</div>
-    </div>
-
-    <div style="background: #f3f6fb; border: 1px solid #dfe7ef; border-radius: 12px; padding: 1rem 1.1rem; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);">
-      <div style="font-size: 0.75rem; color: #475569; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;">Intereses pagados</div>
-      <div style="font-size: 1.45rem; font-weight: 800; color: #1e293b; margin-top: 0.35rem;">$ {{ totalInterestPaid | number:'1.0-0' }}</div>
-    </div>
-  </div>
 
   <!-- ========================================== -->
   <!-- WIDGET: CARTERA VENCIDA                   -->
   <!-- ========================================== -->
-  <div *ngIf="totalOverdueQuotaDebt > 0; else noOverdueWidget" style="margin-top: 1.5rem; background: linear-gradient(135deg, #fff1f2, #ffe4e6); border: 1px solid #fecdd3; border-radius: 16px; padding: 1.25rem 1.4rem; box-shadow: 0 8px 20px rgba(190, 24, 93, 0.08);">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
-      <div>
-        <div style="font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: #9f1239; font-weight: 800;">Amortización - Cartera Vencida 🚨</div>
-        <div style="font-size: 2.1rem; font-weight: 900; color: #be123c; margin-top: 0.35rem;">$ {{ totalOverdueQuotaDebt | number:'1.0-0' }}</div>
-      </div>
-      <span style="background: #fecdd3; color: #9f1239; border: 1px solid #fda4af; border-radius: 999px; padding: 0.45rem 0.8rem; font-weight: 800; letter-spacing: 0.04em;">CARTERA EN MORA</span>
-    </div>
-  </div>
+  
 
   <ng-template #noOverdueWidget>
     <div style="margin-top: 1.5rem; background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 1px solid #a7f3d0; border-radius: 16px; padding: 1.25rem 1.4rem; box-shadow: 0 8px 20px rgba(6, 95, 70, 0.08);">
