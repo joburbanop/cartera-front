@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, Validators, FormArray, FormGroup } from '@angular/forms';
 import { ContractService } from '../../../core/services/contract.service';
 import { ProjectService } from '../../../core/services/project.service';
 import { LotService } from '../../../core/services/lot.service';
@@ -68,8 +68,35 @@ export class ContractsComponent implements OnInit {
     start_date: ['', Validators.required],
     down_payment_date: ['', Validators.required],
     first_installment_date: ['', Validators.required],
-    preventa_stages: [7, [Validators.required, Validators.min(0)]]
+    preventa_stages: [7, [Validators.required, Validators.min(0)]],
+    is_custom_plan: [false],
+    payment_promises: this.fb.array([]),
   });
+
+  get paymentPromises(): FormArray {
+    return this.contractForm.get('payment_promises') as FormArray;
+  }
+
+  get totalCustomPromises(): number {
+    return this.paymentPromises.controls.reduce((sum, control) => {
+      const amount = Number((control as FormGroup).get('expected_amount')?.value ?? 0);
+      return sum + (Number.isFinite(amount) ? amount : 0);
+    }, 0);
+  }
+
+  addPaymentPromise(): void {
+    const promiseGroup = this.fb.group({
+      expected_date: ['', Validators.required],
+      expected_amount: [null, [Validators.required, Validators.min(1)]],
+      description: ['', Validators.required],
+    });
+
+    this.paymentPromises.push(promiseGroup);
+  }
+
+  removePaymentPromise(index: number): void {
+    this.paymentPromises.removeAt(index);
+  }
 
   calculateKPIs() {
     this.totalContracts = this.contracts.length;
@@ -106,6 +133,16 @@ export class ContractsComponent implements OnInit {
       const lotId = params.get('lotId');
       this.selectedLotId = lotId ? Number(lotId) : null;
       this.loadContracts();
+    });
+
+    this.contractForm.get('is_custom_plan')?.valueChanges.subscribe((isCustom: boolean) => {
+      if (isCustom && this.paymentPromises.length === 0) {
+        this.addPaymentPromise();
+      }
+
+      if (!isCustom) {
+        this.paymentPromises.clear();
+      }
     });
 
     this.loadCustomers();
@@ -275,6 +312,14 @@ export class ContractsComponent implements OnInit {
   }
 
   onSubmit() {
+    const isCustom = Boolean(this.contractForm.get('is_custom_plan')?.value);
+
+    if (isCustom && this.paymentPromises.invalid) {
+      this.paymentPromises.markAllAsTouched();
+      this.errorMessage = 'Complete cada promesa de pago con fecha, monto y descripción.';
+      return;
+    }
+
     if (this.contractForm.invalid) {
       this.errorMessage = 'Por favor, complete todos los campos obligatorios.';
       return;
@@ -293,6 +338,8 @@ export class ContractsComponent implements OnInit {
       regular_payment_start_date: formValue.first_installment_date,
       first_installment_date: formValue.first_installment_date,
       preventa_installments_count: preventa_stages,
+      is_custom_plan: isCustom,
+      payment_promises: isCustom ? this.paymentPromises.value : [],
     };
 
     this.contractService.createContract(payload).subscribe({

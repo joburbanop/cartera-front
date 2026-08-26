@@ -76,8 +76,19 @@
       <div style="border-top: 1px solid #e2e8f0; padding-top: 1.5rem;">
         <h4 style="margin: 0 0 1rem 0; color: #475569; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em;">2. Condiciones Financieras</h4>
         
+        <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+          <label style="font-weight: 600; color: #1e293b; display: block; margin-bottom: 0.5rem;">Modalidad del Plan de Pagos</label>
+          <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+              <input type="radio" formControlName="is_custom_plan" [value]="false"> Estándar (Sistema Francés)
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+              <input type="radio" formControlName="is_custom_plan" [value]="true"> Personalizado (Primas / Cuota Balón)
+            </label>
+          </div>
+        </div>
+
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-          <!-- Tus 4 inputs financieros actuales... -->
           <div>
             <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Precio de Venta ($)</label>
             <input type="number" formControlName="sale_price" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
@@ -93,6 +104,46 @@
           <div>
             <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Tasa de Interés (%)</label>
             <input type="number" step="0.01" formControlName="interest_rate" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; background-color: #f8fafc;">
+          </div>
+        </div>
+
+        <div *ngIf="contractForm.get('is_custom_plan')?.value" style="margin-top: 1.5rem; padding: 1rem; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; gap: 1rem; flex-wrap: wrap;">
+            <div>
+              <h5 style="margin: 0; color: #9a4d00; font-size: 0.97rem;">Plan personalizado</h5>
+              <small style="color: #b45309;">Define cuotas variables, primas y cuotas balón.</small>
+            </div>
+            <button type="button" (click)="addPaymentPromise()" style="background: #f97316; color: white; border: none; border-radius: 6px; padding: 0.6rem 0.9rem; font-weight: 700; cursor: pointer;">
+              + Agregar pago
+            </button>
+          </div>
+
+          <div *ngIf="paymentPromises.length === 0" style="padding: 0.75rem; border: 1px dashed #fdba74; border-radius: 6px; color: #9a4d00; background: rgba(255, 247, 237, 0.7);">
+            Aún no hay pagos personalizados definidos.
+          </div>
+
+          <div *ngFor="let promise of paymentPromises.controls; let i = index" [formGroup]="promise" style="margin-top: 1rem; padding: 1rem; border: 1px solid #fdba74; border-radius: 8px; background: white; display: grid; grid-template-columns: 1fr 1fr 1.5fr auto; gap: 0.75rem; align-items: end;">
+            <div>
+              <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">Fecha</label>
+              <input type="date" formControlName="expected_date" style="width: 100%; padding: 0.55rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">Monto</label>
+              <input type="number" formControlName="expected_amount" min="1" style="width: 100%; padding: 0.55rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">Descripción</label>
+              <input type="text" formControlName="description" placeholder="Cuota inicial / prima / balón" style="width: 100%; padding: 0.55rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+            </div>
+            <div>
+              <button type="button" (click)="removePaymentPromise(i)" style="padding: 0.6rem 0.8rem; border: 1px solid #fecaca; background: #fff1f2; color: #be123c; border-radius: 6px; font-weight: 700; cursor: pointer;">
+                Eliminar
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="paymentPromises.length > 0" style="margin-top: 1rem; padding: 0.75rem 1rem; border-radius: 6px; background: #ecfdf5; border: 1px solid #bbf7d0; color: #166534; font-weight: 700;">
+            Total cronograma personalizado: $ {{ totalCustomPromises | number:'1.0-0' }}
           </div>
         </div>
 
