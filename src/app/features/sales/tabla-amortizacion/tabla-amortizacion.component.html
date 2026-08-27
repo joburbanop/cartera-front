@@ -27,11 +27,16 @@
       </div>
 
       <div style="padding: 1.5rem;">
-        <div *ngIf="transactions.length === 0" style="padding: 1.2rem; color: #64748b; text-align: center;">
+        <div *ngIf="isLoadingHistory" style="display: flex; justify-content: center; align-items: center; gap: 0.75rem; padding: 1.5rem; color: #475569; font-weight: 600;">
+          <span style="display: inline-block; width: 18px; height: 18px; border: 2px solid #cbd5e1; border-top-color: #0f766e; border-radius: 50%; animation: spin 0.8s linear infinite;"></span>
+          Cargando historial...
+        </div>
+
+        <div *ngIf="!isLoadingHistory && transactions.length === 0" style="padding: 1.2rem; color: #64748b; text-align: center;">
           No hay transacciones registradas para este contrato.
         </div>
 
-        <div *ngIf="transactions.length > 0" style="overflow-x: auto;">
+        <div *ngIf="!isLoadingHistory && transactions.length > 0" style="overflow-x: auto;">
           <table style="width: 100%; border-collapse: collapse; min-width: 700px;">
             <thead>
               <tr style="background-color: #f8fafc; color: #475569; text-align: left; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">
@@ -199,33 +204,17 @@
     </div>
   </ng-template>
 
-  <div *ngIf="hasActiveMora" class="overdue-flow-card" style="margin-top: 1.5rem;">
-    <div class="overdue-header">
-      <div>
-        <span class="flow-label">Gestión de cartera vencida</span>
-        <h3>Cartera vencida</h3>
-      </div>
-      <span class="overdue-badge">{{ overdueLevelLabel }}</span>
-    </div>
+  <div *ngIf="tieneCarteraVencida" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3" style="margin-top: 1.5rem; border: 1px solid #fecaca; background: #fef2f2; border-radius: 12px; padding: 1rem 1.25rem; display: flex; align-items: flex-start; gap: 0.75rem;">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 24px; height: 24px; color: #dc2626; flex-shrink: 0;">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>
 
-    <div class="overdue-content">
-      <div class="overdue-kpi">
-        <span class="kpi-label">Monto en mora</span>
-        <strong class="kpi-value">$ {{ activeMoraDebt | number:'1.0-0' }}</strong>
-      </div>
-      <div class="overdue-kpi">
-        <span class="kpi-label">Cuotas afectadas</span>
-        <strong class="kpi-value">{{ activeMoraFees.length }}</strong>
-      </div>
-      <div class="overdue-kpi warning">
-        <span class="kpi-label">Estado</span>
-        <strong class="kpi-value">Abono parcial aplicado</strong>
-      </div>
+    <div>
+      <h4 style="margin: 0; color: #991b1b; font-weight: 800; font-size: 1rem;">Cartera vencida activa</h4>
+      <p style="margin: 0.35rem 0 0; color: #b91c1c; font-size: 0.9rem; line-height: 1.45;">
+        {{ cantidadCuotasVencidas }} cuota(s) vencida(s) por un total de <strong>$ {{ totalDineroVencido | number }}</strong>, con fecha de vencimiento anterior a hoy.
+      </p>
     </div>
-
-    <p class="overdue-note">
-      El pago realizado fue menor al valor de la cuota. La deuda que queda en mora es <strong>$ {{ activeMoraDebt | number:'1.0-0' }}</strong> en {{ activeMoraFeeLabel }}. Esta cuota queda en cartera vencida y requiere seguimiento.
-    </p>
   </div>
 
   <!-- ========================================== -->

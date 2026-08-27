@@ -18,7 +18,27 @@ export class AmortizationTablePresenterComponent {
   @Output() downloadPdf = new EventEmitter<'internal' | 'client'>();
   @Output() paySelected = new EventEmitter<void>();
 
+  estadoTraduccion: { [key: string]: string } = {
+    pending: 'PENDIENTE',
+    paid: 'PAGADA',
+    partial: 'PARCIAL',
+    overdue: 'VENCIDA',
+    sin_pagar: 'PENDIENTE',
+    pagada: 'PAGADA',
+    parcial: 'PARCIAL',
+    vencida: 'VENCIDA',
+  };
+
   selectedInstallments: any[] = [];
+
+  obtenerEstadoEspanol(estado: string): string {
+    if (!estado) {
+      return '';
+    }
+
+    const clave = String(estado).trim().toLowerCase();
+    return this.estadoTraduccion[clave] || clave.toUpperCase();
+  }
 
   get allInstallmentsPaid(): boolean {
     return this.installments.length > 0 && this.installments.every((fee: any) => {

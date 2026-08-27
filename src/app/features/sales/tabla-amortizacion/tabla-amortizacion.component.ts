@@ -57,6 +57,7 @@ export class AmortizationComponent implements OnInit {
   resetSelectionFlag = false;
   transactions: any[] = [];
   isHistoryModalOpen = false;
+  isLoadingHistory = false;
   paymentPromises: PaymentPromise[] = [];
 
   get selectedFees(): any[] {
@@ -301,21 +302,30 @@ export class AmortizationComponent implements OnInit {
   }
 
   abrirHistorialPagos(): void {
+    this.isLoadingHistory = true;
+    this.transactions = [];
+    this.isHistoryModalOpen = true;
+    this.cdr.detectChanges();
+
     this.recaudoService.getTransactionsByContract(this.contractId).subscribe({
       next: (response) => {
         const payload = response?.data ?? response ?? [];
         this.transactions = Array.isArray(payload) ? payload : [];
-        this.isHistoryModalOpen = true;
+        this.isLoadingHistory = false;
+        this.cdr.detectChanges();
       },
       error: () => {
         this.transactions = [];
-        this.isHistoryModalOpen = true;
+        this.isLoadingHistory = false;
+        this.cdr.detectChanges();
       },
     });
   }
 
   cerrarHistorialPagos(): void {
     this.isHistoryModalOpen = false;
+    this.isLoadingHistory = false;
+    this.transactions = [];
   }
 
   verComprobante(receiptUrl: string): void {
@@ -337,6 +347,64 @@ export class AmortizationComponent implements OnInit {
     return this.financials.overdueFees(this.amortizationPlan, this.contractData);
   }
 
+  get cuotasVencidas(): any[] {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    return (this.amortizationPlan ?? []).filter((cuota: any) => {
+      const status = String(cuota?.status ?? '').toLowerCase();
+      if (status === 'pagada' || status === 'paid') {
+        return false;
+      }
+
+      const saldoPendiente = Number(
+        cuota?.saldo_pendiente ??
+        cuota?.projected_balance ??
+        cuota?.remaining_balance ??
+        cuota?.amount ??
+        cuota?.quota_debt ??
+        cuota?.installment_value ??
+        0
+      );
+
+      if (saldoPendiente < 500) {
+        return false;
+      }
+
+      const fechaVencimiento = cuota?.due_date ? new Date(cuota.due_date) : null;
+      if (!fechaVencimiento || Number.isNaN(fechaVencimiento.getTime())) {
+        return false;
+      }
+
+      fechaVencimiento.setHours(0, 0, 0, 0);
+      return fechaVencimiento < hoy;
+    });
+  }
+
+  get cantidadCuotasVencidas(): number {
+    return this.cuotasVencidas.length;
+  }
+
+  get totalDineroVencido(): number {
+    return this.cuotasVencidas.reduce((sum: number, cuota: any) => {
+      const valor = Number(
+        cuota?.saldo_pendiente ??
+        cuota?.projected_balance ??
+        cuota?.remaining_balance ??
+        cuota?.amount ??
+        cuota?.quota_debt ??
+        cuota?.installment_value ??
+        0
+      );
+
+      return sum + (Number.isFinite(valor) ? valor : 0);
+    }, 0);
+  }
+
+  get tieneCarteraVencida(): boolean {
+    return this.cantidadCuotasVencidas > 0;
+  }
+
   get activeMoraFees(): any[] {
     return this.financials.activeMoraFees(this.amortizationPlan, this.contractData);
   }
@@ -346,7 +414,7 @@ export class AmortizationComponent implements OnInit {
   }
 
   get hasActiveMora(): boolean {
-    return this.financials.hasActiveMora(this.amortizationPlan, this.contractData);
+    return this.tieneCarteraVencida;
   }
 
   get regularPaymentTotal(): number {

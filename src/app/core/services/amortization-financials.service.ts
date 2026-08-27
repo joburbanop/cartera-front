@@ -4,6 +4,29 @@ import { Injectable } from '@angular/core';
   providedIn: 'root',
 })
 export class AmortizationFinancialsService {
+  private isPastDueFee(fee: any): boolean {
+    const status = String(fee?.status ?? '').toLowerCase();
+    if (status === 'pagada' || status === 'paid') {
+      return false;
+    }
+
+    const dueDateValue = fee?.due_date ?? fee?.fecha_vencimiento ?? null;
+    if (!dueDateValue) {
+      return false;
+    }
+
+    const dueDate = new Date(dueDateValue);
+    if (Number.isNaN(dueDate.getTime())) {
+      return false;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    dueDate.setHours(0, 0, 0, 0);
+
+    return dueDate < today;
+  }
+
   initialFee(plan: any[] = [], contractData: any = null): any {
     return (plan ?? []).find((fee: any) => Number(fee.installment_number) === 0) ?? null;
   }
@@ -103,12 +126,11 @@ export class AmortizationFinancialsService {
   overdueFees(plan: any[] = [], contractData: any = null): any[] {
     return (plan ?? [])
       .filter((fee: any) => {
-        const status = this.getFeeStatus(fee, plan, contractData);
-        const isActiveContract = contractData?.status !== 'preventa_inactiva';
+        if (contractData?.status === 'preventa_inactiva') {
+          return false;
+        }
 
-        if (status === 'vencida') return true;
-        if (status === 'parcial' && isActiveContract) return true;
-        return false;
+        return this.isPastDueFee(fee);
       })
       .map((fee: any) => {
         const installmentValue = Number(fee.installment_value || 0);

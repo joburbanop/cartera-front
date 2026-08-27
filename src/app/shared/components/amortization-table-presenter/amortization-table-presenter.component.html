@@ -78,7 +78,7 @@
             'badge-partial': (fee.status || '').toLowerCase() === 'parcial',
             'badge-overdue': (fee.status || '').toLowerCase() === 'vencida'
           }">
-            {{ (fee.status || 'sin_pagar').replace('_', ' ') }}
+            {{ obtenerEstadoEspanol(fee.status || 'sin_pagar') }}
           </span>
         </td>
       </tr>
