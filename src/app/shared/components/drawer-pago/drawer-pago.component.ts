@@ -1,11 +1,12 @@
 import { Component, Input, Output, EventEmitter, inject, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { CurrencyMaskDirective } from '../../directives/currency-mask.directive';
 
 @Component({
   selector: 'app-drawer-pago',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, CurrencyMaskDirective],
   templateUrl: './drawer-pago.component.html',
   styleUrl: './drawer-pago.component.scss'
 })
@@ -30,6 +31,7 @@ export class DrawerPagoComponent implements OnInit {
   private fb = inject(FormBuilder);
   selectedFile: File | null = null;
   totalSelectedAmount = 0;
+  montoSugeridoTotal = 0;
 
   paymentForm: FormGroup = this.fb.group({
     amount: ['', [Validators.required, Validators.min(1)]],
@@ -73,7 +75,13 @@ export class DrawerPagoComponent implements OnInit {
   }
 
   get excessAmount(): number {
-    return Math.max(0, (Number(this.paymentForm.get('amount')?.value) || 0) - this.totalSelectedAmount);
+    return Math.max(0, (Number(this.paymentForm.get('amount')?.value) || 0) - this.montoSugeridoTotal);
+  }
+
+  get excedenteCalculado(): number {
+    const montoIngresado = Number(this.paymentForm.get('amount')?.value) || 0;
+    const diferencia = montoIngresado - this.montoSugeridoTotal;
+    return diferencia > 0 ? diferencia : 0;
   }
 
   get hasSurplus(): boolean {
@@ -176,14 +184,16 @@ export class DrawerPagoComponent implements OnInit {
   }
 
   calculateDebt() {
-    this.totalSelectedAmount = this._selectedFees.reduce((sum, fee) => sum + this.getFeeDebtValue(fee), 0);
+    const deudaBruta = this._selectedFees.reduce((sum, fee) => sum + this.getFeeDebtValue(fee), 0);
+    this.totalSelectedAmount = Math.round(deudaBruta);
+    this.montoSugeridoTotal = this.totalSelectedAmount;
   }
 
   updateFormAmount() {
     this.calculateDebt();
     setTimeout(() => {
       this.paymentForm.patchValue({
-        amount: this.totalSelectedAmount,
+        amount: this.montoSugeridoTotal,
         payment_method: 'transfer',
         bank_account_id: '',
         surplus_action: ''
@@ -194,7 +204,7 @@ export class DrawerPagoComponent implements OnInit {
   private resetState() {
     this.selectedFile = null;
     this.paymentForm.reset({
-      amount: this.totalSelectedAmount,
+      amount: this.montoSugeridoTotal,
       payment_method: 'transfer',
       bank_account_id: '',
       transaction_date: this.todayIsoDate(),

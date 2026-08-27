@@ -5,8 +5,8 @@
     <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
       <div *ngIf="selectedInstallments.length > 0" style="display: flex; align-items: center; gap: 1rem; background-color: #f8fafc; padding: 0.3rem 0.4rem 0.3rem 1rem; border-radius: 8px; border: 1px dashed #cbd5e1; animation: fadeIn 0.3s;">
         <span style="font-size: 0.85rem; color: #475569; font-weight: 500;">
-          {{ selectedInstallments.length }} seleccionada{{ selectedInstallments.length > 1 ? 's' : '' }}
-          (<strong style="color: #0f172a;">$ {{ totalSelectedAmount | number:'1.0-0' }}</strong>)
+          {{ selectedInstallments.length }} seleccionada(s)
+         
         </span>
         <button
           type="button"

@@ -97,7 +97,7 @@
             <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Cuota Inicial Pactada ($)</label>
             <input type="text" formControlName="down_payment_pactada" appCurrencyMask style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
           </div>
-          <div *ngIf="!isCustomPlan">
+          <div>
             <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Plazo (Meses)</label>
             <input type="number" formControlName="term_months" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
           </div>
@@ -153,6 +153,7 @@
 
             <div *ngIf="batchErrorMessage" style="margin-top: 0.7rem; font-size: 0.84rem; color: #b91c1c; font-weight: 600;">
               {{ batchErrorMessage }}
+              <span *ngIf="batchErrorMessage.includes('Valor Futuro')" style="display: block; margin-top: 0.2rem; color: #7f1d1d;">Límite actual: $ {{ valorFuturoDeuda | number:'1.0-0' }}</span>
             </div>
           </div>
 

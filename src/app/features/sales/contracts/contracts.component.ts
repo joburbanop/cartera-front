@@ -149,6 +149,19 @@ export class ContractsComponent implements OnInit {
     return this.cuotaFijaEstimada * n;
   }
 
+  get maxCuotasPermitidas(): number {
+    return Number(this.contractForm.get('term_months')?.value ?? 0) || 0;
+  }
+
+  get hasExceededTermLimit(): boolean {
+    const maxAllowed = this.maxCuotasPermitidas;
+    if (maxAllowed <= 0) {
+      return false;
+    }
+
+    return this.paymentPromises.length > maxAllowed;
+  }
+
   get costoTotalInmueble(): number {
     return this.valorFuturoDeuda + (Number(this.contractForm.get('down_payment_pactada')?.value ?? 0) || 0);
   }
@@ -171,7 +184,7 @@ export class ContractsComponent implements OnInit {
     }
 
     if (isCustom) {
-      termMonthsControl.clearValidators();
+      termMonthsControl.setValidators([Validators.required, Validators.min(1)]);
       firstInstallmentDateControl.clearValidators();
       preventaStagesControl.clearValidators();
     } else {
@@ -258,11 +271,20 @@ export class ContractsComponent implements OnInit {
       return;
     }
 
+    const maxCuotasPermitidas = this.maxCuotasPermitidas;
+    const cuotasActuales = this.paymentPromises.length;
+
+    if (maxCuotasPermitidas > 0 && cuotasActuales + count > maxCuotasPermitidas) {
+      this.batchErrorMessage = `El plazo actual permite máximo ${maxCuotasPermitidas} cuotas. Ya tienes ${cuotasActuales} y estás intentando agregar ${count}.`;
+      return;
+    }
+
     const totalBatchAmount = Math.round(count * amount * 100) / 100;
     const projectedTotal = Math.round((this.totalCustomPromises + totalBatchAmount) * 100) / 100;
+    const limitePermitido = this.valorFuturoDeuda ? this.valorFuturoDeuda : this.saldoAFinanciar;
 
-    if (projectedTotal > this.saldoAFinanciar) {
-      this.batchErrorMessage = 'El lote excede el saldo pendiente por financiar. Ajusta cantidad o valor por cuota.';
+    if (projectedTotal > limitePermitido + 1) {
+      this.batchErrorMessage = 'El lote excede el Valor Futuro pendiente por financiar. Ajusta la cantidad o el valor por cuota.';
       return;
     }
 
@@ -540,6 +562,11 @@ export class ContractsComponent implements OnInit {
       return;
     }
 
+    if (isCustom && this.hasExceededTermLimit) {
+      this.errorMessage = `La cantidad de cuotas personalizadas supera el plazo definido (${this.maxCuotasPermitidas} meses). Ajusta el cronograma o reduce el plazo.`;
+      return;
+    }
+
     if (isCustom && this.hasFinancialDifference) {
       this.errorMessage = 'La suma de cuotas personalizadas debe cuadrar con el valor futuro de la deuda (PMT × plazo), con un margen de +/- $5.';
       return;
@@ -561,9 +588,7 @@ export class ContractsComponent implements OnInit {
       ? (down_payment_date || formValue.start_date)
       : formValue.first_installment_date;
 
-    const effectiveTermMonths = isCustom
-      ? Math.max(1, normalizedPromises.length)
-      : Number(formValue.term_months);
+    const effectiveTermMonths = Number(formValue.term_months || 0);
 
     const effectivePreventaStages = isCustom
       ? 0
