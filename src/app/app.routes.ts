@@ -43,6 +43,11 @@ export const routes: Routes = [
         path: 'historial-pagos',
         loadComponent: () => import('./features/sales/historial-pagos/historial-pagos.component').then(m => m.HistorialPagosComponent)
       },
+      {
+        // Ruta para los Clientes
+        path: 'clientes',
+        loadComponent: () => import('./features/clients/clients.component').then(m => m.ClientsComponent)
+      },
 
       {
         path: '',

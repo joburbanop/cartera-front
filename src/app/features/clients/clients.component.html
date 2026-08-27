@@ -1,0 +1,203 @@
+<div class="clients-container">
+  <!-- Cabecera y Acciones -->
+  <div class="header-section">
+    <div class="title-area">
+      
+      <h1>Clientes</h1>
+      <p>Base de compradores y titulares de lotes</p>
+    </div>
+    <div class="actions-area">
+      <div class="search-box">
+       
+      </div>
+      <button class="btn-primary" (click)="abrirModalNuevoCliente()">
+        + Nuevo cliente
+      </button>
+    </div>
+  </div>
+
+  <!-- Tarjetas de Indicadores (KPIs) -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <h3>Total clientes</h3>
+      <p class="kpi-value">{{ totalClientes || 0 }}</p>
+      <p class="kpi-desc">Registrados en el sistema</p>
+    </div>
+    <div class="kpi-card">
+      <h3>Con contrato activo</h3>
+      <p class="kpi-value">{{ clientesConContrato || 0 }}</p>
+      <p class="kpi-desc">Titulares de un lote</p>
+    </div>
+    <div class="kpi-card kpi-danger">
+      <h3>Con cartera vencida</h3>
+      <p class="kpi-value">{{ clientesEnMora || 0 }}</p>
+      <p class="kpi-desc">Requieren seguimiento</p>
+    </div>
+  </div>
+
+  <!-- Tabla de Clientes -->
+  <div class="table-container">
+    <table class="clients-table">
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th>Contacto</th>
+          <th>Lotes asociado</th>
+          <th>Estado de cartera</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Mensaje cuando no hay clientes -->
+        <tr *ngIf="clientesFiltrados.length === 0" class="empty-state">
+          <td colspan="4">
+            <div class="empty-content">
+              <svg class="empty-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <p>{{ searchTerm ? 'No se encontraron clientes con ese criterio' : 'No hay clientes registrados' }}</p>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Iteración de clientes -->
+        <tr *ngFor="let cliente of clientesFiltrados">
+          <td>
+            <p class="client-name">{{ cliente.nombre }}</p>
+            <p class="client-doc">CC {{ cliente.documento }}</p>
+          </td>
+          <td>{{ cliente.telefono }}</td>
+          <td [ngClass]="{'has-lote': cliente.lote, 'no-lote': !cliente.lote}">
+            {{ cliente.lote || 'Sin contrato' }}
+          </td>
+          <td>
+            <span class="badge" [ngClass]="'badge-' + (cliente.estadoCartera || 'na')">
+              {{ cliente.estadoCartera === 'al_dia' ? 'Al día' : (cliente.estadoCartera === 'vencida' ? 'Vencida' : 'N/A') }}
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal de Nuevo Cliente -->
+<div *ngIf="showCustomerModal" class="modal-overlay">
+  <div class="modal-container">
+    <!-- Header del Modal -->
+    <div class="modal-header">
+      <div>
+        <h2>Nuevo Cliente</h2>
+        <p>Registra la información del comprador</p>
+      </div>
+      <button class="btn-close" (click)="cerrarModal()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Contenido del Modal -->
+    <form [formGroup]="customerForm" (ngSubmit)="guardarCliente()" class="modal-body">
+      <!-- Mensajes de éxito/error -->
+      <div *ngIf="successMessage" class="alert alert-success">
+        {{ successMessage }}
+      </div>
+      <div *ngIf="errorMessage" class="alert alert-error">
+        {{ errorMessage }}
+      </div>
+
+      <div class="form-grid">
+        <!-- Nombre -->
+        <div class="form-group">
+          <label>Nombre completo *</label>
+          <input 
+            type="text" 
+            formControlName="name"
+            placeholder="Juan Pérez García"
+            [class.input-error]="customerForm.get('name')?.invalid && customerForm.get('name')?.touched">
+          <p *ngIf="customerForm.get('name')?.invalid && customerForm.get('name')?.touched" class="error-text">
+            El nombre es requerido
+          </p>
+        </div>
+
+        <!-- Tipo y número de documento -->
+        <div class="form-group form-group-inline">
+          <div class="form-group-small">
+            <label>Tipo *</label>
+            <select formControlName="document_type">
+              <option value="CC">CC</option>
+              <option value="CE">CE</option>
+              <option value="NIT">NIT</option>
+              <option value="TI">TI</option>
+            </select>
+          </div>
+          <div class="form-group-large">
+            <label>Documento *</label>
+            <input 
+              type="text" 
+              formControlName="document"
+              placeholder="1234567890"
+              [class.input-error]="customerForm.get('document')?.invalid && customerForm.get('document')?.touched">
+            <p *ngIf="customerForm.get('document')?.invalid && customerForm.get('document')?.touched" class="error-text">
+              El documento es requerido
+            </p>
+          </div>
+        </div>
+
+        <!-- Teléfono -->
+        <div class="form-group">
+          <label>Teléfono *</label>
+          <input 
+            type="tel" 
+            formControlName="phone"
+            placeholder="321 456 7890"
+            [class.input-error]="customerForm.get('phone')?.invalid && customerForm.get('phone')?.touched">
+          <p *ngIf="customerForm.get('phone')?.invalid && customerForm.get('phone')?.touched" class="error-text">
+            El teléfono es requerido
+          </p>
+        </div>
+
+        <!-- Email -->
+        <div class="form-group">
+          <label>Email</label>
+          <input 
+            type="email" 
+            formControlName="email"
+            placeholder="cliente@ejemplo.com"
+            [class.input-error]="customerForm.get('email')?.invalid && customerForm.get('email')?.touched">
+          <p *ngIf="customerForm.get('email')?.invalid && customerForm.get('email')?.touched" class="error-text">
+            Ingrese un email válido
+          </p>
+        </div>
+
+        <!-- Dirección -->
+        <div class="form-group">
+          <label>Dirección</label>
+          <input 
+            type="text" 
+            formControlName="address"
+            placeholder="Calle 123 # 45-67">
+        </div>
+
+        <!-- Ciudad -->
+        <div class="form-group">
+          <label>Ciudad</label>
+          <input 
+            type="text" 
+            formControlName="city"
+            placeholder="Bogotá">
+        </div>
+      </div>
+
+      <!-- Botones -->
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" (click)="cerrarModal()">
+          Cancelar
+        </button>
+        <button type="submit" class="btn-primary" [disabled]="customerForm.invalid || isLoading">
+          {{ isLoading ? 'Guardando...' : 'Guardar cliente' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
