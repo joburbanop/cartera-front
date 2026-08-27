@@ -202,7 +202,7 @@
           </div>
 
           <div *ngIf="isCustomPlan" style="margin-top: 1.5rem; padding: 1rem; border-radius: 10px; border: 1px solid; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem;"
-               [ngStyle]="{'background': diferenciaFinanciera === 0 ? '#ecfdf5' : '#fef2f2', 'border-color': diferenciaFinanciera === 0 ? '#bbf7d0' : '#fecaca'}">
+               [ngStyle]="{'background': !hasFinancialDifference ? '#ecfdf5' : '#fef2f2', 'border-color': !hasFinancialDifference ? '#bbf7d0' : '#fecaca'}">
             <div style="padding: 0.9rem; border-radius: 8px; background: rgba(255,255,255,0.22);">
               <span style="display: block; font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">Saldo a financiar</span>
               <span style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">$ {{ saldoAFinanciar | number }}</span>
@@ -214,14 +214,14 @@
             <div style="padding: 0.9rem; border-radius: 8px; background: rgba(255,255,255,0.22);">
               <span style="display: block; font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">Diferencia</span>
               <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
-                <span *ngIf="diferenciaFinanciera === 0" style="font-size: 1rem; color: #15803d;">✓</span>
-                <span *ngIf="diferenciaFinanciera !== 0" style="font-size: 1rem; color: #b91c1c;">!</span>
-                <span [ngStyle]="{'color': diferenciaFinanciera === 0 ? '#15803d' : '#b91c1c', 'font-weight': '800'}">
-                  {{ diferenciaFinanciera === 0 ? 'Distribución exacta' : (diferenciaFinanciera > 0 ? 'Faltan' : 'Sobran') }}
+                <span *ngIf="!hasFinancialDifference" style="font-size: 1rem; color: #15803d;">✓</span>
+                <span *ngIf="hasFinancialDifference" style="font-size: 1rem; color: #b91c1c;">!</span>
+                <span [ngStyle]="{'color': !hasFinancialDifference ? '#15803d' : '#b91c1c', 'font-weight': '800'}">
+                  {{ !hasFinancialDifference ? 'Distribución válida' : (diferenciaFinanciera > 0 ? 'Faltan' : 'Sobran') }}
                 </span>
               </div>
               <div style="margin-top: 0.2rem; font-size: 0.92rem; font-weight: 700; color: #0f172a;">
-                $ {{ diferenciaFinanciera < 0 ? (diferenciaFinanciera * -1) : diferenciaFinanciera | number }}
+                $ {{ diferenciaFinanciera < 0 ? (diferenciaFinanciera * -1) : diferenciaFinanciera | number:'1.0-0' }}
               </div>
             </div>
           </div>
@@ -259,8 +259,8 @@
       </div>
 
       <button type="submit"
-              [disabled]="isLoading || contractForm.invalid || (isCustomPlan && diferenciaFinanciera !== 0)"
-              [attr.title]="isCustomPlan && diferenciaFinanciera !== 0 ? 'Ajusta las cuotas personalizadas para cuadrar el saldo a financiar.' : null"
+              [disabled]="isLoading || contractForm.invalid || (isCustomPlan && hasFinancialDifference)"
+              [attr.title]="isCustomPlan && hasFinancialDifference ? 'Ajusta las cuotas personalizadas para cuadrar el saldo a financiar (margen permitido: +/- $5).' : null"
               style="margin-top: 1rem; padding: 0.85rem; background: linear-gradient(135deg, #347769 0%, #2a615d 100%); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem;">
         {{ isLoading ? 'Procesando Contrato...' : 'Guardar y Generar Amortización' }}
       </button>

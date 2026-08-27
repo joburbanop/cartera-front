@@ -91,9 +91,39 @@ export class ContractsComponent implements OnInit {
   }
 
   get totalCustomPromises(): number {
-    return this.paymentPromises.controls.reduce((sum, control) => {
-      const amount = Number((control as FormGroup).get('expected_amount')?.value ?? 0);
-      return sum + (Number.isFinite(amount) ? amount : 0);
+    return this.paymentPromises.controls.reduce((sum, control, index) => {
+      const rawValue = (control as FormGroup).get('expected_amount')?.value;
+      
+      // 🔍 LOG DE DEPURACIÓN
+      console.log(`[DEBUG] Cuota ${index + 1}:`, {
+        rawValue,
+        tipo: typeof rawValue,
+        esString: typeof rawValue === 'string',
+        esNumero: typeof rawValue === 'number'
+      });
+      
+      // Sanitización agresiva
+      let cleanValue: number = 0;
+      
+      if (rawValue === null || rawValue === undefined || rawValue === '') {
+        cleanValue = 0;
+      } else if (typeof rawValue === 'string') {
+        // Limpiar: remover $, puntos, comas y espacios
+        const sanitized = rawValue.replace(/[\$\.\,\s]/g, '');
+        cleanValue = Number(sanitized) || 0;
+        
+        console.log(`[DEBUG] String detectado - Sanitizado: "${rawValue}" → "${sanitized}" → ${cleanValue}`);
+      } else if (typeof rawValue === 'number') {
+        cleanValue = Number.isFinite(rawValue) ? rawValue : 0;
+      } else {
+        console.warn(`[DEBUG] Tipo inesperado en cuota ${index + 1}:`, typeof rawValue, rawValue);
+        cleanValue = 0;
+      }
+      
+      const newSum = sum + cleanValue;
+      console.log(`[DEBUG] Suma parcial: ${sum} + ${cleanValue} = ${newSum}`);
+      
+      return newSum;
     }, 0);
   }
 
@@ -143,10 +173,11 @@ export class ContractsComponent implements OnInit {
   get valorFuturoDeuda(): number {
     const n = Number(this.contractForm.get('term_months')?.value ?? 0) || 0;
     if (n <= 0) {
-      return this.capitalAFinanciar;
+      return Math.round(this.capitalAFinanciar);
     }
 
-    return this.cuotaFijaEstimada * n;
+    // Redondear para eliminar centavos en el cálculo de intereses
+    return Math.round(this.cuotaFijaEstimada * n);
   }
 
   get maxCuotasPermitidas(): number {
@@ -167,7 +198,13 @@ export class ContractsComponent implements OnInit {
   }
 
   get diferenciaFinanciera(): number {
-    return this.valorFuturoDeuda - this.totalCustomPromises;
+    // Asegurar que ambos valores estén redondeados antes de calcular la diferencia
+    const valorFuturo = Math.round(this.valorFuturoDeuda);
+    const totalDistribuido = Math.round(this.totalCustomPromises);
+    const diferencia = valorFuturo - totalDistribuido;
+    
+    // Redondear la diferencia final para eliminar cualquier resto de centavos
+    return Math.round(diferencia);
   }
 
   get hasFinancialDifference(): boolean {
