@@ -4,26 +4,26 @@
     <button class="modal-close" (click)="closeModal()">✖</button>
     <h3>Nuevo Proyecto</h3>
     
-    <div *ngIf="errorMessage" style="background: #fee2e2; color: #dc2626; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem;">
+    <div *ngIf="errorMessage" class="app-form-alert">
       {{ errorMessage }}
     </div>
 
     <!-- FORMULARIO REUTILIZADO -->
     <form [formGroup]="projectForm" (ngSubmit)="onSubmit()">
-      <div class="form-group">
-        <label>Nombre del Proyecto</label>
-        <input type="text" formControlName="name" placeholder="Ej. Condominio San Miguel">
+      <div class="app-form-group">
+        <label class="app-form-label">Nombre del Proyecto</label>
+        <input class="app-form-input" type="text" formControlName="name" placeholder="Ej. Condominio San Miguel">
       </div>
-      <div class="form-group">
-        <label>Ubicación / Dirección</label>
-        <input type="text" formControlName="location" placeholder="Ej. Calle 10 # 4-50">
+      <div class="app-form-group">
+        <label class="app-form-label">Ubicación / Dirección</label>
+        <input class="app-form-input" type="text" formControlName="location" placeholder="Ej. Calle 10 # 4-50">
       </div>
-      <div class="form-group">
-        <label>Descripción (Opcional)</label>
-        <textarea formControlName="description" rows="2"></textarea>
+      <div class="app-form-group">
+        <label class="app-form-label">Descripción (Opcional)</label>
+        <textarea class="app-form-textarea" formControlName="description" rows="2"></textarea>
       </div>
-      <div class="form-group">
-        <label>Cuentas Bancarias Vinculadas</label>
+      <div class="app-form-group">
+        <label class="app-form-label">Cuentas Bancarias Vinculadas</label>
         <div class="checkbox-box">
           <label *ngFor="let account of availableBankAccounts">
             <input type="checkbox" [value]="account.id" (change)="onCheckboxChange($event)">
@@ -31,7 +31,7 @@
           </label>
         </div>
       </div>
-      <button type="submit" [disabled]="isLoading" class="btn-submit">
+      <button type="submit" [disabled]="isLoading" class="app-form-button">
         {{ isLoading ? 'Guardando...' : 'Guardar Proyecto' }}
       </button>
     </form>

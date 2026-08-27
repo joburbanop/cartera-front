@@ -77,25 +77,25 @@
         <h4 style="margin: 0 0 1rem 0; color: #475569; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em;">2. Condiciones Financieras</h4>
         
         <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
-          <label style="font-weight: 600; color: #1e293b; display: block; margin-bottom: 0.5rem;">Modalidad del Plan de Pagos</label>
-          <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
-              <input type="radio" formControlName="is_custom_plan" [value]="false"> Estándar
-            </label>
-            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
-              <input type="radio" formControlName="is_custom_plan" [value]="true"> Personalizado
-            </label>
+          <label style="font-weight: 600; color: #1e293b; display: block; margin-bottom: 0.75rem;">Modalidad del Plan de Pagos</label>
+          <div style="display: inline-flex; gap: 0.4rem; padding: 0.35rem; border: 1px solid #e2e8f0; border-radius: 10px; background: #ffffff;">
+            <button type="button" (click)="contractForm.patchValue({ is_custom_plan: false })" [style.background]="!isCustomPlan ? 'linear-gradient(135deg, #347769 0%, #2a615d 100%)' : 'transparent'" [style.color]="!isCustomPlan ? '#ffffff' : '#334155'" [style.border]="'none'" [style.border-radius]="'8px'" [style.padding]="'0.55rem 1rem'" [style.font-weight]="'700'" [style.cursor]="'pointer'" [style.min-width]="'120px'">
+              Estándar
+            </button>
+            <button type="button" (click)="contractForm.patchValue({ is_custom_plan: true })" [style.background]="isCustomPlan ? 'linear-gradient(135deg, #347769 0%, #2a615d 100%)' : 'transparent'" [style.color]="isCustomPlan ? '#ffffff' : '#334155'" [style.border]="'none'" [style.border-radius]="'8px'" [style.padding]="'0.55rem 1rem'" [style.font-weight]="'700'" [style.cursor]="'pointer'" [style.min-width]="'120px'">
+              Personalizado
+            </button>
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
           <div>
             <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Precio de Venta ($)</label>
-            <input type="number" formControlName="sale_price" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+            <input type="text" formControlName="sale_price" appCurrencyMask style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
           </div>
           <div>
             <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Cuota Inicial Pactada ($)</label>
-            <input type="number" formControlName="down_payment_pactada" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+            <input type="text" formControlName="down_payment_pactada" appCurrencyMask style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
           </div>
           <div *ngIf="!isCustomPlan">
             <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Plazo (Meses)</label>
@@ -107,47 +107,47 @@
           </div>
         </div>
 
-        <div *ngIf="isCustomPlan" style="margin-top: 1.5rem; padding: 1rem; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px;">
+        <div *ngIf="isCustomPlan" style="margin-top: 1.5rem; padding: 1rem; border: 0.5px solid #e2e8f0; border-radius: 10px; background: #ffffff;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; gap: 1rem; flex-wrap: wrap;">
             <div>
-              <h5 style="margin: 0; color: #9a4d00; font-size: 0.97rem;">Plan personalizado</h5>
-              <small style="color: #b45309;">Define cuotas variables, primas y cuotas balón.</small>
+              <h5 style="margin: 0; color: #334155; font-size: 0.97rem;">Plan personalizado</h5>
+              <small style="color: #64748b;">Define cuotas variables, primas y cuotas balón.</small>
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-              <button type="button" (click)="showBatchAssistant = !showBatchAssistant" style="background: #1d4ed8; color: white; border: none; border-radius: 6px; padding: 0.6rem 0.9rem; font-weight: 700; cursor: pointer;">
+              <button type="button" (click)="showBatchAssistant = !showBatchAssistant" style="background: #f59e0b; color: white; border: none; border-radius: 6px; padding: 0.6rem 0.9rem; font-weight: 700; cursor: pointer;">
                 {{ showBatchAssistant ? 'Ocultar asistente' : 'Mostrar asistente rapido' }}
               </button>
-              <button type="button" (click)="addPaymentPromise()" style="background: #f97316; color: white; border: none; border-radius: 6px; padding: 0.6rem 0.9rem; font-weight: 700; cursor: pointer;">
+              <button type="button" (click)="addPaymentPromise()" style="background: linear-gradient(135deg, #347769 0%, #2a615d 100%); color: white; border: none; border-radius: 6px; padding: 0.6rem 0.9rem; font-weight: 700; cursor: pointer;">
                 + Agregar pago
               </button>
             </div>
           </div>
 
-          <div *ngIf="showBatchAssistant" style="margin-bottom: 1rem; padding: 1rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
-            <h6 style="margin: 0 0 0.85rem 0; color: #1e3a8a; font-size: 0.92rem; font-weight: 800;">
+          <div *ngIf="showBatchAssistant" style="margin-bottom: 1rem; padding: 1rem; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px;">
+            <h6 style="margin: 0 0 0.85rem 0; color: #9a4d00; font-size: 0.92rem; font-weight: 800;">
               Generacion Rapida por Lotes
             </h6>
 
             <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem;">
               <div>
-                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #1e40af; margin-bottom: 0.25rem;">Cantidad de cuotas</label>
-                <input type="number" min="1" step="1" [(ngModel)]="batchCount" [ngModelOptions]="{standalone: true}" style="width: 100%; padding: 0.55rem; border: 1px solid #93c5fd; border-radius: 4px; box-sizing: border-box;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">Cantidad de cuotas</label>
+                <input type="number" min="1" step="1" [(ngModel)]="batchCount" [ngModelOptions]="{standalone: true}" style="width: 100%; padding: 0.55rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
               </div>
               <div>
-                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #1e40af; margin-bottom: 0.25rem;">Valor por cuota</label>
-                <input type="number" min="1" [(ngModel)]="batchAmount" [ngModelOptions]="{standalone: true}" style="width: 100%; padding: 0.55rem; border: 1px solid #93c5fd; border-radius: 4px; box-sizing: border-box;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">Valor por cuota</label>
+                <input type="text" min="1" [(ngModel)]="batchAmount" [ngModelOptions]="{standalone: true}" appCurrencyMask style="width: 100%; padding: 0.55rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
               </div>
               <div>
-                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #1e40af; margin-bottom: 0.25rem;">Fecha inicial</label>
-                <input type="date" [(ngModel)]="batchStartDate" [ngModelOptions]="{standalone: true}" style="width: 100%; padding: 0.55rem; border: 1px solid #93c5fd; border-radius: 4px; box-sizing: border-box;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">Fecha inicial</label>
+                <input type="date" [(ngModel)]="batchStartDate" [ngModelOptions]="{standalone: true}" style="width: 100%; padding: 0.55rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
               </div>
               <div>
-                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #1e40af; margin-bottom: 0.25rem;">Concepto</label>
-                <input type="text" [(ngModel)]="batchDescription" [ngModelOptions]="{standalone: true}" placeholder="Cuota ordinaria" style="width: 100%; padding: 0.55rem; border: 1px solid #93c5fd; border-radius: 4px; box-sizing: border-box;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">Concepto</label>
+                <input type="text" [(ngModel)]="batchDescription" [ngModelOptions]="{standalone: true}" placeholder="Cuota ordinaria" style="width: 100%; padding: 0.55rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
               </div>
             </div>
 
-            <button type="button" (click)="generateBatch()" style="margin-top: 0.9rem; background: #2563eb; color: white; border: none; border-radius: 6px; padding: 0.65rem 1rem; font-weight: 700; cursor: pointer;">
+            <button type="button" (click)="generateBatch()" style="margin-top: 0.9rem; background: #f59e0b; color: white; border: none; border-radius: 6px; padding: 0.65rem 1rem; font-weight: 700; cursor: pointer;">
               Inyectar Lote al Cronograma
             </button>
 
@@ -156,18 +156,15 @@
             </div>
           </div>
 
-          <div *ngIf="paymentPromises.length === 0" style="padding: 0.75rem; border: 1px dashed #fdba74; border-radius: 6px; color: #9a4d00; background: rgba(255, 247, 237, 0.7);">
+          <div *ngIf="paymentPromises.length === 0" style="padding: 0.75rem; border: 1px dashed #cbd5e1; border-radius: 6px; color: #475569; background: #f8fafc;">
             Aún no hay pagos personalizados definidos.
           </div>
 
-          <!-- CONTENEDOR UNIFICADO: BARRA + LISTA DE CUOTAS (todo dentro del mismo borde) -->
-          <div *ngIf="paymentPromises.length > 0" style="margin-top: 1rem; border: 1px solid #fde68a; border-radius: 8px; overflow: hidden;">
-
-            <!-- BARRA PLEGABLE -->
+          <div *ngIf="paymentPromises.length > 0" style="margin-top: 1rem; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
             <div (click)="showGeneratedPromises = !showGeneratedPromises"
-                 style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.85rem; background: #fffbeb; cursor: pointer; user-select: none;"
-                 [style.border-bottom]="showGeneratedPromises ? '1px solid #fde68a' : 'none'">
-              <span style="font-size: 0.88rem; font-weight: 700; color: #92400e; display: flex; align-items: center; gap: 0.45rem;">
+                 style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.85rem; background: #f8fafc; cursor: pointer; user-select: none;"
+                 [style.border-bottom]="showGeneratedPromises ? '1px solid #e2e8f0' : 'none'">
+              <span style="font-size: 0.88rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 0.45rem;">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
                      style="width: 15px; height: 15px; transition: transform 0.2s;"
                      [style.transform]="showGeneratedPromises ? 'rotate(90deg)' : 'rotate(0deg)'">
@@ -175,21 +172,20 @@
                 </svg>
                 Cuotas generadas ({{ paymentPromises.length }})
               </span>
-              <span style="font-size: 0.8rem; font-weight: 600; color: #b45309;">
+              <span style="font-size: 0.8rem; font-weight: 600; color: #475569;">
                 {{ showGeneratedPromises ? 'Contraer' : 'Expandir' }}
               </span>
             </div>
 
-            <!-- LISTA, con scroll interno para que muchas cuotas no disparen el alto de la página -->
-            <div *ngIf="showGeneratedPromises" style="max-height: 360px; overflow-y: auto; padding: 0.85rem; background: #fffdf7; display: flex; flex-direction: column; gap: 0.75rem;">
-              <div *ngFor="let promise of paymentPromises.controls; let i = index" [formGroup]="promise" style="padding: 1rem; border: 1px solid #fdba74; border-radius: 8px; background: white; display: grid; grid-template-columns: 1fr 1fr 1.5fr auto; gap: 0.75rem; align-items: end;">
+            <div *ngIf="showGeneratedPromises" style="max-height: 360px; overflow-y: auto; padding: 0.85rem; background: #ffffff; display: flex; flex-direction: column; gap: 0.75rem;">
+              <div *ngFor="let promise of paymentPromises.controls; let i = index" [formGroup]="promise" style="padding: 1rem; border: 1px solid #e2e8f0; border-radius: 8px; background: white; display: grid; grid-template-columns: 1fr 1fr 1.5fr auto; gap: 0.75rem; align-items: end;">
                 <div>
                   <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">Fecha</label>
                   <input type="date" formControlName="expected_date" style="width: 100%; padding: 0.55rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
                 </div>
                 <div>
                   <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">Monto</label>
-                  <input type="number" formControlName="expected_amount" min="1" style="width: 100%; padding: 0.55rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+                  <input type="text" formControlName="expected_amount" min="1" appCurrencyMask style="width: 100%; padding: 0.55rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
                 </div>
                 <div>
                   <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">Descripción</label>
@@ -204,37 +200,33 @@
             </div>
           </div>
 
-          <div *ngIf="isCustomPlan" style="margin-top: 1.5rem; padding: 1.25rem; border-radius: 8px; border: 1px solid;"
-               [ngStyle]="{'background-color': diferenciaFinanciera === 0 ? '#f0fdf4' : '#fef2f2', 'border-color': diferenciaFinanciera === 0 ? '#bbf7d0' : '#fecaca'}">
-
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-              <div>
-                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600; display: block;">SALDO A FINANCIAR</span>
-                <span style="font-size: 1.1rem; font-weight: 700; color: #0f172a;">$ {{ saldoAFinanciar | number }}</span>
-              </div>
-              <div style="text-align: right;">
-                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600; display: block;">TOTAL DISTRIBUIDO</span>
-                <span style="font-size: 1.1rem; font-weight: 700; color: #0f172a;">$ {{ totalCustomPromises | number }}</span>
-              </div>
+          <div *ngIf="isCustomPlan" style="margin-top: 1.5rem; padding: 1rem; border-radius: 10px; border: 1px solid; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem;"
+               [ngStyle]="{'background': diferenciaFinanciera === 0 ? '#ecfdf5' : '#fef2f2', 'border-color': diferenciaFinanciera === 0 ? '#bbf7d0' : '#fecaca'}">
+            <div style="padding: 0.9rem; border-radius: 8px; background: rgba(255,255,255,0.22);">
+              <span style="display: block; font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">Saldo a financiar</span>
+              <span style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">$ {{ saldoAFinanciar | number }}</span>
             </div>
-
-            <div style="border-top: 1px dashed #cbd5e1; padding-top: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 0.9rem; font-weight: 600;" [ngStyle]="{'color': diferenciaFinanciera === 0 ? '#15803d' : '#b91c1c'}">
-                {{ diferenciaFinanciera === 0 ? 'Distribucion perfecta' : 'Diferencia detectada' }}
-              </span>
-              <span style="font-size: 1.2rem; font-weight: 800;" [ngStyle]="{'color': diferenciaFinanciera === 0 ? '#15803d' : '#b91c1c'}">
-                $ {{ diferenciaFinanciera < 0 ? (diferenciaFinanciera * -1) : diferenciaFinanciera | number }} {{ diferenciaFinanciera > 0 ? 'Faltan' : (diferenciaFinanciera < 0 ? 'Sobran' : '') }}
-              </span>
+            <div style="padding: 0.9rem; border-radius: 8px; background: rgba(255,255,255,0.22);">
+              <span style="display: block; font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">Distribuido</span>
+              <span style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">$ {{ totalCustomPromises | number }}</span>
+            </div>
+            <div style="padding: 0.9rem; border-radius: 8px; background: rgba(255,255,255,0.22);">
+              <span style="display: block; font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">Diferencia</span>
+              <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                <span *ngIf="diferenciaFinanciera === 0" style="font-size: 1rem; color: #15803d;">✓</span>
+                <span *ngIf="diferenciaFinanciera !== 0" style="font-size: 1rem; color: #b91c1c;">!</span>
+                <span [ngStyle]="{'color': diferenciaFinanciera === 0 ? '#15803d' : '#b91c1c', 'font-weight': '800'}">
+                  {{ diferenciaFinanciera === 0 ? 'Distribución exacta' : (diferenciaFinanciera > 0 ? 'Faltan' : 'Sobran') }}
+                </span>
+              </div>
+              <div style="margin-top: 0.2rem; font-size: 0.92rem; font-weight: 700; color: #0f172a;">
+                $ {{ diferenciaFinanciera < 0 ? (diferenciaFinanciera * -1) : diferenciaFinanciera | number }}
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- ========================================== -->
-        <!-- MAGIA EN TIEMPO REAL: RESUMEN FINANCIERO   -->
-        <!-- ========================================== -->
-        <div *ngIf="!isCustomPlan && projectedQuota > 0" style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 1.25rem; border-radius: 8px; margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); animation: fadeIn 0.3s ease-in-out;">
-          
-          <!-- Cuota Mensual -->
+        <div *ngIf="!isCustomPlan && projectedQuota > 0" style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 1.25rem; border-radius: 8px; margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); animation: fadeIn 0.3s ease-in-out; flex-wrap: wrap;">
           <div>
             <span style="display: block; font-size: 0.75rem; color: #166534; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">
               Cuota Mensual Estimada
@@ -244,29 +236,36 @@
             </span>
           </div>
 
-          <!-- Valor Total Proyectado -->
-          <div style="text-align: right; border-left: 1px solid #bbf7d0; padding-left: 1.5rem;">
+          <div style="text-align: center; border-left: 1px solid #bbf7d0; padding-left: 1.5rem; border-right: 1px solid #bbf7d0; padding-right: 1.5rem;">
             <span style="display: block; font-size: 0.75rem; color: #166534; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">
-              Valor Final (Con Intereses)
+              Total Deuda a Financiar
             </span>
             <span style="font-size: 1.2rem; font-weight: 700; color: #166534;">
-              $ {{ projectedTotal | number:'1.0-0' }}
+              $ {{ valorFuturoDeuda | number:'1.0-0' }}
+            </span>
+          </div>
+
+          <div style="text-align: right;">
+            <span style="display: block; font-size: 0.75rem; color: #166534; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">
+              Costo Total del Proyecto
+            </span>
+            <span style="font-size: 1.2rem; font-weight: 700; color: #166534;">
+              $ {{ costoTotalInmueble | number:'1.0-0' }}
             </span>
           </div>
         </div>
-        <!-- ========================================== -->
 
       </div>
 
       <button type="submit"
               [disabled]="isLoading || contractForm.invalid || (isCustomPlan && diferenciaFinanciera !== 0)"
               [attr.title]="isCustomPlan && diferenciaFinanciera !== 0 ? 'Ajusta las cuotas personalizadas para cuadrar el saldo a financiar.' : null"
-              style="margin-top: 1rem; padding: 0.85rem; background-color: #2563eb; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem;">
+              style="margin-top: 1rem; padding: 0.85rem; background: linear-gradient(135deg, #347769 0%, #2a615d 100%); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem;">
         {{ isLoading ? 'Procesando Contrato...' : 'Guardar y Generar Amortización' }}
       </button>
 
-      <div *ngIf="isCustomPlan && diferenciaFinanciera !== 0" style="margin-top: 0.4rem; font-size: 0.85rem; color: #b91c1c; font-weight: 600;">
-        No puedes guardar hasta que el Total Distribuido sea exactamente igual al Saldo a Financiar.
+      <div *ngIf="isCustomPlan && hasFinancialDifference" style="margin-top: 0.4rem; font-size: 0.85rem; color: #b91c1c; font-weight: 600;">
+        No puedes guardar hasta que el Total Distribuido cuadre con el Valor Futuro de la Deuda (margen permitido: +/- $5).
       </div>
 
      

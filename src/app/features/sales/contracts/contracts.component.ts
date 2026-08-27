@@ -7,11 +7,12 @@ import { LotService } from '../../../core/services/lot.service';
 import { CustomerService, Customer } from '../../../core/services/customer.service';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FinancialService } from '../../../core/services/financial.service';
+import { CurrencyMaskDirective } from '../../../shared/directives/currency-mask.directive';
 
 @Component({
   selector: 'app-contracts',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule, CurrencyMaskDirective],
   templateUrl: './contracts.component.html',
   styleUrl: './contracts.component.scss'
 })
@@ -100,22 +101,64 @@ export class ContractsComponent implements OnInit {
     return this.contractForm.get('is_custom_plan')?.value === true;
   }
 
-  get saldoAFinanciar(): number {
-    const precio = Number(this.contractForm.get('sale_price')?.value ?? 0);
-    const inicial = Number(this.contractForm.get('down_payment_pactada')?.value ?? 0);
+  get tasaInteres(): number {
+    return Number(this.contractForm.get('interest_rate')?.value ?? 0) || 0;
+  }
 
-    return (Math.round(precio * 100) - Math.round(inicial * 100)) / 100;
+  get capitalAFinanciar(): number {
+    const precio = Number(this.contractForm.get('sale_price')?.value ?? 0) || 0;
+    const inicial = Number(this.contractForm.get('down_payment_pactada')?.value ?? 0) || 0;
+    return Math.max(0, precio - inicial);
+  }
+
+  get saldoAFinanciar(): number {
+    return this.capitalAFinanciar;
+  }
+
+  get plazoFinanciero(): number {
+    const plazoFormulario = Number(this.contractForm.get('term_months')?.value ?? 0) || 0;
+    return this.paymentPromises.length > 0 ? this.paymentPromises.length : plazoFormulario || 1;
+  }
+
+  get cuotaFijaEstimada(): number {
+    const P = this.capitalAFinanciar;
+    const i = (this.tasaInteres || 0) / 100;
+    const n = Number(this.contractForm.get('term_months')?.value ?? 0) || 0;
+
+    if (P <= 0 || n <= 0) {
+      return 0;
+    }
+
+    if (i === 0) {
+      return P / n;
+    }
+
+    return P * (i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1);
+  }
+
+  get interesesCalculados(): number {
+    return Math.max(0, this.valorFuturoDeuda - this.capitalAFinanciar);
+  }
+
+  get valorFuturoDeuda(): number {
+    const n = Number(this.contractForm.get('term_months')?.value ?? 0) || 0;
+    if (n <= 0) {
+      return this.capitalAFinanciar;
+    }
+
+    return this.cuotaFijaEstimada * n;
+  }
+
+  get costoTotalInmueble(): number {
+    return this.valorFuturoDeuda + (Number(this.contractForm.get('down_payment_pactada')?.value ?? 0) || 0);
   }
 
   get diferenciaFinanciera(): number {
-    const saldoCents = Math.round(this.saldoAFinanciar * 100);
-    const distribuidoCents = Math.round(this.totalCustomPromises * 100);
-
-    return (saldoCents - distribuidoCents) / 100;
+    return this.valorFuturoDeuda - this.totalCustomPromises;
   }
 
   get hasFinancialDifference(): boolean {
-    return Math.round(this.diferenciaFinanciera * 100) !== 0;
+    return Math.abs(this.diferenciaFinanciera) > 5;
   }
 
   private updatePlanModeValidators(isCustom: boolean): void {
@@ -498,7 +541,7 @@ export class ContractsComponent implements OnInit {
     }
 
     if (isCustom && this.hasFinancialDifference) {
-      this.errorMessage = 'La suma de cuotas personalizadas debe coincidir exactamente con el saldo a financiar.';
+      this.errorMessage = 'La suma de cuotas personalizadas debe cuadrar con el valor futuro de la deuda (PMT × plazo), con un margen de +/- $5.';
       return;
     }
 

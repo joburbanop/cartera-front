@@ -1,16 +1,17 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { ActivatedRoute, Router,RouterModule } from '@angular/router'; // Para leer la URL y navegar
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ProjectService } from '../../../core/services/project.service';
 import { LotService } from '../../../core/services/lot.service';
+import { CurrencyMaskDirective } from '../../../shared/directives/currency-mask.directive';
 
 @Component({
   selector: 'app-lots',
   standalone: true,
- imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, CurrencyMaskDirective],
   templateUrl: './lots.component.html',
-  styleUrl: './lots.component.scss' // <-- ASEGÚRATE DE QUE ESTO ESTÉ AQUÍ
+  styleUrl: './lots.component.scss'
 })
 export class LotsComponent implements OnInit {
   private fb = inject(FormBuilder);

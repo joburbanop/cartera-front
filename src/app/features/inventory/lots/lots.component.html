@@ -4,16 +4,16 @@
     <button class="modal-close" (click)="closeModal()">✖</button>
     <h3 style="margin: 0 0 1.5rem 0; color: #1e293b;">Registrar Lote</h3>
     
-    <div *ngIf="errorMessage" style="background: #fee2e2; color: #dc2626; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem;">
+    <div *ngIf="errorMessage" class="app-form-alert">
       {{ errorMessage }}
     </div>
 
     <form [formGroup]="lotForm" (ngSubmit)="onSubmit()">
       
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-        <div class="form-group" *ngIf="!hasProjectInRoute" style="grid-column: span 2;">
-          <label>Proyecto</label>
-          <select formControlName="project_id">
+      <div class="app-form-row">
+        <div class="app-form-group" *ngIf="!hasProjectInRoute" style="grid-column: span 2;">
+          <label class="app-form-label">Proyecto</label>
+          <select class="app-form-select" formControlName="project_id">
             <option value="">Seleccione un proyecto</option>
             <option *ngFor="let project of projects" [value]="project.id">
               {{ project.name }}
@@ -21,32 +21,32 @@
           </select>
         </div>
 
-        <div class="form-group" style="grid-column: span 2;">
-          <label>Identificador del Lote</label>
-          <input type="text" formControlName="number" placeholder="Ej. Lote 12 - Mz B">
+        <div class="app-form-group" style="grid-column: span 2;">
+          <label class="app-form-label">Identificador del Lote</label>
+          <input class="app-form-input" type="text" formControlName="number" placeholder="Ej. Lote 12 - Mz B">
         </div>
 
-        <div class="form-group">
-          <label>Área (m²)</label>
-          <input type="number" formControlName="area_m2" placeholder="120">
+        <div class="app-form-group">
+          <label class="app-form-label">Área (m²)</label>
+          <input class="app-form-input" type="number" formControlName="area_m2" placeholder="120">
         </div>
 
-        <div class="form-group">
-          <label>Precio de Lista ($)</label>
-          <input type="number" formControlName="list_price" placeholder="85000000">
+        <div class="app-form-group">
+          <label class="app-form-label">Precio de Lista ($)</label>
+          <input class="app-form-input" type="text" formControlName="list_price" placeholder="85000000" appCurrencyMask>
         </div>
       </div>
 
-      <div class="form-group">
-        <label>Estado Inicial</label>
-        <select formControlName="status">
+      <div class="app-form-group">
+        <label class="app-form-label">Estado Inicial</label>
+        <select class="app-form-select" formControlName="status">
           <option value="disponible">Disponible</option>
           <option value="reservado">Reservado / Preventa</option>
           <option value="vendido">Vendido</option>
         </select>
       </div>
 
-      <button type="submit" [disabled]="isLoading" class="btn-submit">
+      <button type="submit" [disabled]="isLoading" class="app-form-button">
         {{ isLoading ? 'Guardando...' : 'Guardar Lote' }}
       </button>
     </form>

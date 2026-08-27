@@ -1,0 +1,78 @@
+.app-form-group {
+  margin-bottom: 1.25rem;
+}
+
+.app-form-label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 0.45rem;
+}
+
+.app-form-input,
+.app-form-select,
+.app-form-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #0f172a;
+  padding: 0.72rem 0.8rem;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+
+  &:focus {
+    outline: none;
+    border-color: #2f7d6c;
+    box-shadow: 0 0 0 3px rgba(47, 125, 108, 0.12);
+  }
+}
+
+.app-form-textarea {
+  resize: vertical;
+  min-height: 96px;
+}
+
+.app-form-button {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #347769 0%, #2a615d 100%);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.96rem;
+  cursor: pointer;
+  box-shadow: 0 8px 16px rgba(52, 119, 105, 0.2);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+
+  &:hover {
+    opacity: 0.96;
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+.app-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.app-form-alert {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 0.75rem 0.9rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  border: 1px solid #fecaca;
+}

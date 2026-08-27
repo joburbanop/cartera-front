@@ -6,14 +6,12 @@ import { BankAccountService } from '../../../core/services/bank-account.service'
 import { LotService } from '../../../core/services/lot.service';
 import { RouterModule } from '@angular/router';
 
-
 @Component({
   selector: 'app-projects',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule,RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule],
   templateUrl: './projects.component.html',
   styleUrl: './projects.component.scss'
-
 })
 export class ProjectsComponent implements OnInit {
   private fb = inject(FormBuilder);
