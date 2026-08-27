@@ -63,21 +63,16 @@ export class ClientsComponent implements OnInit {
       next: (response) => {
         const customersData = response.data || response || [];
         
-        // Mapear los datos de la API al formato UI
-        this.clientes = customersData.map((customer: Customer) => ({
+        // Los datos ya vienen en el formato correcto desde el backend
+        this.clientes = customersData.map((customer: any) => ({
           id: customer.id,
-          nombre: customer.name || 'Sin nombre',
-          documento: customer.document_number || customer.document || 'Sin documento',
-          telefono: customer.phone || 'Sin teléfono',
+          nombre: customer.nombre,
+          documento: customer.documento,
+          telefono: customer.telefono,
           email: customer.email,
-          lote: null, // TODO: Conectar con el servicio de contratos para obtener el lote asociado
-          estadoCartera: 'sin_contrato' as const
+          lote: customer.lote,
+          estadoCartera: customer.estadoCartera
         }));
-
-        // Agregar datos de prueba si no hay clientes
-        if (this.clientes.length === 0) {
-          this.agregarDatosDePrueba();
-        }
 
         this.clientesFiltrados = [...this.clientes];
         this.calcularKPIs();
@@ -85,45 +80,14 @@ export class ClientsComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error cargando clientes:', err);
-        // Si hay error, mostrar datos de prueba
-        this.agregarDatosDePrueba();
-        this.clientesFiltrados = [...this.clientes];
+        // Si hay error en producción, mostrar mensaje al usuario
+        this.errorMessage = 'No se pudieron cargar los clientes. Por favor, intente nuevamente.';
+        this.clientes = [];
+        this.clientesFiltrados = [];
         this.calcularKPIs();
         this.isLoading = false;
       }
     });
-  }
-
-  private agregarDatosDePrueba(): void {
-    this.clientes = [
-      {
-        id: 1,
-        nombre: 'William Rojas',
-        documento: '1234567890',
-        telefono: '321 456 7890',
-        email: 'william.rojas@email.com',
-        lote: 'Lote 45',
-        estadoCartera: 'vencida'
-      },
-      {
-        id: 2,
-        nombre: 'Ana Muñoz',
-        documento: '9876543210',
-        telefono: '310 234 5678',
-        email: 'ana.munoz@email.com',
-        lote: 'Lote 12',
-        estadoCartera: 'al_dia'
-      },
-      {
-        id: 3,
-        nombre: 'Luis Erazo',
-        documento: '5554443332',
-        telefono: '315 987 6543',
-        email: 'luis.erazo@email.com',
-        lote: null,
-        estadoCartera: 'sin_contrato'
-      }
-    ];
   }
 
   private calcularKPIs(): void {
@@ -174,12 +138,13 @@ export class ClientsComponent implements OnInit {
     this.isLoading = true;
     this.errorMessage = '';
 
-    const customerData: Partial<Customer> = {
-      name: this.customerForm.value.name || '',
-      document: this.customerForm.value.document || '',
-      phone: this.customerForm.value.phone || '',
-      email: this.customerForm.value.email || '',
+    // Mapear correctamente los campos al formato que espera el backend
+    const customerData = {
       document_type: this.customerForm.value.document_type || 'CC',
+      document_number: this.customerForm.value.document || '',
+      name: this.customerForm.value.name || '',
+      phone: this.customerForm.value.phone || '',
+      email: this.customerForm.value.email || null,
       address: this.customerForm.value.address || null,
       city: this.customerForm.value.city || null
     };
@@ -197,8 +162,41 @@ export class ClientsComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error al crear cliente:', err);
-        this.errorMessage = err.error?.message || 'No se pudo crear el cliente';
         this.isLoading = false;
+        
+        // Manejo específico de errores de validación (422)
+        if (err.status === 422 && err.error?.errors) {
+          // Laravel devuelve los errores en formato { campo: [mensajes] }
+          const errors = err.error.errors;
+          const errorMessages: string[] = [];
+          
+          // Mapear los nombres de campos del backend a mensajes amigables
+          const fieldLabels: { [key: string]: string } = {
+            'document_type': 'Tipo de documento',
+            'document_number': 'Número de documento',
+            'name': 'Nombre',
+            'phone': 'Teléfono',
+            'email': 'Email',
+            'address': 'Dirección',
+            'city': 'Ciudad'
+          };
+          
+          for (const field in errors) {
+            const label = fieldLabels[field] || field;
+            const messages = errors[field];
+            
+            if (Array.isArray(messages)) {
+              messages.forEach(msg => {
+                errorMessages.push(`${label}: ${msg}`);
+              });
+            }
+          }
+          
+          this.errorMessage = errorMessages.join('. ');
+        } else {
+          // Error genérico
+          this.errorMessage = err.error?.message || 'No se pudo crear el cliente. Intente nuevamente.';
+        }
       }
     });
   }

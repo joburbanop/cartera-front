@@ -364,6 +364,8 @@
     border-radius: 8px;
     margin-bottom: 16px;
     font-size: 14px;
+    line-height: 1.5;
+    word-wrap: break-word;
 
     &.alert-success {
       background-color: #f0fdf4;
@@ -375,6 +377,7 @@
       background-color: #fef2f2;
       border: 1px solid #fecaca;
       color: #b91c1c;
+      white-space: pre-wrap;
     }
   }
 

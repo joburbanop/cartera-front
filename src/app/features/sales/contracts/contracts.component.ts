@@ -485,7 +485,8 @@ export class ContractsComponent implements OnInit {
   loadCustomers() {
     this.customerService.getCustomers().subscribe({
       next: (response: any) => {
-        const customers = response.data?.data || response.data || response || [];
+        // La respuesta viene en formato { success, message, data: [...] }
+        const customers = response.data || response || [];
         this.customers = Array.isArray(customers) ? customers : [];
         this.cdr.detectChanges();
       },
@@ -502,20 +503,26 @@ export class ContractsComponent implements OnInit {
     const rawCustomer = this.customerForm.getRawValue();
     const documentValue = String(rawCustomer.document ?? '').trim();
 
-    const payload: Partial<Customer> = {
+    const payload = {
       name: String(rawCustomer.name ?? '').trim(),
       document_type: 'CC',
       document_number: documentValue,
       phone: rawCustomer.phone?.trim() || '3000000000',
-      email: rawCustomer.email?.trim() || undefined,
+      email: rawCustomer.email?.trim() || null,
     };
 
     this.customerService.createCustomer(payload).subscribe({
       next: (response: any) => {
-        const customer = response.customer ?? response.data ?? response;
+        // La respuesta viene en formato { success, message, data: {...} }
+        const customer = response.data || response;
 
-        this.customers = [...this.customers, customer];
+        // Seleccionar automáticamente el cliente recién creado
         this.contractForm.patchValue({ customer_id: customer.id });
+        
+        // Recargar la lista completa de clientes para mantener consistencia
+        this.loadCustomers();
+        
+        // Cerrar modal y mostrar mensaje
         this.customerForm.reset();
         this.showCustomerModal = false;
         this.successMessage = 'Cliente registrado y seleccionado correctamente.';
@@ -523,7 +530,23 @@ export class ContractsComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error al crear cliente', err);
-        this.errorMessage = err.error?.message || 'No se pudo crear el cliente.';
+        
+        // Manejo de errores de validación 422
+        if (err.status === 422 && err.error?.errors) {
+          const errors = err.error.errors;
+          const errorMessages: string[] = [];
+          
+          for (const field in errors) {
+            const messages = errors[field];
+            if (Array.isArray(messages)) {
+              errorMessages.push(...messages);
+            }
+          }
+          
+          this.errorMessage = errorMessages.join('. ');
+        } else {
+          this.errorMessage = err.error?.message || 'No se pudo crear el cliente.';
+        }
       }
     });
   }

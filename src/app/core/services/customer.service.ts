@@ -14,6 +14,16 @@ export interface Customer {
   city?: string | null;
 }
 
+export interface CreateCustomerPayload {
+  document_type: string;
+  document_number: string;
+  name: string;
+  phone: string;
+  email?: string | null;
+  address?: string | null;
+  city?: string | null;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -25,7 +35,7 @@ export class CustomerService {
     return this.http.get(this.apiUrl);
   }
 
-  createCustomer(customer: Partial<Customer>): Observable<any> {
+  createCustomer(customer: CreateCustomerPayload | Partial<Customer>): Observable<any> {
     return this.http.post(this.apiUrl, customer);
   }
 }
