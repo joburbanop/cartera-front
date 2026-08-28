@@ -66,8 +66,8 @@
             <p class="client-doc">CC {{ cliente.documento }}</p>
           </td>
           <td>{{ cliente.telefono }}</td>
-          <td [ngClass]="{'has-lote': cliente.lote, 'no-lote': !cliente.lote}">
-            {{ cliente.lote || 'Sin contrato' }}
+          <td [ngClass]="{'has-lote': (cliente.cantidad_contratos ?? 0) > 0, 'no-lote': (cliente.cantidad_contratos ?? 0) === 0}">
+            {{ (cliente.cantidad_contratos ?? 0) > 0 ? cliente.cantidad_contratos : 'Sin contrato' }}
           </td>
           <td>
             <span class="badge" [ngClass]="'badge-' + (cliente.estadoCartera || 'na')">
@@ -128,7 +128,7 @@
               <option value="CC">CC</option>
               <option value="CE">CE</option>
               <option value="NIT">NIT</option>
-              <option value="PASSPORT">Pasaporte</option>
+              <option value="TI">TI</option>
             </select>
           </div>
           <div class="form-group-large">

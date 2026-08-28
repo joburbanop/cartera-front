@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { CustomerService, Customer } from '../../core/services/customer.service';
@@ -10,6 +10,7 @@ interface ClienteUI {
   telefono: string;
   email?: string;
   lote: string | null;
+  cantidad_contratos?: number;
   estadoCartera: 'al_dia' | 'vencida' | 'sin_contrato';
 }
 
@@ -23,6 +24,7 @@ interface ClienteUI {
 export class ClientsComponent implements OnInit {
   private customerService = inject(CustomerService);
   private fb = inject(FormBuilder);
+  private cdr = inject(ChangeDetectorRef);
 
   // KPIs
   totalClientes = 0;
@@ -62,8 +64,7 @@ export class ClientsComponent implements OnInit {
     this.customerService.getCustomers().subscribe({
       next: (response) => {
         const customersData = response.data || response || [];
-        
-        // Los datos ya vienen en el formato correcto desde el backend
+
         this.clientes = customersData.map((customer: any) => ({
           id: customer.id,
           nombre: customer.nombre,
@@ -71,21 +72,23 @@ export class ClientsComponent implements OnInit {
           telefono: customer.telefono,
           email: customer.email,
           lote: customer.lote,
+          cantidad_contratos: customer.cantidad_contratos ?? 0,
           estadoCartera: customer.estadoCartera
         }));
 
         this.clientesFiltrados = [...this.clientes];
         this.calcularKPIs();
         this.isLoading = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error cargando clientes:', err);
-        // Si hay error en producción, mostrar mensaje al usuario
         this.errorMessage = 'No se pudieron cargar los clientes. Por favor, intente nuevamente.';
         this.clientes = [];
         this.clientesFiltrados = [];
         this.calcularKPIs();
         this.isLoading = false;
+        this.cdr.detectChanges();
       }
     });
   }
