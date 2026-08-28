@@ -489,7 +489,7 @@ export class AmortizationComponent implements OnInit {
     formData.append('amount', String(paymentData.amount ?? 0));
     formData.append('payment_method', paymentData.payment_method ?? '');
     formData.append('transaction_date', paymentData.transaction_date ?? '');
-    formData.append('payment_date', paymentData.transaction_date ?? '');
+    formData.append('payment_date', paymentData.payment_date ?? paymentData.transaction_date ?? '');
     formData.append('transaction_type', transactionType);
 
     const paymentOption = paymentData.payment_option ?? paymentData.surplus_action;
