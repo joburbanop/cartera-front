@@ -1,0 +1,4 @@
+- Feature-driven: cada módulo en features/ es autocontenido (componentes, servicios, rutas propias).
+- Servicios en core/services son singletons (providedIn: 'root'), nunca se registran en un feature module.
+- shared/ solo contiene dumb components sin lógica de negocio ni llamadas HTTP.
+- Guards en core/guards controlan acceso por rol/JWT.

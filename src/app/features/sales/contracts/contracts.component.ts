@@ -208,7 +208,54 @@ export class ContractsComponent implements OnInit {
   }
 
   get hasFinancialDifference(): boolean {
-    return Math.abs(this.diferenciaFinanciera) > 5;
+    return Math.abs(this.diferenciaFinanciera) > 1000;
+  }
+
+  autoCuadrarUltimaCuota(): void {
+    if (!this.isCustomPlan || this.paymentPromises.length === 0) {
+      return;
+    }
+
+    const termMonths = Number(this.contractForm.get('term_months')?.value ?? 0) || 0;
+    const valorFuturoDeuda = Math.round(this.cuotaFijaEstimada * termMonths);
+
+    if (!Number.isFinite(valorFuturoDeuda) || valorFuturoDeuda <= 0) {
+      this.errorMessage = 'No se pudo calcular el valor futuro de la deuda. Verifica precio, inicial, plazo y tasa.';
+      return;
+    }
+
+    const lastIndex = this.paymentPromises.length - 1;
+    const sumaParcial = this.paymentPromises.controls.slice(0, lastIndex).reduce((sum, control) => {
+      const rawValue = (control as FormGroup).get('expected_amount')?.value;
+
+      if (rawValue === null || rawValue === undefined || rawValue === '') {
+        return sum;
+      }
+
+      if (typeof rawValue === 'number') {
+        return sum + (Number.isFinite(rawValue) ? rawValue : 0);
+      }
+
+      if (typeof rawValue === 'string') {
+        const sanitized = rawValue.replace(/[\$\.,\s]/g, '');
+        const parsed = Number(sanitized);
+        return sum + (Number.isFinite(parsed) ? parsed : 0);
+      }
+
+      return sum;
+    }, 0);
+
+    const nuevoMontoUltimaCuota = Math.round(valorFuturoDeuda - sumaParcial);
+
+    if (nuevoMontoUltimaCuota <= 0) {
+      this.errorMessage = 'No se puede auto-cuadrar: la suma de las cuotas previas ya supera el valor futuro proyectado.';
+      return;
+    }
+
+    this.errorMessage = '';
+    (this.paymentPromises.at(lastIndex) as FormGroup).patchValue({
+      expected_amount: nuevoMontoUltimaCuota,
+    });
   }
 
   private updatePlanModeValidators(isCustom: boolean): void {
@@ -605,7 +652,40 @@ export class ContractsComponent implements OnInit {
     }
   }
 
+  private findInvalidControls(): string[] {
+    const invalid: string[] = [];
+
+    const contractControls = this.contractForm.controls as Record<string, any>;
+    Object.keys(contractControls).forEach((controlName) => {
+      const control = contractControls[controlName];
+
+      if (control?.invalid) {
+        invalid.push(`contractForm.${controlName}`);
+      }
+    });
+
+    this.paymentPromises.controls.forEach((control, index) => {
+      const group = control as FormGroup;
+      const groupControls = group.controls as Record<string, any>;
+
+      Object.keys(groupControls).forEach((controlName) => {
+        if (groupControls[controlName]?.invalid) {
+          invalid.push(`payment_promises[${index}].${controlName}`);
+        }
+      });
+    });
+
+    return invalid;
+  }
+
   onSubmit() {
+    console.log('[Contracts] 1. Iniciando submit', {
+      isCustomPlan: this.isCustomPlan,
+      hasFinancialDifference: this.hasFinancialDifference,
+      diferenciaFinanciera: this.diferenciaFinanciera,
+      paymentPromisesLength: this.paymentPromises.length,
+    });
+
     const isCustom = Boolean(this.contractForm.get('is_custom_plan')?.value);
     const normalizedPromises = isCustom
       ? this.paymentPromises.value.map((promise: any, index: number) => ({
@@ -617,25 +697,44 @@ export class ContractsComponent implements OnInit {
       : [];
 
     if (isCustom && this.paymentPromises.invalid) {
+      console.warn('[Contracts] Bloqueado: payment_promises inválido', {
+        invalidControls: this.findInvalidControls(),
+      });
       this.paymentPromises.markAllAsTouched();
       this.errorMessage = 'Complete cada promesa de pago con fecha, monto y descripción.';
+      this.cdr.detectChanges();
       return;
     }
 
     if (isCustom && this.hasExceededTermLimit) {
-      this.errorMessage = `La cantidad de cuotas personalizadas supera el plazo definido (${this.maxCuotasPermitidas} meses). Ajusta el cronograma o reduce el plazo.`;
-      return;
+      // Solo advertimos para diagnóstico: ya no se bloquea el envío por cantidad de cuotas.
+      console.warn('[Contracts] Advertencia: cuotas personalizadas superan term_months, pero se permite continuar', {
+        paymentPromisesLength: this.paymentPromises.length,
+        termMonths: this.maxCuotasPermitidas,
+      });
     }
 
     if (isCustom && this.hasFinancialDifference) {
-      this.errorMessage = 'La suma de cuotas personalizadas debe cuadrar con el valor futuro de la deuda (PMT × plazo), con un margen de +/- $5.';
+      console.warn('[Contracts] Bloqueado: diferencia financiera fuera de tolerancia', {
+        diferenciaFinanciera: this.diferenciaFinanciera,
+        tolerancia: 1000,
+      });
+      this.errorMessage = 'La suma de cuotas personalizadas debe cuadrar con el valor futuro de la deuda (PMT × plazo), con un margen de +/- $1,000.';
+      this.cdr.detectChanges();
       return;
     }
 
     if (this.contractForm.invalid) {
+      console.warn('[Contracts] Bloqueado: contractForm inválido', {
+        invalidControls: this.findInvalidControls(),
+      });
+      this.contractForm.markAllAsTouched();
       this.errorMessage = 'Por favor, complete todos los campos obligatorios.';
+      this.cdr.detectChanges();
       return;
     }
+
+    console.log('[Contracts] 3. Validaciones pasadas. Preparando payload...');
 
     this.isLoading = true;
     this.successMessage = '';
@@ -665,8 +764,17 @@ export class ContractsComponent implements OnInit {
       promises: normalizedPromises,
     };
 
+    console.log('[Contracts] 4. Payload listo para envío', {
+      contract_number: payload.contract_number,
+      lot_id: payload.lot_id,
+      customer_id: payload.customer_id,
+      is_custom_plan: payload.is_custom_plan,
+      promises_count: Array.isArray(payload.promises) ? payload.promises.length : 0,
+    });
+
     this.contractService.createContract(payload).subscribe({
       next: (response) => {
+        console.log('[Contracts] 5. Contrato creado exitosamente', response);
         this.isLoading = false;
         this.successMessage = 'Contrato registrado exitosamente.';
 
@@ -681,13 +789,22 @@ export class ContractsComponent implements OnInit {
         this.loadContracts();
       },
       error: (err) => {
+        console.error('[Contracts] Error al crear contrato', err);
         this.isLoading = false;
+
         if (err.status === 422 && err.error?.errors) {
-          const firstError = Object.keys(err.error.errors)[0];
-          this.errorMessage = err.error.errors[firstError][0];
+          const backendErrors = err.error.errors as Record<string, string[]>;
+          const flattenMessages = Object.values(backendErrors)
+            .flat()
+            .filter((msg) => typeof msg === 'string');
+
+          this.errorMessage = flattenMessages.length > 0
+            ? flattenMessages.join('. ')
+            : 'Validación rechazada por el backend.';
         } else {
-          this.errorMessage = 'Hubo un error al registrar el contrato.';
+          this.errorMessage = err.error?.message || 'Hubo un error al registrar el contrato.';
         }
+
         this.cdr.detectChanges();
       }
     });

@@ -225,6 +225,16 @@
               </div>
             </div>
           </div>
+
+          <div *ngIf="isCustomPlan" style="margin-top: 0.75rem; display: flex; justify-content: flex-end;">
+            <button
+              type="button"
+              (click)="autoCuadrarUltimaCuota()"
+              [disabled]="paymentPromises.length === 0 || !hasFinancialDifference"
+              style="font-size: 0.75rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 6px; padding: 0.4rem 0.7rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+              Auto-cuadrar última cuota
+            </button>
+          </div>
         </div>
 
         <div *ngIf="!isCustomPlan && projectedQuota > 0" style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 1.25rem; border-radius: 8px; margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); animation: fadeIn 0.3s ease-in-out; flex-wrap: wrap;">
@@ -260,13 +270,13 @@
 
       <button type="submit"
               [disabled]="isLoading || contractForm.invalid || (isCustomPlan && hasFinancialDifference)"
-              [attr.title]="isCustomPlan && hasFinancialDifference ? 'Ajusta las cuotas personalizadas para cuadrar el saldo a financiar (margen permitido: +/- $5).' : null"
+              [attr.title]="isCustomPlan && hasFinancialDifference ? 'Ajusta las cuotas personalizadas para cuadrar el saldo a financiar (margen permitido: +/- $1,000).' : null"
               style="margin-top: 1rem; padding: 0.85rem; background: linear-gradient(135deg, #347769 0%, #2a615d 100%); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem;">
         {{ isLoading ? 'Procesando Contrato...' : 'Guardar y Generar Amortización' }}
       </button>
 
       <div *ngIf="isCustomPlan && hasFinancialDifference" style="margin-top: 0.4rem; font-size: 0.85rem; color: #b91c1c; font-weight: 600;">
-        No puedes guardar hasta que el Total Distribuido cuadre con el Valor Futuro de la Deuda (margen permitido: +/- $5).
+        No puedes guardar hasta que el Total Distribuido cuadre con el Valor Futuro de la Deuda (margen permitido: +/- $1,000).
       </div>
 
      
