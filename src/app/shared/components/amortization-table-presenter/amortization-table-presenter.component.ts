@@ -47,9 +47,34 @@ export class AmortizationTablePresenterComponent {
     });
   }
 
-  isFeeSelectable(fee: any): boolean {
+  /**
+   * Retorna true si la fecha de vencimiento de la cuota es estrictamente
+   * anterior a hoy (comparación por día, sin horas).
+   */
+  isVencida(dueDate: string | Date | null | undefined): boolean {
+    if (!dueDate) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const limitDate = new Date(dueDate);
+    limitDate.setHours(0, 0, 0, 0);
+    return limitDate < today;
+  }
+
+  /**
+   * Una cuota está bloqueada (checkbox deshabilitado) si:
+   * - ya fue pagada, O
+   * - su fecha de vencimiento ya expiró (periodo contable cerrado).
+   * Las cuotas FUTURAS nunca se bloquean para permitir pagos adelantados.
+   */
+  isBloqueada(fee: any): boolean {
     const status = String(fee?.status ?? '').toLowerCase();
-    return this.selectable && status !== 'pagada' && status !== 'paid';
+    const isPagada = status === 'pagada' || status === 'paid';
+    const isPasada = this.isVencida(fee?.due_date);
+    return isPagada || isPasada;
+  }
+
+  isFeeSelectable(fee: any): boolean {
+    return this.selectable && !this.isBloqueada(fee);
   }
 
   isSelected(fee: any): boolean {
@@ -57,8 +82,7 @@ export class AmortizationTablePresenterComponent {
   }
 
   toggleFeeSelection(fee: any, event: Event): void {
-    const status = String(fee?.status ?? fee?.estado ?? '').toLowerCase();
-    if (status === 'pagada' || status === 'paid') {
+    if (this.isBloqueada(fee)) {
       const statusTarget = event.target as HTMLInputElement;
       if (statusTarget) {
         statusTarget.checked = false;

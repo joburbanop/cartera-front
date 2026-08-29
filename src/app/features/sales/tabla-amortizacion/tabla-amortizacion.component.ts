@@ -240,13 +240,63 @@ export class AmortizationComponent implements OnInit {
     return this.selection.totalOverdueQuotaDebt;
   }
 
-  openDrawer(): void {
-    this.selectedFees = this.selectedFees.filter((fee: any) => this.isFeeSelectable(fee));
+  /**
+   * Retorna true si la fecha de vencimiento es estrictamente anterior a hoy
+   * (comparación por día, sin horas). Duplica la lógica del presenter para
+   * poder usarla en el componente contenedor sin inyectar dependencias extra.
+   */
+  private isVencida(dueDate: string | Date | null | undefined): boolean {
+    if (!dueDate) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const limitDate = new Date(dueDate);
+    limitDate.setHours(0, 0, 0, 0);
+    return limitDate < today;
+  }
 
-    if (this.selectedFees.length === 0) {
+  openDrawer(): void {
+    // Filtrar las seleccionadas manualmente que aún sean elegibles
+    const seleccionadasValidas = this.selectedFees.filter(
+      (fee: any) => this.isFeeSelectable(fee)
+    );
+
+    // --- Regla de negocio: separar tipo antes de fusionar mora ---
+    // La cuota inicial (installment_number === 0) va al endpoint /down-payment,
+    // las cuotas regulares van a /cascade. Nunca mezclar ambos tipos en un pago.
+    const isSeleccionInicial = seleccionadasValidas.some(
+      (c: any) => Number(c.installment_number) === 0
+    );
+
+    // Filtrar mora del mismo tipo que la selección manual
+    const cuotasEnMora = (this.amortizationPlan ?? []).filter((c: any) => {
+      const status = String(c?.status ?? '').toLowerCase();
+      const esPagada = status === 'pagada' || status === 'paid';
+      const esVencida = this.isVencida(c.due_date);
+      const esInicial = Number(c.installment_number) === 0;
+
+      if (esPagada || !esVencida) return false;
+
+      // Solo incluir mora del mismo "carril" que la selección del usuario
+      return isSeleccionInicial ? esInicial : !esInicial;
+    });
+
+    // Fusionar mora tipada + selección manual y eliminar duplicados por id
+    const merged = [...cuotasEnMora, ...seleccionadasValidas];
+    const cuotasUnicas = Array.from(
+      new Map(merged.map((c: any) => [c.id ?? c.installment_number, c])).values()
+    );
+
+    // Ordenar de más antigua a más reciente (FIFO)
+    cuotasUnicas.sort(
+      (a: any, b: any) =>
+        new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
+    );
+
+    if (cuotasUnicas.length === 0) {
       return;
     }
 
+    this.selectedFees = cuotasUnicas;
     this.isDrawerOpen = true;
     this.cdr.detectChanges();
   }
