@@ -86,9 +86,9 @@ export class ContractsComponent implements OnInit {
     payment_promises: this.fb.array([]),
   });
 
-  get paymentPromises(): FormArray {
-    return this.contractForm.get('payment_promises') as FormArray;
-  }
+  get paymentPromises(): FormArray<FormGroup> {
+  return this.contractForm.get('payment_promises') as FormArray<FormGroup>;
+}
 
   get totalCustomPromises(): number {
     return this.paymentPromises.controls.reduce((sum, control) => {

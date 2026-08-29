@@ -43,7 +43,7 @@ export class CurrencyMaskDirective implements ControlValueAccessor {
     const currentValue = input.value ?? '';
     const digitsOnly = currentValue.replace(/[^\d]/g, '');
     const numericValue = digitsOnly === '' ? null : Number(digitsOnly);
-    const formattedValue = digitsOnly === '' ? '' : this.formatNumber(numericValue);
+    const formattedValue = numericValue === null ? '' : this.formatNumber(numericValue);
 
     const selectionStart = input.selectionStart ?? currentValue.length;
     const caretPosition = this.calculateCaretPosition(currentValue, formattedValue, selectionStart);

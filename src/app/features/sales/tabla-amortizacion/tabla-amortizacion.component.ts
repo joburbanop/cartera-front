@@ -14,7 +14,7 @@ import { PaymentMethodNamePipe } from '../../../shared/pipes/payment-method-name
 import { AmortizationTablePresenterComponent } from '../../../shared/components/amortization-table-presenter/amortization-table-presenter.component';
 import { PaymentPromiseService } from '../../../core/services/payment-promise.service';
 import { PaymentPromise } from '../../../core/models/payment-promise.model';
-
+import { HttpClient } from '@angular/common/http';
 @Component({
   selector: 'app-tabla-amortizacion',
   standalone: true,
@@ -43,6 +43,7 @@ export class AmortizationComponent implements OnInit {
   private financials = inject(AmortizationFinancialsService);
   private selection = inject(AmortizationSelectionService);
   private paymentPromiseService = inject(PaymentPromiseService);
+  private http = inject(HttpClient);
 
   contractId!: number;
   activeTab: 'amortizacion' | 'promesa' = 'amortizacion';
@@ -329,12 +330,35 @@ export class AmortizationComponent implements OnInit {
   }
 
   verComprobante(receiptUrl: string): void {
-    if (!receiptUrl) {
-      return;
-    }
-
-    window.open(receiptUrl, '_blank');
+  if (!receiptUrl) {
+    return;
   }
+
+  this.http.get(receiptUrl, {
+    responseType: 'blob',
+    observe: 'response'
+  }).subscribe({
+    next: (response) => {
+      const blob = response.body;
+
+      if (!blob) {
+        console.error('El recibo llegó vacío');
+        return;
+      }
+
+      const fileUrl = URL.createObjectURL(blob);
+
+      window.open(fileUrl, '_blank');
+
+      setTimeout(() => {
+        URL.revokeObjectURL(fileUrl);
+      }, 60000);
+    },
+    error: (err) => {
+      console.error('Error al abrir el recibo', err);
+    }
+  });
+}
 
   get initialPaymentTransactions(): any[] {
     return (this.contractData?.transactions ?? []).filter((tx: any) => {

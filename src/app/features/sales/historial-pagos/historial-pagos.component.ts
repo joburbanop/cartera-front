@@ -1,4 +1,5 @@
 import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RecaudoService } from '../../../core/services/recaudo.service';
@@ -16,6 +17,7 @@ export class HistorialPagosComponent implements OnInit {
   isLoading = false;
 
   private cdr = inject(ChangeDetectorRef);
+  private http = inject(HttpClient);
 
   constructor(private recaudoService: RecaudoService) {}
 
@@ -55,11 +57,34 @@ export class HistorialPagosComponent implements OnInit {
     this.loadTransactions();
   }
 
-  verComprobante(url: string): void {
-    if (!url) {
-      return;
-    }
-
-    window.open(url, '_blank');
+verComprobante(url: string): void {
+  if (!url) {
+    return;
   }
+
+  this.http.get(url, {
+    responseType: 'blob',
+    observe: 'response'
+  }).subscribe({
+    next: (response) => {
+      const blob = response.body;
+
+      if (!blob) {
+        console.error('El recibo llegó vacío');
+        return;
+      }
+
+      const fileUrl = URL.createObjectURL(blob);
+
+      window.open(fileUrl, '_blank');
+
+      setTimeout(() => {
+        URL.revokeObjectURL(fileUrl);
+      }, 60000);
+    },
+    error: (err) => {
+      console.error('Error al abrir el recibo', err);
+    }
+  });
+}
 }
