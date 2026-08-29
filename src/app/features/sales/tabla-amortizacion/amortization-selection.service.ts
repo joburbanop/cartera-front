@@ -1,9 +1,12 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { isOverdueStatus } from '../../../core/models/amortization-status';
+import { AmortizationFinancialsService } from '../../../core/services/amortization-financials.service';
 
 @Injectable()
 export class AmortizationSelectionService {
   selectedFees: any[] = [];
   private plan: any[] = [];
+  private financials = inject(AmortizationFinancialsService);
 
   setPlan(plan: any[] = []): void {
     this.plan = plan ?? [];
@@ -46,30 +49,7 @@ export class AmortizationSelectionService {
   }
 
   getFeeDebtValue(fee: any): number {
-    const status = String(fee?.status ?? '').toLowerCase();
-
-    if (status === 'pagada' || status === 'paid') {
-      return 0;
-    }
-
-    const quotaDebt = Number(fee?.quota_debt ?? 0);
-    const installmentValue = Number(fee.installment_value ?? 0);
-    const overdueBalance = Number(fee.overdue_balance ?? 0);
-    const remainingBalance = Number(fee.remaining_balance ?? 0);
-
-    if (quotaDebt > 0) {
-      return Math.max(0, quotaDebt);
-    }
-
-    if (overdueBalance > 0) {
-      return Math.max(0, Math.min(overdueBalance, installmentValue || overdueBalance));
-    }
-
-    if (remainingBalance > 0 && remainingBalance < installmentValue) {
-      return Math.max(0, remainingBalance);
-    }
-
-    return Math.max(0, installmentValue);
+    return this.financials.getFeeDebtValue(fee);
   }
 
   clearSelection(): void {
@@ -82,8 +62,7 @@ export class AmortizationSelectionService {
 
   get totalOverdueQuotaDebt(): number {
     return (this.plan ?? []).reduce((sum: number, fee: any) => {
-      const status = String(fee?.status ?? '').toLowerCase();
-      if (status === 'vencida' || status === 'overdue') {
+      if (isOverdueStatus(fee?.status)) {
         return sum + this.getFeeDebtValue(fee);
       }
       return sum;

@@ -1,0 +1,262 @@
+---
+description: Auditoría de src/app/core (servicios, guards, interceptor, modelos). Consultar antes de tocar HTTP, auth o cálculos de cartera en el front.
+globs: src/app/core/**,src/environments/**
+alwaysApply: false
+---
+
+# Core — auditoría del estado actual
+
+Capa compartida de Angular: servicios `providedIn: 'root'`, un guard funcional, un interceptor HTTP y dos módulos de modelos. No hay `NgModule`. No hay `BehaviorSubject` ni signals en core. `environment.apiUrl` existe en `src/environments/environment.ts` (`http://127.0.0.1:8000/api`) y **ningún servicio de core lo importa**.
+
+---
+
+## 1. Inventario
+
+### Modelos
+
+| Pieza | Responsabilidad |
+|---|---|
+| `models/amortization-status.ts` | Tipo `AmortizationStatus`, labels, clases de badge, mapa legado ES→EN y helpers `toAmortizationStatus` / `isPaidStatus` / `isPartialStatus` / `isOverdueStatus` / `amortizationStatusLabel` / **`isVencida(dueDate)`** (fecha < hoy, sin horas). Fuente única de “cuota vencida por fecha”. |
+| `models/payment-promise.model.ts` | Interface `PaymentPromise` (`id`, `contract_id`, `payment_number`, `expected_date`, `expected_amount`, `description`, `is_paid`). |
+
+### Servicios (todos singleton `providedIn: 'root'`)
+
+| Servicio | Responsabilidad |
+|---|---|
+| `AuthService` | Login HTTP, persistencia del JWT en `localStorage` (`auth_token`), lectura de token y flag de sesión. |
+| `CustomerService` | Listar y crear clientes. Exporta también `Customer` y `CreateCustomerPayload`. |
+| `ProjectService` | Listar y crear proyectos. |
+| `LotService` | Listar lotes (filtro opcional `project_id`) y crear lote. |
+| `ContractService` | Crear contrato, listar contratos, ficha por id. |
+| `BankAccountService` | Listar y crear cuentas bancarias. |
+| `AmortizationService` | Plan de amortización, generación y descarga PDF. |
+| `RecaudoService` | Registrar pago (cascada o inicial) y listar transacciones. |
+| `PaymentPromiseService` | Promesas de pago de un contrato. |
+| `AmortizationFinancialsService` | Cálculo **puro** (sin HTTP) sobre un plan: inicial, mora, saldos, seleccionabilidad y **`getFeeDebtValue`** (deuda de una cuota para cobro). |
+| `FinancialService` | PMT francés y total proyectado (sin HTTP). `ContractsComponent.cuotaFijaEstimada` ya lo consume; no reimplementar la fórmula. |
+
+### Guard e interceptor
+
+| Pieza | Responsabilidad |
+|---|---|
+| `guards/auth.guard.ts` (`authGuard`) | `CanActivateFn`: deja pasar si `AuthService.isLoggedIn()`; si no, `navigate(['/login'])`. **No hay control por rol.** |
+| `interceptors/auth.interceptor.ts` (`authInterceptor`) | Interceptor funcional: clona cada request con `Accept: application/json` y, si hay token, `Authorization: Bearer …`. Registrado en `app.config.ts` vía `withInterceptors([authInterceptor])`. |
+
+---
+
+## 2. Contratos públicos
+
+### `AuthService`
+
+```ts
+login(credentials: { email: string; password: string }): Observable<any>
+logout(): void
+getToken(): string | null
+isLoggedIn(): boolean
+```
+
+`login` hace `tap` sobre la respuesta: toma `response.data ?? response`, extrae `payload.access_token ?? response.access_token` y lo guarda en `localStorage` bajo `auth_token`. Si no hay token, **borra** la clave. No tipa el body.
+
+### `CustomerService`
+
+```ts
+getCustomers(): Observable<any>
+createCustomer(customer: CreateCustomerPayload | Partial<Customer>): Observable<any>
+```
+
+### `ProjectService`
+
+```ts
+getProjects(): Observable<any>
+createProject(data: any): Observable<any>
+```
+
+### `LotService`
+
+```ts
+getLots(projectId?: number): Observable<any>
+getLotsByProject(projectId: number): Observable<any>  // alias de getLots(projectId)
+createLot(data: any): Observable<any>
+getAllLots(): Observable<any>  // alias de getLots()
+```
+
+Si hay `projectId`, lo manda como query param `project_id`.
+
+### `ContractService`
+
+```ts
+createContract(data: any): Observable<any>
+getContracts(): Observable<any>
+getContractById(id: number): Observable<any>
+```
+
+### `BankAccountService`
+
+```ts
+getAccounts(): Observable<any>
+createAccount(data: any): Observable<any>
+```
+
+### `AmortizationService`
+
+```ts
+getPlan(contractId: number): Observable<any>
+generatePlan(contractId: number): Observable<any>
+downloadPdf(contractId: number, type: 'internal' | 'client' = 'internal'): Observable<Blob>
+```
+
+### `RecaudoService`
+
+```ts
+registerPayment(contractId: number, formData: FormData, transactionType: string = 'regular_payment'): Observable<any>
+registerDownPayment(contractId: number, formData: FormData): Observable<any>  // delega a registerPayment(..., 'down_payment')
+getTransactionsByContract(contractId: number): Observable<any>
+getAllTransactions(filters?: any): Observable<any>
+```
+
+`registerPayment` añade `contract_id` al `FormData` si falta. El endpoint depende de `transactionType === 'down_payment'`.
+
+### `PaymentPromiseService`
+
+```ts
+getPromisesByContract(contractId: number): Observable<PaymentPromise[]>
+```
+
+Único GET de core genéricamente tipado (el consumidor igual desenvuelve `response.data`).
+
+### `AmortizationFinancialsService` (síncrono)
+
+Parámetros de plan/contrato son `any[]` / `any`. Retornos:
+
+```ts
+getFeeDebtValue(fee): number
+initialFee(plan?, contractData?): any
+initialFeeTotal(plan?, contractData?): number
+initialFeePaid(plan?, contractData?): number
+initialFeeBalance(plan?, contractData?): number
+initialFeeProgress(plan?, contractData?): number
+activationThreshold(contractData?): number
+getFeeStatus(fee, plan?, contractData?): AmortizationStatus
+isFeeSelectable(fee, plan?, contractData?): boolean  // !== 'paid'
+totalPaidAmount(contractData?): number
+totalOutstandingAmount(totalWithInterest: number, contractData?): number
+totalInterestPaid(plan?, contractData?): number
+overdueFees(plan?, contractData?): any[]
+activeMoraFees(plan?, contractData?): any[]   // alias de overdueFees, vacío si status === 'preventa_inactiva'
+activeMoraDebt(plan?, contractData?, feeDebtValue: (fee: any) => number): number
+hasActiveMora(plan?, contractData?): boolean
+```
+
+`getFeeDebtValue`: 0 si paid; si no, `quota_debt > 0` → ese valor; si no `overdue_balance > 0` → `min(overdue_balance, installment_value)`; si `remaining_balance` entre 0 e `installment_value` → remaining; si no → `installment_value`. Lo consumen `DrawerPagoComponent` y `AmortizationSelectionService` (no duplicar).
+
+`isPastDueFee` interno usa `isVencida(due_date ?? fecha_vencimiento)` más el filtro de pagadas.
+
+`overdueFees`: filtra no pagadas vencidas por fecha; en `preventa_inactiva` retorna `[]`; anota `overdue_balance`; descarta `installment_value <= 0`. El cobro real (`openDrawer`) **no** usa esta lista: fusiona mora por carril con `isVencida` + `getFeeDebtValue`.
+
+`getFeeStatus` para `installment_number === 0` **no** usa `fee.status`: compara `initialFeePaid` contra `down_payment_pactada`.
+
+`initialFeePaid`: suma transacciones `down_payment`/`down-payment`; si no hay, usa status paid/partial + `amount_paid`.
+
+### `FinancialService` (síncrono)
+
+```ts
+calculateFrenchQuota(principal: number, months: number, interestRate: number): number
+calculateProjectedTotal(monthlyQuota: number, months: number, downPayment: number): number
+```
+
+`interestRate` se divide entre 100 (tasa periódica en porcentaje, igual que el motor backend mensual).
+
+### `authGuard`
+
+```ts
+export const authGuard: CanActivateFn = () => boolean | UrlTree-via-navigate
+```
+
+Retorna `true` o `false` (el `navigate` a `/login` no se retorna como `UrlTree`).
+
+### `authInterceptor`
+
+```ts
+export const authInterceptor: HttpInterceptorFn
+```
+
+No declara métodos; no hay `catchError`.
+
+---
+
+## 3. Manejo de estado
+
+No hay store, `BehaviorSubject`, `Subject` ni signals en core.
+
+- **Auth:** el único estado persistido es `localStorage['auth_token']`. `isLoggedIn()` es `!!getToken()` (líneas 37–39 de `auth.service.ts`). No hay usuario, roles ni expiración en memoria.
+- **Resto de servicios:** stateless; cada llamada HTTP es independiente. El estado vive en los componentes que se suscriben.
+- **Cálculo:** `AmortizationFinancialsService` y `FinancialService` son funciones puras sobre argumentos; no cachean.
+
+Consumidores (fuera de core): features de inventory/sales/collection/clients/auth inyectan estos singletons. `AmortizationSelectionService` **no** está en core: es `providedIn` de componente en `tabla-amortizacion`.
+
+---
+
+## 4. Comunicación con el backend
+
+Base real en código: string literal `http://127.0.0.1:8000/api` (o `…/api/<recurso>`), no `environment.apiUrl`.
+
+| Método | Ruta | Request | Response tipada en código |
+|---|---|---|---|
+| POST | `/api/login` | `{ email, password }` | `Observable<any>`; se lee `data.access_token` o `access_token` |
+| GET | `/api/customers` | — | `Observable<any>` |
+| POST | `/api/customers` | `CreateCustomerPayload \| Partial<Customer>` | `Observable<any>` |
+| GET | `/api/projects` | — | `Observable<any>` |
+| POST | `/api/projects` | `any` | `Observable<any>` |
+| GET | `/api/lots` | query opcional `project_id` | `Observable<any>` |
+| POST | `/api/lots` | `any` | `Observable<any>` |
+| GET | `/api/contracts` | — | `Observable<any>` |
+| POST | `/api/contracts` | `any` | `Observable<any>` |
+| GET | `/api/contracts/:id` | — | `Observable<any>` |
+| GET | `/api/contracts/:id/amortization` | — | `Observable<any>` |
+| POST | `/api/contracts/:id/generate-amortization` | `{}` | `Observable<any>` |
+| GET | `/api/contracts/:id/download-pdf?type=internal\|client` | `responseType: 'blob'` | `Observable<Blob>` |
+| GET | `/api/contracts/:id/payment-promises` | — | `Observable<PaymentPromise[]>` |
+| GET | `/api/contracts/:id/transactions` | — | `Observable<any>` |
+| POST | `/api/contracts/:id/transactions/down-payment` | `FormData` | `Observable<any>` |
+| POST | `/api/collections/cascade` | `FormData` | `Observable<any>` |
+| GET | `/api/transactions` | `filters` como `HttpParams` objeto | `Observable<any>` |
+| GET | `/api/bank-accounts` | — | `Observable<any>` |
+| POST | `/api/bank-accounts` | `any` | `Observable<any>` |
+
+Ningún servicio de core tiene `subscribe` con `error`, `catchError` ni reintento. Los errores los manejan (o ignoran) los componentes.
+
+El interceptor no inspecciona status 401/403: un token inválido viaja igual en el header.
+
+---
+
+## 5. Convenciones observadas
+
+- Servicios HTTP: `@Injectable({ providedIn: 'root' })` + `inject(HttpClient)`. Nunca providers de feature.
+- URLs: propiedad privada `apiUrl` hardcodeada por clase, no `environment`.
+- Tipado de respuesta: `Observable<any>` salvo PDF (`Blob`) y promesas (`PaymentPromise[]`).
+- Los features desenvuelven Laravel con `response.data?.data \|\| response.data \|\| []` (paginación vs recurso).
+- RxJS: `Observable` + `subscribe({ next, error })` en componentes. En core, el único operador es `tap` en `login`.
+- Sin signals, sin interceptores de error, sin refresh token.
+- Nombres de archivo kebab-case; clases `*Service`. Auth es `CanActivateFn` exportada, no clase.
+- Cálculo de cartera: `AmortizationFinancialsService` (plan persistido) vs `FinancialService` (proyección francesa al crear contrato). No mezclar responsabilidades.
+- Status de cuota: canon EN (`pending`/`paid`/`partial`/`overdue`) con aliases ES en `LEGACY_STATUS_MAP`.
+- Fecha vencida: **solo** `isVencida` de `amortization-status.ts`. Deuda de cuota para cobro: **solo** `AmortizationFinancialsService.getFeeDebtValue`.
+
+---
+
+## 6. Advertencia para futuros cambios
+
+Este código ya está implementado y probado. Cualquier feature nuevo debe consumir estos servicios/componentes existentes — nunca duplicar llamadas HTTP ni lógica de estado ya centralizada aquí.
+
+---
+
+## Deuda técnica observada
+
+Cálculo de cobro (isVencida / getFeeDebtValue) **ya está centralizado**. Lo que sigue es infra de HTTP/auth, no del motor de cuotas:
+
+1. **URL base hardcodeada por servicio.** `environment.apiUrl` existe y no se usa.
+2. **Respuestas HTTP tipadas `Observable<any>`**, salvo `downloadPdf` y `getPromisesByContract`.
+3. **`isLoggedIn()` solo verifica presencia del token**, no expiración. El interceptor no maneja 401.
+4. **`logout()` solo borra `localStorage`**. No hay invalidación en backend ni botón de salida en el layout.
+5. **No hay guards por rol**, pese a lo que dice `arquitectura.mdc`.
+6. **`AmortizationFinancialsService` sigue parametrizando plan/cuota como `any`.** `overdueFees` / `activeMoraDebt` existen para banners/KPIs; el flujo de cobro usa `isVencida` + `getFeeDebtValue` + la fusión de `openDrawer`.

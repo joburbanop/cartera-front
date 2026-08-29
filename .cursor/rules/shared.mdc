@@ -1,0 +1,167 @@
+---
+description: Auditoría de src/app/shared (layout, drawer de pago, tabla de amortización, pipes, máscara de moneda).
+globs: src/app/shared/**
+alwaysApply: false
+---
+
+# Shared — auditoría del estado actual
+
+Standalone components, pipes y una directiva. **No existe carpeta `ui-kit/`.** `arquitectura.mdc` afirma que shared solo tiene dumb components sin lógica de negocio ni HTTP: el drawer y el presenter siguen teniendo reglas de UI de cobro, pero **ya no duplican** `isVencida` ni `getFeeDebtValue` — delegan a core. Ninguno hace HTTP.
+
+---
+
+## 1. Inventario
+
+| Pieza | Tipo | Smart/dumb | Consumidores reales |
+|---|---|---|---|
+| `MainLayoutComponent` (`app-main-layout`) | Componente | **Smart de shell**: breadcrumbs, menú, `RouterOutlet`. Sin HTTP. | Solo `app.routes.ts` (layout autenticado). Un único lugar. |
+| `DrawerPagoComponent` (`app-drawer-pago`) | Componente | **Smart de UI de pago**: reactive form, deuda sugerida, excedente, archivo. Sin HTTP. | Solo `features/sales/tabla-amortizacion`. **Candidato a no ser “shared”.** |
+| `AmortizationTablePresenterComponent` (`app-amortization-table-presenter`) | Componente | **Presentational con estado de selección local.** | Solo `tabla-amortizacion`. **Candidato a no ser “shared”.** |
+| `CurrencyMaskDirective` (`[appCurrencyMask]`) | Directiva CVA | Reutilizable | `drawer-pago`, `contracts`, `lots` (3 features). El único shared realmente cruzado. |
+| `AmortizationStatusLabelPipe` | Pipe | Dumb | Solo el presenter de amortización. |
+| `ContractStatusLabelPipe` | Pipe | Dumb | Solo `tabla-amortizacion` (HTML). `contracts.component.ts` **duplica** el mapa en `getContractStatusLabel` y no importa el pipe. |
+| `PaymentMethodNamePipe` | Pipe | Dumb | Solo `tabla-amortizacion`. |
+
+Tests: `main-layout.spec.ts` y `drawer-pago.spec.ts` (smoke / copia parcial del componente). No hay spec del presenter ni de pipes/directiva.
+
+---
+
+## 2. Contratos públicos
+
+### `MainLayoutComponent`
+
+Sin `@Input`/`@Output`. Estado y métodos públicos:
+
+- `isCarteraOpen`, `isInventarioOpen`, `breadcrumbs`
+- `toggleCartera()`, `toggleInventario()`
+- El template **no usa** esos toggles: el menú es una lista plana de `routerLink`.
+
+Rutas del menú (html): `/dashboard`, `/projects`, `/lots`, `/clientes`, `/usuarios` (disabled “Próx.”, **sin ruta**), `/bank-accounts`, `/contracts`, `/historial-pagos`, más dos enlaces disabled (“Cartera vencida”, “Devoluciones”). Buscador del top-bar es input estático (no filtra). Avatar “JD” estático. **No hay logout.**
+
+### `DrawerPagoComponent`
+
+```ts
+@Input() isProcessing: boolean          // setter: si pasa a false, resetState()
+@Input() bankAccounts: any[]
+@Input() isOpen: boolean                // setter: true → updateFormAmount(); false → resetState()
+@Input() selectedFees: any[]            // setter: calculateDebt()
+@Output() closeDrawer: EventEmitter<void>
+@Output() onClose: EventEmitter<void>   // ambos se emiten en close()
+@Output() confirmPayment: EventEmitter<any>
+```
+
+Métodos / getters públicos relevantes:
+
+```ts
+getFeeDebtValue(fee: any): number
+calculateDebt(): void
+updateFormAmount(): void
+close(): void
+submit(): void
+onFileSelected(event: any): void
+get excessAmount(): number
+get excedenteCalculado(): number
+get hasSurplus(): boolean
+get currentPaymentAmount(): number
+```
+
+`submit()` exige formulario válido **y** `selectedFile`. Payload emitido:
+
+```ts
+{
+  ...paymentForm.value,          // amount, payment_method, bank_account_id, transaction_date, surplus_action
+  transaction_date, payment_date, // ISO yyyy-mm-dd
+  receipt: File,
+  payment_option: surplus_action || ''
+}
+```
+
+`paymentForm`: `amount` (required, min 1), `payment_method` (default `'transfer'`), `bank_account_id` (required si transfer), `transaction_date`, `surplus_action` (required solo si hay excedente). Radios: `reducir_plazo` | `reducir_cuota` | `adelantar_cuotas`.
+
+`getFeeDebtValue(fee)` **delega** a `AmortizationFinancialsService.getFeeDebtValue`. No hay copia local de la cascada.
+
+`calculateDebt`: suma `getFeeDebtValue` de `selectedFees`, `Math.round`, asigna `totalSelectedAmount` y `montoSugeridoTotal`.
+
+El presenter usa `isVencida` exportada de `core/models/amortization-status.ts` en `displayStatus` e `isBloqueada`. No tiene implementación propia.
+
+### `AmortizationTablePresenterComponent`
+
+```ts
+@Input() installments: any[] = []
+@Input() selectable = false
+@Input() currentView: 'venta' | 'preventa' = 'venta'
+@Input() resetSelection = false
+@Output() selectionChanged: EventEmitter<any[]>
+@Output() downloadPdf: EventEmitter<'internal' | 'client'>
+@Output() paySelected: EventEmitter<void>
+```
+
+Selección local `selectedInstallments`. `isBloqueada`: pagada **o** `isVencida(due_date)` (helper de core). Las vencidas **no se pueden tildar** en la tabla; `openDrawer()` las reinyecta al cobro. `totalSelectedAmount` del presenter suma `AmortizationFinancialsService.getFeeDebtValue` (igual que drawer y selection service).
+
+Implementa `ngOnChanges` **sin** `implements OnChanges`.
+
+### `CurrencyMaskDirective`
+
+CVA: el form control guarda `number | null` (dígitos sin formato); el input muestra `Intl.NumberFormat('es-CO')`. No admite decimales: strip `[^\d]`.
+
+### Pipes
+
+```ts
+AmortizationStatusLabelPipe.transform(value: string | null | undefined): string
+ContractStatusLabelPipe.transform(value: string | null | undefined): string
+  // preventa_inactiva→Preventa, activo→Activo, terminado→Terminado, rescindido→Rescindido
+PaymentMethodNamePipe.transform(value: string | null | undefined): string
+  // transfer, cash, barter, bank_transfer; default: valor o 'Sin método'
+```
+
+`PaymentMethodNamePipe` no mapea `'card'` (el drawer sí ofrece esa opción).
+
+---
+
+## 3. Manejo de estado
+
+Sin servicios shared, sin subjects/signals.
+
+- **Layout:** `breadcrumbs` se reconstruye en cada `NavigationEnd`. Labels fijos en `routeLabels`; query `projectName` / `search` y `data.title` pueden sustituir el segmento. Ruta `amortization/:id` no tiene label amigable (queda el id crudo).
+- **Drawer:** estado del form + `selectedFile` + montos derivados. Al abrir, `patchValue({ amount: montoSugeridoTotal })`.
+- **Presenter:** selección en el propio componente; el padre (`AmortizationSelectionService`) guarda otra copia vía `selectionChanged`.
+- Consumen core: presenter usa `isVencida` / status helpers; drawer inyecta `AmortizationFinancialsService` para `getFeeDebtValue`. Layout solo `Router` / `ActivatedRoute`.
+
+---
+
+## 4. Comunicación con el backend
+
+Ninguna. El padre arma `FormData` y llama `RecaudoService`. Shared no conoce endpoints.
+
+---
+
+## 5. Convenciones observadas
+
+- Todo `standalone: true`. Estilos en `.scss` colocales; mucho CSS inline en templates.
+- Formularios: **reactive** en drawer; layout no tiene forms.
+- RxJS mínimo: `valueChanges` en drawer (`payment_method`, `amount`); layout filtra `NavigationEnd`.
+- Escape cierra el drawer (`@HostListener('document:keydown.escape')`).
+- Doble output de cierre (`closeDrawer` + `onClose`): el padre se suscribe a ambos con el mismo handler.
+- Máscara de moneda: usar `appCurrencyMask` en inputs de dinero ligados a reactive forms (el control recibe number).
+
+---
+
+## 6. Advertencia para futuros cambios
+
+Este código ya está implementado y probado. Cualquier feature nuevo debe consumir estos servicios/componentes existentes — nunca duplicar llamadas HTTP ni lógica de estado ya centralizada aquí.
+
+En particular: no reimplementar el drawer de pago ni `getFeeDebtValue` (está en `AmortizationFinancialsService`). No reimplementar `isVencida` (está en `amortization-status.ts`). No crear un segundo layout autenticado.
+
+---
+
+## Deuda técnica observada
+
+Resuelto: duplicación de `getFeeDebtValue` e `isVencida`. El total del presenter ya usa `getFeeDebtValue`, igual que drawer y selection service.
+
+Lo que queda es empaquetado/UX, no cálculo:
+
+1. **“Shared” de un solo consumidor:** drawer y presenter solo los usa `tabla-amortizacion`. `CurrencyMaskDirective` es el único shared cruzado (drawer, contracts, lots).
+2. **`ContractStatusLabelPipe` vs `getContractStatusLabel`** en contratos: misma tabla de labels, dos implementaciones. El pipe no cubre `vencido`.
+3. **Presenter bloquea vencidas en checkbox** y el contenedor las reinyecta en `openDrawer` (regla de negocio deliberada: no se tildan a mano, sí entran al cobro).
+4. **Drawer exige comprobante**; no hay validación de tipo/tamaño más allá de `accept`.
+5. Layout: búsqueda y avatar inertes; `toggleCartera`/`toggleInventario` muertos; enlace `/usuarios` sin ruta; **no hay logout**.

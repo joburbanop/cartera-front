@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter, inject, OnInit, HostListener } 
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CurrencyMaskDirective } from '../../directives/currency-mask.directive';
+import { AmortizationFinancialsService } from '../../../core/services/amortization-financials.service';
 
 @Component({
   selector: 'app-drawer-pago',
@@ -29,6 +30,7 @@ export class DrawerPagoComponent implements OnInit {
   @Input() bankAccounts: any[] = []; 
 
   private fb = inject(FormBuilder);
+  private financials = inject(AmortizationFinancialsService);
   selectedFile: File | null = null;
   totalSelectedAmount = 0;
   montoSugeridoTotal = 0;
@@ -157,30 +159,7 @@ export class DrawerPagoComponent implements OnInit {
   }
 
   getFeeDebtValue(fee: any): number {
-    const status = String(fee?.status ?? '').toLowerCase();
-
-    if (status === 'pagada' || status === 'paid') {
-      return 0;
-    }
-
-    const quotaDebt = Number(fee?.quota_debt ?? 0);
-    const installmentValue = Number(fee.installment_value ?? 0);
-    const overdueBalance = Number(fee.overdue_balance ?? 0);
-    const remainingBalance = Number(fee.remaining_balance ?? 0);
-
-    if (quotaDebt > 0) {
-      return Math.max(0, quotaDebt);
-    }
-
-    if (overdueBalance > 0) {
-      return Math.max(0, Math.min(overdueBalance, installmentValue || overdueBalance));
-    }
-
-    if (remainingBalance > 0 && remainingBalance < installmentValue) {
-      return Math.max(0, remainingBalance);
-    }
-
-    return Math.max(0, installmentValue);
+    return this.financials.getFeeDebtValue(fee);
   }
 
   calculateDebt() {

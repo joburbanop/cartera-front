@@ -1,0 +1,83 @@
+---
+description: Auditoría de src/app/features/auth (login).
+globs: src/app/features/auth/**
+alwaysApply: false
+---
+
+# Auth (feature) — auditoría del estado actual
+
+Un único componente standalone de login. Ruta pública `/login` en `app.routes.ts` (sin `authGuard`). Tras éxito navega a `/dashboard`. No hay registro, recuperación de clave ni pantalla de logout.
+
+---
+
+## 1. Inventario
+
+| Pieza | Tipo | Responsabilidad |
+|---|---|---|
+| `LoginComponent` (`app-login`) | Smart component | Formulario reactivo, llama `AuthService.login`, muestra error, redirige. |
+| `login.spec.ts` | Test | Solo `should create`. |
+
+No hay servicios, guards ni pipes propios del feature. El guard e interceptor viven en core.
+
+---
+
+## 2. Contratos públicos
+
+Sin `@Input` / `@Output`.
+
+```ts
+loginForm: FormGroup  // nonNullable: email, password
+errorMessage: string
+isLoading: boolean
+onSubmit(): void
+```
+
+Valores iniciales del form: `email` y `password` **vacíos**. Validadores: email required+email, password required.
+
+`onSubmit`: si inválido, return; `isLoading = true`; `authService.login(this.loginForm.getRawValue()).subscribe`. En **next**: `isLoading = false` y luego `router.navigate(['/dashboard'])`. En **error**: `isLoading = false` y arma `errorMessage` con el primer string de `err.error.errors` (mapa Laravel 422) o `'Credenciales incorrectas o servidor no disponible.'`.
+
+---
+
+## 3. Manejo de estado
+
+Estado local del componente: form, `errorMessage`, `isLoading`. Sin signals/subjects.
+
+Consume **solo** `AuthService` (core). El token lo persiste el servicio en `localStorage`; el componente no lo lee. No consume interceptor ni guard (esos aplican al resto de la app).
+
+---
+
+## 4. Comunicación con el backend
+
+No llama HTTP directo. Delega a `AuthService.login` → `POST http://127.0.0.1:8000/api/login` con `{ email, password }`. Response `Observable<any>` (ver `core.mdc`).
+
+Manejo de error: solo en `subscribe.error` del componente (líneas 37–50). No hay timeout ni retry.
+
+---
+
+## 5. Convenciones observadas
+
+- Standalone + `ReactiveFormsModule` + `inject()`.
+- Credenciales via `getRawValue()` (form `nonNullable`).
+- Errores 422: `Object.values(err.error.errors).flat()`.
+- Template con estilos inline; `login.component.scss` existe pero está **vacío** (0 líneas). `styleUrls` lo referencia igual.
+- Spec generado, sin cobertura del submit.
+
+---
+
+## 6. Advertencia para futuros cambios
+
+Este código ya está implementado y probado. Cualquier feature nuevo debe consumir estos servicios/componentes existentes — nunca duplicar llamadas HTTP ni lógica de estado ya centralizada aquí.
+
+El login HTTP y el almacenamiento del JWT están en `AuthService`, no en este componente. No añadir un segundo POST de login.
+
+---
+
+## Deuda técnica observada
+
+Resuelto: credenciales de desarrollo ya no vienen pre-rellenadas; `isLoading` se apaga también en el camino feliz.
+
+Lo que queda:
+
+1. No hay `logout` en UI (el método de core no se usa).
+2. Spec no cubre error ni navegación.
+3. `login.component.scss` está vacío (0 líneas) y igual está en `styleUrls`.

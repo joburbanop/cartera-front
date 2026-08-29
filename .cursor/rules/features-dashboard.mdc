@@ -1,0 +1,65 @@
+---
+description: Auditoría de src/app/features/dashboard.
+globs: src/app/features/dashboard/**
+alwaysApply: false
+---
+
+# Dashboard (feature) — auditoría del estado actual
+
+Pantalla de aterrizaje post-login. Ruta hija `/dashboard` bajo `MainLayoutComponent` + `authGuard`. Redirect de `''` → `dashboard` en `app.routes.ts`.
+
+---
+
+## 1. Inventario
+
+| Pieza | Tipo | Responsabilidad |
+|---|---|---|
+| `DashboardComponent` (`app-dashboard`) | Dumb component | Shell vacío; template literal `dashboard works!`. |
+| `dashboard.spec.ts` | Test | Solo `should create`. |
+
+Sin servicios, guards, pipes ni directivas propias. `imports: []`. `dashboard.component.scss` existe vacío (0 líneas) y está referenciado en `styleUrls`.
+
+---
+
+## 2. Contratos públicos
+
+Clase vacía:
+
+```ts
+export class DashboardComponent {}
+```
+
+Sin `@Input`, `@Output` ni métodos.
+
+---
+
+## 3. Manejo de estado
+
+Ninguno. No inyecta core ni otros features.
+
+---
+
+## 4. Comunicación con el backend
+
+Ninguna.
+
+---
+
+## 5. Convenciones observadas
+
+- Standalone, lazy `loadComponent` en rutas.
+- Placeholder de scaffolding Angular; el menú y el redirect ya apuntan aquí como home autenticado.
+
+---
+
+## 6. Advertencia para futuros cambios
+
+Este código ya está implementado y probado. Cualquier feature nuevo debe consumir estos servicios/componentes existentes — nunca duplicar llamadas HTTP ni lógica de estado ya centralizada aquí.
+
+Si el dashboard pasa a mostrar KPIs, los datos de proyectos/lotes/contratos/pagos ya tienen servicios en core (`ProjectService`, `LotService`, `ContractService`, `RecaudoService`). No crear clientes HTTP paralelos.
+
+---
+
+## Deuda técnica observada
+
+El feature es un stub: no hay widgets, ni llamadas, ni manejo de error. El spec no aporta comportamiento. No hay otra deuda oculta porque casi no hay código.

@@ -1,30 +1,47 @@
 import { Injectable } from '@angular/core';
+import {
+  AmortizationStatus,
+  isPaidStatus,
+  isPartialStatus,
+  isVencida,
+  toAmortizationStatus,
+} from '../models/amortization-status';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AmortizationFinancialsService {
   private isPastDueFee(fee: any): boolean {
-    const status = String(fee?.status ?? '').toLowerCase();
-    if (status === 'pagada' || status === 'paid') {
+    if (isPaidStatus(fee?.status)) {
       return false;
     }
 
-    const dueDateValue = fee?.due_date ?? fee?.fecha_vencimiento ?? null;
-    if (!dueDateValue) {
-      return false;
+    return isVencida(fee?.due_date ?? fee?.fecha_vencimiento ?? null);
+  }
+
+  getFeeDebtValue(fee: any): number {
+    if (isPaidStatus(fee?.status)) {
+      return 0;
     }
 
-    const dueDate = new Date(dueDateValue);
-    if (Number.isNaN(dueDate.getTime())) {
-      return false;
+    const quotaDebt = Number(fee?.quota_debt ?? 0);
+    const installmentValue = Number(fee.installment_value ?? 0);
+    const overdueBalance = Number(fee.overdue_balance ?? 0);
+    const remainingBalance = Number(fee.remaining_balance ?? 0);
+
+    if (quotaDebt > 0) {
+      return Math.max(0, quotaDebt);
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    dueDate.setHours(0, 0, 0, 0);
+    if (overdueBalance > 0) {
+      return Math.max(0, Math.min(overdueBalance, installmentValue || overdueBalance));
+    }
 
-    return dueDate < today;
+    if (remainingBalance > 0 && remainingBalance < installmentValue) {
+      return Math.max(0, remainingBalance);
+    }
+
+    return Math.max(0, installmentValue);
   }
 
   initialFee(plan: any[] = [], contractData: any = null): any {
@@ -55,12 +72,11 @@ export class AmortizationFinancialsService {
       return 0;
     }
 
-    const status = String(fee.status ?? '').toLowerCase();
-    if (status === 'pagada' || status === 'paid') {
+    if (isPaidStatus(fee.status)) {
       return this.initialFeeTotal(plan, contractData);
     }
 
-    if (status === 'parcial') {
+    if (isPartialStatus(fee.status)) {
       return Number(fee.amount_paid || 0);
     }
 
@@ -84,23 +100,21 @@ export class AmortizationFinancialsService {
     return Number(contractData?.down_payment_pactada || 0);
   }
 
-  getFeeStatus(fee: any, plan: any[] = [], contractData: any = null): string {
+  getFeeStatus(fee: any, plan: any[] = [], contractData: any = null): AmortizationStatus {
     if (Number(fee?.installment_number) === 0) {
       const paid = this.initialFeePaid(plan, contractData);
       const threshold = this.activationThreshold(contractData);
 
-      if (paid >= threshold) return 'pagada';
-      if (paid > 0) return 'parcial';
-      return 'sin_pagar';
+      if (paid >= threshold) return 'paid';
+      if (paid > 0) return 'partial';
+      return 'pending';
     }
 
-    return String(fee?.status || 'sin_pagar');
+    return toAmortizationStatus(fee?.status);
   }
 
   isFeeSelectable(fee: any, plan: any[] = [], contractData: any = null): boolean {
-    const status = this.getFeeStatus(fee, plan, contractData).toLowerCase();
-    const rawStatus = String(fee?.status ?? '').toLowerCase();
-    return status !== 'pagada' && rawStatus !== 'paid';
+    return this.getFeeStatus(fee, plan, contractData) !== 'paid';
   }
 
   totalPaidAmount(contractData: any = null): number {
@@ -116,7 +130,7 @@ export class AmortizationFinancialsService {
   totalInterestPaid(plan: any[] = [], contractData: any = null): number {
     return (plan ?? []).reduce((sum: number, fee: any) => {
       const status = this.getFeeStatus(fee, plan, contractData);
-      if (status === 'pagada' || status === 'parcial') {
+      if (status === 'paid' || status === 'partial') {
         return sum + Number(fee.interest_value || 0);
       }
       return sum;

@@ -72,25 +72,8 @@
         <td style="color: #059669;">$ {{ fee.principal_value | number:'1.2-2' }}</td>
         <td style="font-weight: 600; color: #0f172a;">$ {{ (fee.remaining_balance ?? 0) | number:'1.2-2' }}</td>
         <td>
-          <!-- PAGADA (Verde) -->
-          <span
-            *ngIf="(fee.status || '').toLowerCase() === 'pagada' || (fee.status || '').toLowerCase() === 'paid'"
-            style="display: inline-block; padding: 0.2rem 0.65rem; border-radius: 999px; background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.02em;">
-            Pagada
-          </span>
-
-          <!-- VENCIDA (Rojo): no pagada y la fecha ya expiró -->
-          <span
-            *ngIf="(fee.status || '').toLowerCase() !== 'pagada' && (fee.status || '').toLowerCase() !== 'paid' && isVencida(fee.due_date)"
-            style="display: inline-block; padding: 0.2rem 0.65rem; border-radius: 999px; background-color: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.02em;">
-            Vencida
-          </span>
-
-          <!-- PENDIENTE / ABONO PARCIAL (Azul): no pagada y fecha aún vigente -->
-          <span
-            *ngIf="(fee.status || '').toLowerCase() !== 'pagada' && (fee.status || '').toLowerCase() !== 'paid' && !isVencida(fee.due_date)"
-            style="display: inline-block; padding: 0.2rem 0.65rem; border-radius: 999px; background-color: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.02em;">
-            {{ (fee.status || '').toLowerCase() === 'parcial' ? 'Abono Parcial' : 'Pendiente' }}
+          <span class="badge-status" [ngClass]="statusBadgeClass(fee)">
+            {{ displayStatus(fee) | amortizationStatusLabel }}
           </span>
         </td>
       </tr>

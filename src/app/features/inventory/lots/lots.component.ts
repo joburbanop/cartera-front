@@ -84,6 +84,12 @@ export class LotsComponent implements OnInit {
           this.activeProject = this.projects.find(p => p.id === this.selectedProjectId);
         }
         this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error cargando proyectos', err);
+        this.projects = [];
+        this.errorMessage = 'No se pudieron cargar los proyectos. Intente nuevamente.';
+        this.cdr.detectChanges();
       }
     });
   }

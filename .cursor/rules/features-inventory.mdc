@@ -1,0 +1,160 @@
+---
+description: Auditoría de inventario (proyectos, lotes), contratos de venta y clientes. El código de contratos vive en features/sales/contracts, no en inventory/.
+globs: src/app/features/inventory/**,src/app/features/sales/contracts/**,src/app/features/clients/**
+alwaysApply: false
+---
+
+# Inventory / ventas de inmueble — auditoría del estado actual
+
+Rutas reales: `/projects`, `/lots`, `/contracts`, `/clientes`. Todo lazy `loadComponent` bajo layout + `authGuard`.
+
+Ubicación en disco (no coinciden los nombres de carpeta con el menú):
+
+- `features/inventory/projects`, `features/inventory/lots`
+- `features/sales/contracts` — contratos
+- `features/clients` — CRM de clientes
+
+La carpeta `features/inventario/` (`CrearLoteComponent`) **se eliminó**: el alta de lote vive en el modal de `LotsComponent`.
+
+HTTP 100 % vía core (`ProjectService`, `LotService`, `ContractService`, `CustomerService`, `BankAccountService`, `FinancialService`).
+
+---
+
+## 1. Inventario
+
+| Pieza | Tipo | Smart/dumb | Responsabilidad |
+|---|---|---|---|
+| `ProjectsComponent` (`app-projects`) | Smart | Lista proyectos, KPIs de lotes, modal crear proyecto con cuentas bancarias. |
+| `LotsComponent` (`app-lots`) | Smart | Lista lotes global o por `?projectId=`, KPIs, modal crear lote. |
+| `ContractsComponent` (`app-contracts`) | Smart | Listado/KPIs, alta de contrato (plan francés o promesas custom), alta rápida de cliente. |
+| `ClientsComponent` (`app-clients`) | Smart | Listado/KPIs/búsqueda, modal nuevo cliente. |
+
+Specs de projects/lots/contracts/clients: solo `should create`.
+
+No hay servicios propios del feature. `CurrencyMaskDirective` en lots y contracts.
+
+---
+
+## 2. Contratos públicos
+
+Ninguno de estos componentes expone `@Input`/`@Output` hacia el router; son páginas.
+
+### `ProjectsComponent`
+
+Estado: `projects: any[]`, `availableBankAccounts: any[]`, `projectLotsStats`, `totalLots`, `totalAvailableLots`, `projectForm` (`name`, `location`, `description`, `bank_account_ids: FormArray` required).
+
+Públicos: `loadProjects()`, `loadBankAccounts()`, `loadLotsStats()`, `onCheckboxChange(e)`, `openModal()`, `closeModal()`, `onSubmit()`.
+
+`closeModal` recorre `document.querySelectorAll('input[type=checkbox]')` para destildar.
+
+### `LotsComponent`
+
+Query `projectId`. Form: `project_id`, `number`, `area_m2`, `list_price`, `price_m2`, `status` default `'disponible'`.
+
+Públicos: `onProjectSelect`, `selectProject`, `loadLots`, `openModal`, `closeModal`, `onSubmit`. Getter `isGlobalView`.
+
+Si `price_m2` viene vacío/`'0'`, lo calcula `list_price / area_m2` antes del POST.
+
+### `ContractsComponent`
+
+Dos forms: `contractForm` (número, cliente, proyecto, lote, vendedor, precios, plazo, tasa default `1.00`, fechas, `preventa_stages` default 7, `is_custom_plan`, `payment_promises: FormArray`) y `customerForm` (alta rápida).
+
+Getters financieros: `cuotaFijaEstimada` **llama** `FinancialService.calculateFrenchQuota`. `valorFuturoDeuda` = `Math.round(cuota × plazo)`; `interesesCalculados` y `costoTotalInmueble` parten de eso (no reimplementar PMT). `diferenciaFinanciera` con tolerancia **1000**. `calculatePreview` también usa `FinancialService`.
+
+Públicos relevantes: `addPaymentPromise`, `removePaymentPromise`, `generateBatch`, `autoCuadrarUltimaCuota`, `saveQuickCustomer`, `onSubmit`, `openModal`/`closeModal`, `getContractStatusLabel(status: string): string`, `calculatePreview(values: any)`.
+
+Payload de alta (`onSubmit`, ~756–765):
+
+```ts
+{
+  ...rest, // sin project_id, down_payment_date, preventa_stages, payment_promises
+  term_months,
+  initial_payment_date: down_payment_date,
+  regular_payment_start_date, first_installment_date,  // custom: down_payment_date || start_date
+  preventa_installments_count,  // 0 si custom, si no preventa_stages
+  is_custom_plan,
+  promises: [{ payment_number, expected_date, expected_amount, description }]
+}
+```
+
+Custom bloquea submit si `hasFinancialDifference` (`|PMT×plazo − suma promesas| > 1000`). Superar `term_months` en cantidad de promesas **no** bloquea (solo `console.warn`).
+
+`saveQuickCustomer`: POST con `document_type: 'CC'` fijo y `phone` fallback `'3000000000'`.
+
+### `ClientsComponent`
+
+Interface local `ClienteUI` (`nombre`, `documento`, `telefono`, `lote`, `estadoCartera`, …). Form: `name`, `document`, `phone`, `email`, `document_type` default CC, `address`, `city`.
+
+Públicos: `cargarClientes`, `buscarCliente`, `abrirModalNuevoCliente`, `cerrarModal`, `guardarCliente`.
+
+`cargarClientes` mapea `customer.nombre` / `documento` / `telefono` / `lote` / `estadoCartera`. **No es un mismatch:** `CustomerResource` en cartera-api devuelve **ambos** nombres (`nombre` y `name`, `documento` y `document_number`, `telefono` y `phone`). `guardarCliente` envía el payload inglés de `CreateCustomerPayload`.
+
+---
+
+## 3. Manejo de estado
+
+Todo local al componente (`any[]`, flags de modal, mensajes). `valueChanges` en contracts (`project_id` recarga lotes disponibles; form entero llama `calculatePreview`). Lots sincroniza `selectedProjectId` con query params.
+
+Consumen core:
+
+| Componente | Servicios |
+|---|---|
+| Projects | `ProjectService`, `BankAccountService`, `LotService` |
+| Lots | `ProjectService`, `LotService` |
+| Contracts | `ContractService`, `ProjectService`, `LotService`, `CustomerService`, `FinancialService` |
+| Clients | `CustomerService` |
+
+Unwrap típico: `response.data?.data \|\| response.data \|\| []`. Status de lote: objeto `{value|name}` o string; se compara `'disponible'` o `'available'`.
+
+---
+
+## 4. Comunicación con el backend
+
+| Quién | Método + ruta (vía servicio) | Shape usada en UI |
+|---|---|---|
+| Projects `loadProjects` | GET `/api/projects` | lista en `data.data` o `data`; **error** → `errorMessage` |
+| Projects `onSubmit` | POST `/api/projects` body = `projectForm.value` (incluye `bank_account_ids`) | error 422 → primer mensaje de `errors` |
+| Projects `loadBankAccounts` | GET `/api/bank-accounts` | unwrap; **error** → `errorMessage` + `console.error` |
+| Projects `loadLotsStats` | GET `/api/lots` | recorre todos los lotes para KPIs |
+| Lots `loadLots` | GET `/api/lots` o `?project_id=` | error → `lots = []` + `console.error` |
+| Lots `loadProjects` | GET `/api/projects` | **error** → `errorMessage` |
+| Lots `onSubmit` | POST `/api/lots` | 422 primer error |
+| Contracts `loadContracts` | GET `/api/contracts` | filtro client-side por `?lotId=`; **error** → `errorMessage` |
+| Contracts `loadProjects` | GET `/api/projects` | **error** → `errorMessage` |
+| Contracts `onSubmit` | POST `/api/contracts` | 422 concatena todos los mensajes |
+| Contracts lotes de proyecto | GET `/api/lots?project_id=` | filtra disponibles |
+| Contracts/Clients clientes | GET/POST `/api/customers` | resource dual ES/EN (ver §2) |
+
+Ningún componente de este grupo llama `environment.apiUrl`.
+
+---
+
+## 5. Convenciones observadas
+
+- Páginas standalone, reactive forms, modales booleanos, `ChangeDetectorRef.detectChanges()` tras HTTP (OnPush no está declarado; se llama igual).
+- KPIs se calculan en el cliente recorriendo listados completos, no hay endpoint de dashboard.
+- Lots: estado en URL (`queryParams.projectId`); contracts: `lotId` para filtrar.
+- Alta de cliente existe **dos veces** (modal en contracts y página clients) sobre el mismo `CustomerService.createCustomer`.
+- GET de listados en projects/lots/contracts llevan `error` con mensaje en pantalla.
+- Specs scaffold.
+
+---
+
+## 6. Advertencia para futuros cambios
+
+Este código ya está implementado y probado. Cualquier feature nuevo debe consumir estos servicios/componentes existentes — nunca duplicar llamadas HTTP ni lógica de estado ya centralizada aquí.
+
+Alta de proyecto/lote/contrato/cliente ya está en estos componentes y en los servicios de core. El alta de lote es el modal de `LotsComponent`. El PMT del formulario de contrato es `FinancialService.calculateFrenchQuota`.
+
+---
+
+## Deuda técnica observada
+
+Resuelto: `CrearLoteComponent` eliminado; PMT vía `FinancialService`; `alculatePreview` y `console.log` de depuración quitados; GET silenciosos de projects/lots/contracts con `error`; el GET de clientes **sí** trae `nombre`/`documento`/`telefono` (y también las claves EN).
+
+Lo que queda:
+
+1. `ContractsComponent` sigue siendo un smart grande (listado + simulación + plan custom + alta de cliente). `getContractStatusLabel` duplica `ContractStatusLabelPipe`.
+2. Phone placeholder `'3000000000'` en alta rápida de contrato.
+3. `loadLotsStats` (projects) solo hace `console.error`, sin mensaje en pantalla.
+4. Specs de projects/lots/contracts: `should create` (lots/contracts fallan sin `ActivatedRoute` de test).

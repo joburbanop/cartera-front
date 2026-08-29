@@ -14,6 +14,7 @@ import { PaymentMethodNamePipe } from '../../../shared/pipes/payment-method-name
 import { AmortizationTablePresenterComponent } from '../../../shared/components/amortization-table-presenter/amortization-table-presenter.component';
 import { PaymentPromiseService } from '../../../core/services/payment-promise.service';
 import { PaymentPromise } from '../../../core/models/payment-promise.model';
+import { isPaidStatus, isVencida } from '../../../core/models/amortization-status';
 import { HttpClient } from '@angular/common/http';
 @Component({
   selector: 'app-tabla-amortizacion',
@@ -199,8 +200,7 @@ export class AmortizationComponent implements OnInit {
   }
 
   toggleFeeSelection(fee: any, event: any): void {
-    const status = String(fee?.status ?? fee?.estado ?? '').toLowerCase();
-    if (status === 'pagada' || status === 'paid') {
+    if (isPaidStatus(fee?.status ?? fee?.estado)) {
       if (event?.target) {
         event.target.checked = false;
       }
@@ -220,8 +220,7 @@ export class AmortizationComponent implements OnInit {
 
   allInstallmentsPaid(): boolean {
     return this.amortizationPlan.length > 0 && this.amortizationPlan.every((fee: any) => {
-      const status = this.getFeeStatus(fee).toLowerCase();
-      return status === 'pagada' || status === 'paid';
+      return isPaidStatus(this.getFeeStatus(fee));
     });
   }
 
@@ -242,17 +241,11 @@ export class AmortizationComponent implements OnInit {
   }
 
   /**
-   * Retorna true si la fecha de vencimiento es estrictamente anterior a hoy
-   * (comparación por día, sin horas). Duplica la lógica del presenter para
-   * poder usarla en el componente contenedor sin inyectar dependencias extra.
+   * Delegado a `isVencida` de core. Se conserva como método del componente
+   * para que los specs existentes sigan llamándolo vía `(component as any).isVencida`.
    */
   private isVencida(dueDate: string | Date | null | undefined): boolean {
-    if (!dueDate) return false;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const limitDate = new Date(dueDate);
-    limitDate.setHours(0, 0, 0, 0);
-    return limitDate < today;
+    return isVencida(dueDate);
   }
 
   openDrawer(): void {
@@ -270,8 +263,7 @@ export class AmortizationComponent implements OnInit {
 
     // Filtrar mora del mismo tipo que la selección manual
     const cuotasEnMora = (this.amortizationPlan ?? []).filter((c: any) => {
-      const status = String(c?.status ?? '').toLowerCase();
-      const esPagada = status === 'pagada' || status === 'paid';
+      const esPagada = isPaidStatus(c?.status);
       const esVencida = this.isVencida(c.due_date);
       const esInicial = Number(c.installment_number) === 0;
 
@@ -426,8 +418,7 @@ export class AmortizationComponent implements OnInit {
     hoy.setHours(0, 0, 0, 0);
 
     return (this.amortizationPlan ?? []).filter((cuota: any) => {
-      const status = String(cuota?.status ?? '').toLowerCase();
-      if (status === 'pagada' || status === 'paid') {
+      if (isPaidStatus(cuota?.status)) {
         return false;
       }
 

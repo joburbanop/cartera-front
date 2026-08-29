@@ -56,10 +56,6 @@ export class BankAccountsComponent implements OnInit {
   loadAccounts() {
     this.bankAccountService.getAccounts().subscribe({
       next: (response) => {
-        // 2. AQUI: Agregamos este log para ver qué trae el GET de Laravel
-        console.log('Datos que llegaron del GET:', response);
-        
-        // Verificamos si los datos están paginados (data.data) o directos (data)
         if (response.data && response.data.data) {
            this.accounts = response.data.data;
         } else if (response.data) {
@@ -94,7 +90,6 @@ export class BankAccountsComponent implements OnInit {
       },
       error: (err) => {
         this.isLoading = false;
-        console.log('Error 422 capturado:', err.error);
 
         if (err.status === 422 && err.error?.errors) {
           const primerCampoConError = Object.keys(err.error.errors)[0];

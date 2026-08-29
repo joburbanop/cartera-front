@@ -29,7 +29,7 @@ describe('AmortizationComponent', () => {
     installment_value: 2000000,
     quota_debt: 2000000,
     remaining_balance: 2000000,
-    status: 'sin_pagar',
+    status: 'pending',
   };
 
   const cuota1 = {
@@ -39,7 +39,7 @@ describe('AmortizationComponent', () => {
     installment_value: 1000000,
     quota_debt: 1000000,
     remaining_balance: 1000000,
-    status: 'sin_pagar',
+    status: 'pending',
   };
 
   const cuota2 = {
@@ -49,7 +49,7 @@ describe('AmortizationComponent', () => {
     installment_value: 1000000,
     quota_debt: 0,
     remaining_balance: 0,
-    status: 'pagada',
+    status: 'paid',
   };
 
   const cuota3 = {
@@ -59,7 +59,7 @@ describe('AmortizationComponent', () => {
     installment_value: 1000000,
     quota_debt: 1000000,
     remaining_balance: 1000000,
-    status: 'sin_pagar',
+    status: 'pending',
   };
 
   beforeEach(async () => {
@@ -127,13 +127,13 @@ describe('AmortizationComponent', () => {
   });
 
   it('Debe asignar correctamente las etiquetas visuales (Vencida, Pagada, Pendiente)', () => {
-    const cuotaVencida = { ...cuota1, status: 'vencida' };
-    const cuotaPagada = { ...cuota2, status: 'pagada' };
-    const cuotaPendiente = { ...cuota3, status: 'sin_pagar' };
+    const cuotaVencida = { ...cuota1, status: 'overdue' };
+    const cuotaPagada = { ...cuota2, status: 'paid' };
+    const cuotaPendiente = { ...cuota3, status: 'pending' };
 
-    expect(component.getFeeStatus(cuotaVencida)).toBe('vencida');
-    expect(component.getFeeStatus(cuotaPagada)).toBe('pagada');
-    expect(component.getFeeStatus(cuotaPendiente)).toBe('sin_pagar');
+    expect(component.getFeeStatus(cuotaVencida)).toBe('overdue');
+    expect(component.getFeeStatus(cuotaPagada)).toBe('paid');
+    expect(component.getFeeStatus(cuotaPendiente)).toBe('pending');
   });
 
   it('Debe fusionar la mora ordinaria al seleccionar una cuota ordinaria actual', () => {

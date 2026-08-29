@@ -50,6 +50,12 @@ export class ProjectsComponent implements OnInit {
       next: (response) => {
         this.availableBankAccounts = response.data?.data || response.data || [];
         this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error cargando cuentas bancarias', err);
+        this.availableBankAccounts = [];
+        this.errorMessage = 'No se pudieron cargar las cuentas bancarias. Intente nuevamente.';
+        this.cdr.detectChanges();
       }
     });
   }
@@ -58,6 +64,12 @@ export class ProjectsComponent implements OnInit {
     this.projectService.getProjects().subscribe({
       next: (response) => {
         this.projects = response.data?.data || response.data || [];
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error cargando proyectos', err);
+        this.projects = [];
+        this.errorMessage = 'No se pudieron cargar los proyectos. Intente nuevamente.';
         this.cdr.detectChanges();
       }
     });

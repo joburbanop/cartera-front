@@ -91,39 +91,20 @@ export class ContractsComponent implements OnInit {
 }
 
   get totalCustomPromises(): number {
-    return this.paymentPromises.controls.reduce((sum, control, index) => {
+    return this.paymentPromises.controls.reduce((sum, control) => {
       const rawValue = (control as FormGroup).get('expected_amount')?.value;
-      
-      // 🔍 LOG DE DEPURACIÓN
-      console.log(`[DEBUG] Cuota ${index + 1}:`, {
-        rawValue,
-        tipo: typeof rawValue,
-        esString: typeof rawValue === 'string',
-        esNumero: typeof rawValue === 'number'
-      });
-      
-      // Sanitización agresiva
       let cleanValue: number = 0;
-      
+
       if (rawValue === null || rawValue === undefined || rawValue === '') {
         cleanValue = 0;
       } else if (typeof rawValue === 'string') {
-        // Limpiar: remover $, puntos, comas y espacios
         const sanitized = rawValue.replace(/[\$\.\,\s]/g, '');
         cleanValue = Number(sanitized) || 0;
-        
-        console.log(`[DEBUG] String detectado - Sanitizado: "${rawValue}" → "${sanitized}" → ${cleanValue}`);
       } else if (typeof rawValue === 'number') {
         cleanValue = Number.isFinite(rawValue) ? rawValue : 0;
-      } else {
-        console.warn(`[DEBUG] Tipo inesperado en cuota ${index + 1}:`, typeof rawValue, rawValue);
-        cleanValue = 0;
       }
-      
-      const newSum = sum + cleanValue;
-      console.log(`[DEBUG] Suma parcial: ${sum} + ${cleanValue} = ${newSum}`);
-      
-      return newSum;
+
+      return sum + cleanValue;
     }, 0);
   }
 
@@ -151,19 +132,12 @@ export class ContractsComponent implements OnInit {
   }
 
   get cuotaFijaEstimada(): number {
-    const P = this.capitalAFinanciar;
-    const i = (this.tasaInteres || 0) / 100;
     const n = Number(this.contractForm.get('term_months')?.value ?? 0) || 0;
-
-    if (P <= 0 || n <= 0) {
-      return 0;
-    }
-
-    if (i === 0) {
-      return P / n;
-    }
-
-    return P * (i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1);
+    return this.financialService.calculateFrenchQuota(
+      this.capitalAFinanciar,
+      n,
+      this.tasaInteres,
+    );
   }
 
   get interesesCalculados(): number {
@@ -397,19 +371,6 @@ export class ContractsComponent implements OnInit {
     }, 0);
   }
 
-  alculatePreview(values: any) {
-    const salePrice = Number(values.sale_price) || 0;
-    const downPayment = Number(values.down_payment_pactada) || 0;
-    const months = Number(values.term_months) || 0;
-    const interestRate = Number(values.interest_rate) || 0;
-
-    const principal = salePrice - downPayment;
-
-    // Llamamos al servicio Core para hacer la matemática pesada
-    this.projectedQuota = this.financialService.calculateFrenchQuota(principal, months, interestRate);
-    this.projectedTotal = this.financialService.calculateProjectedTotal(this.projectedQuota, months, downPayment);
-  }
-
   openModal() {
     this.isModalOpen = true;
     this.errorMessage = '';
@@ -488,13 +449,6 @@ export class ContractsComponent implements OnInit {
             allLots = response.data.data;
           }
 
-          console.log('Total de lotes recibidos:', allLots);
-
-          // INVESTIGACIÓN: Imprimimos exactamente cómo viene el estado del primer lote
-          if (allLots.length > 0) {
-            console.log('🔍 ESTADO CRUDO DEL LOTE 1:', allLots[0].status);
-          }
-
           this.availableLots = allLots.filter((lot: any) => {
             const statusStr = typeof lot.status === 'object' ? (lot.status?.value || lot.status?.name) : lot.status;
             const statusLimpio = String(statusStr).toLowerCase().trim();
@@ -502,8 +456,7 @@ export class ContractsComponent implements OnInit {
             return statusLimpio === 'available' || statusLimpio === 'disponible';
           });
 
-          console.log('Lotes disponibles para contrato:', this.availableLots);
-          this.cdr.detectChanges(); // Repintamos la pantalla
+          this.cdr.detectChanges();
         },
         error: (err) => console.error('Error cargando lotes:', err)
       });
@@ -540,6 +493,12 @@ export class ContractsComponent implements OnInit {
 
         this.calculateKPIs();
         this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error cargando contratos', err);
+        this.contracts = [];
+        this.errorMessage = 'No se pudieron cargar los contratos. Intente nuevamente.';
+        this.cdr.detectChanges();
       }
     });
   }
@@ -561,6 +520,12 @@ export class ContractsComponent implements OnInit {
     this.projectService.getProjects().subscribe({
       next: (response) => {
         this.projects = response.data?.data || response.data || [];
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error cargando proyectos', err);
+        this.projects = [];
+        this.errorMessage = 'No se pudieron cargar los proyectos. Intente nuevamente.';
         this.cdr.detectChanges();
       }
     });
@@ -679,13 +644,6 @@ export class ContractsComponent implements OnInit {
   }
 
   onSubmit() {
-    console.log('[Contracts] 1. Iniciando submit', {
-      isCustomPlan: this.isCustomPlan,
-      hasFinancialDifference: this.hasFinancialDifference,
-      diferenciaFinanciera: this.diferenciaFinanciera,
-      paymentPromisesLength: this.paymentPromises.length,
-    });
-
     const isCustom = Boolean(this.contractForm.get('is_custom_plan')?.value);
     const normalizedPromises = isCustom
       ? this.paymentPromises.value.map((promise: any, index: number) => ({
@@ -734,8 +692,6 @@ export class ContractsComponent implements OnInit {
       return;
     }
 
-    console.log('[Contracts] 3. Validaciones pasadas. Preparando payload...');
-
     this.isLoading = true;
     this.successMessage = '';
     this.errorMessage = '';
@@ -764,17 +720,8 @@ export class ContractsComponent implements OnInit {
       promises: normalizedPromises,
     };
 
-    console.log('[Contracts] 4. Payload listo para envío', {
-      contract_number: payload.contract_number,
-      lot_id: payload.lot_id,
-      customer_id: payload.customer_id,
-      is_custom_plan: payload.is_custom_plan,
-      promises_count: Array.isArray(payload.promises) ? payload.promises.length : 0,
-    });
-
     this.contractService.createContract(payload).subscribe({
-      next: (response) => {
-        console.log('[Contracts] 5. Contrato creado exitosamente', response);
+      next: () => {
         this.isLoading = false;
         this.successMessage = 'Contrato registrado exitosamente.';
 

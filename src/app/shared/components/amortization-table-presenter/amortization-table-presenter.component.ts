@@ -1,14 +1,25 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, inject, Input, Output, SimpleChanges } from '@angular/core';
+import {
+  AmortizationStatus,
+  AmortizationStatusBadgeClass,
+  isPaidStatus,
+  isVencida,
+  toAmortizationStatus,
+} from '../../../core/models/amortization-status';
+import { AmortizationFinancialsService } from '../../../core/services/amortization-financials.service';
+import { AmortizationStatusLabelPipe } from '../../pipes/amortization-status-label.pipe';
 
 @Component({
   selector: 'app-amortization-table-presenter',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, AmortizationStatusLabelPipe],
   templateUrl: './amortization-table-presenter.component.html',
   styleUrl: './amortization-table-presenter.component.scss',
 })
 export class AmortizationTablePresenterComponent {
+  private financials = inject(AmortizationFinancialsService);
+
   @Input() installments: any[] = [];
   @Input() selectable = false;
   @Input() currentView: 'venta' | 'preventa' = 'venta';
@@ -18,46 +29,31 @@ export class AmortizationTablePresenterComponent {
   @Output() downloadPdf = new EventEmitter<'internal' | 'client'>();
   @Output() paySelected = new EventEmitter<void>();
 
-  estadoTraduccion: { [key: string]: string } = {
-    pending: 'PENDIENTE',
-    paid: 'PAGADA',
-    partial: 'PARCIAL',
-    overdue: 'VENCIDA',
-    sin_pagar: 'PENDIENTE',
-    pagada: 'PAGADA',
-    parcial: 'PARCIAL',
-    vencida: 'VENCIDA',
-  };
-
   selectedInstallments: any[] = [];
 
-  obtenerEstadoEspanol(estado: string): string {
-    if (!estado) {
-      return '';
+  feeStatus(fee: any): AmortizationStatus {
+    return toAmortizationStatus(fee?.status);
+  }
+
+  displayStatus(fee: any): AmortizationStatus {
+    const status = this.feeStatus(fee);
+    if (status === 'paid') {
+      return 'paid';
     }
 
-    const clave = String(estado).trim().toLowerCase();
-    return this.estadoTraduccion[clave] || clave.toUpperCase();
+    if (status === 'overdue' || isVencida(fee?.due_date)) {
+      return 'overdue';
+    }
+
+    return status;
+  }
+
+  statusBadgeClass(fee: any): string {
+    return AmortizationStatusBadgeClass[this.displayStatus(fee)];
   }
 
   get allInstallmentsPaid(): boolean {
-    return this.installments.length > 0 && this.installments.every((fee: any) => {
-      const status = String(fee?.status ?? '').toLowerCase();
-      return status === 'pagada' || status === 'paid';
-    });
-  }
-
-  /**
-   * Retorna true si la fecha de vencimiento de la cuota es estrictamente
-   * anterior a hoy (comparación por día, sin horas).
-   */
-  isVencida(dueDate: string | Date | null | undefined): boolean {
-    if (!dueDate) return false;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const limitDate = new Date(dueDate);
-    limitDate.setHours(0, 0, 0, 0);
-    return limitDate < today;
+    return this.installments.length > 0 && this.installments.every((fee: any) => isPaidStatus(fee?.status));
   }
 
   /**
@@ -67,10 +63,7 @@ export class AmortizationTablePresenterComponent {
    * Las cuotas FUTURAS nunca se bloquean para permitir pagos adelantados.
    */
   isBloqueada(fee: any): boolean {
-    const status = String(fee?.status ?? '').toLowerCase();
-    const isPagada = status === 'pagada' || status === 'paid';
-    const isPasada = this.isVencida(fee?.due_date);
-    return isPagada || isPasada;
+    return isPaidStatus(fee?.status) || isVencida(fee?.due_date);
   }
 
   isFeeSelectable(fee: any): boolean {
@@ -125,7 +118,10 @@ export class AmortizationTablePresenterComponent {
   }
 
   get totalSelectedAmount(): number {
-    return this.selectedInstallments.reduce((sum: number, fee: any) => sum + Number(fee.installment_value || 0), 0);
+    return this.selectedInstallments.reduce(
+      (sum: number, fee: any) => sum + this.financials.getFeeDebtValue(fee),
+      0,
+    );
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -133,9 +129,7 @@ export class AmortizationTablePresenterComponent {
       const validInstallmentNumbers = new Set((this.installments ?? []).map((fee: any) => fee.installment_number));
       const nextSelection = this.selectedInstallments.filter((item: any) => {
         const stillExists = validInstallmentNumbers.has(item.installment_number);
-        const status = String(item?.status ?? item?.estado ?? '').toLowerCase();
-        const isPaid = status === 'pagada' || status === 'paid';
-        return stillExists && !isPaid;
+        return stillExists && !isPaidStatus(item?.status ?? item?.estado);
       });
 
       if (nextSelection.length !== this.selectedInstallments.length) {
