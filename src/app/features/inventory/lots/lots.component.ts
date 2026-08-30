@@ -9,12 +9,13 @@ import { AppRoles } from '../../../core/models/app-roles';
 import { CurrencyMaskDirective } from '../../../shared/directives/currency-mask.directive';
 import { ToastService } from '../../../shared/services/toast.service';
 import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
+import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { markAllAsTouched, scrollToFirstInvalid } from '../../../shared/utils/form-utils';
 
 @Component({
   selector: 'app-lots',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, CurrencyMaskDirective, FieldErrorComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, CurrencyMaskDirective, FieldErrorComponent, PaginationComponent],
   templateUrl: './lots.component.html',
   styleUrl: './lots.component.scss'
 })
@@ -48,9 +49,16 @@ export class LotsComponent implements OnInit {
   isModalOpen = false;
   errorMessage = '';
   hasProjectInRoute = false;
+  pageSize = 10;
+  currentPage = 1;
 
   get isGlobalView(): boolean {
     return !this.selectedProjectId;
+  }
+
+  get pagedLots(): any[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.lots.slice(start, start + this.pageSize);
   }
 
   lotForm = this.fb.group({
@@ -108,6 +116,7 @@ export class LotsComponent implements OnInit {
 
   // Se dispara al elegir un proyecto en el select o al venir de la URL
   onProjectSelect(event: any) {
+    this.currentPage = 1;
     const pId = Number(event.target.value);
     
     // Si eligen un proyecto, cambiamos la URL para mantener el estado
@@ -123,6 +132,7 @@ export class LotsComponent implements OnInit {
 
   // Función interna para cargar todo sobre un proyecto
   selectProject(projectId: number) {
+    this.currentPage = 1;
     this.selectedProjectId = projectId;
     this.lotForm.patchValue({ project_id: projectId.toString() });
     
@@ -135,6 +145,7 @@ export class LotsComponent implements OnInit {
   }
 
   loadLots() {
+    this.currentPage = 1;
     const request$ = this.selectedProjectId
       ? this.lotService.getLotsByProject(this.selectedProjectId)
       : this.lotService.getAllLots();

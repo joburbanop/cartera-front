@@ -7,6 +7,7 @@ import { AppRoles } from '../../core/models/app-roles';
 import { RouterModule } from '@angular/router';
 import { ToastService } from '../../shared/services/toast.service';
 import { FieldErrorComponent } from '../../shared/components/field-error/field-error.component';
+import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { markAllAsTouched, scrollToFirstInvalid } from '../../shared/utils/form-utils';
 
 interface ClienteUI {
@@ -23,7 +24,7 @@ interface ClienteUI {
 @Component({
   selector: 'app-clients',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, FieldErrorComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, FieldErrorComponent, PaginationComponent],
   templateUrl: './clients.component.html',
   styleUrl: './clients.component.scss'
 })
@@ -56,6 +57,13 @@ export class ClientsComponent implements OnInit {
 
   // Búsqueda
   searchTerm = '';
+  pageSize = 10;
+  currentPage = 1;
+
+  get pagedClientes(): ClienteUI[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.clientesFiltrados.slice(start, start + this.pageSize);
+  }
 
   // Formulario de nuevo cliente
   customerForm = this.fb.group({
@@ -73,6 +81,7 @@ export class ClientsComponent implements OnInit {
   }
 
   cargarClientes(): void {
+    this.currentPage = 1;
     this.isLoading = true;
     this.customerService.getCustomers().subscribe({
       next: (response) => {
@@ -115,6 +124,7 @@ export class ClientsComponent implements OnInit {
   buscarCliente(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.searchTerm = input.value.toLowerCase();
+    this.currentPage = 1;
 
     if (!this.searchTerm.trim()) {
       this.clientesFiltrados = [...this.clientes];

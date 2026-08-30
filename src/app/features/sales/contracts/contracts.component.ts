@@ -13,6 +13,7 @@ import { CurrencyMaskDirective } from '../../../shared/directives/currency-mask.
 import { ContractStatusLabelPipe } from '../../../shared/pipes/contract-status-label.pipe';
 import { ToastService } from '../../../shared/services/toast.service';
 import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
+import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { markAllAsTouched, scrollToFirstInvalid } from '../../../shared/utils/form-utils';
 import { QuickCustomerModalComponent } from './quick-customer-modal/quick-customer-modal.component';
 import { ContractPaymentPromisesComponent, createPaymentPromiseGroup } from './contract-payment-promises/contract-payment-promises.component';
@@ -20,7 +21,7 @@ import { ContractPaymentPromisesComponent, createPaymentPromiseGroup } from './c
 @Component({
   selector: 'app-contracts',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule, CurrencyMaskDirective, ContractStatusLabelPipe, FieldErrorComponent, QuickCustomerModalComponent, ContractPaymentPromisesComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule, CurrencyMaskDirective, ContractStatusLabelPipe, FieldErrorComponent, QuickCustomerModalComponent, ContractPaymentPromisesComponent, PaginationComponent],
   templateUrl: './contracts.component.html',
   styleUrl: './contracts.component.scss'
 })
@@ -47,6 +48,13 @@ export class ContractsComponent implements OnInit {
   availableLots: any[] = []; 
   selectedLotId: number | null = null;
   selectedLot: any = null;
+  pageSize = 10;
+  currentPage = 1;
+
+  get pagedContracts(): any[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.contracts.slice(start, start + this.pageSize);
+  }
   
   isLoading = false;
   successMessage = '';
@@ -435,6 +443,7 @@ export class ContractsComponent implements OnInit {
   }
 
   loadContracts() {
+    this.currentPage = 1;
     this.contractService.getContracts().subscribe({
       next: (response) => {
         const allContracts = response.data?.data || response.data || [];

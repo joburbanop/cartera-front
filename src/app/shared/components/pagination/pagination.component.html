@@ -1,0 +1,19 @@
+<nav class="pagination" *ngIf="totalPages > 1" aria-label="Paginación">
+  <button
+    type="button"
+    class="pagination__btn"
+    [disabled]="isFirstPage"
+    (click)="goToPrevious()"
+  >
+    Anterior
+  </button>
+  <span class="pagination__label">Página {{ currentPage }} de {{ totalPages }}</span>
+  <button
+    type="button"
+    class="pagination__btn"
+    [disabled]="isLastPage"
+    (click)="goToNext()"
+  >
+    Siguiente
+  </button>
+</nav>

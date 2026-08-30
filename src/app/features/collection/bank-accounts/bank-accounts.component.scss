@@ -1,23 +1,163 @@
-// --- HEADER & KPIS ---
-.header-section { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem; h1 { font-size: 1.8rem; font-weight: 700; color: #111827; margin: 0 0 0.25rem 0; } p { font-size: 0.95rem; color: #64748b; margin: 0; } }
-.btn-primary { background-color: #347769; color: white; border: none; border-radius: 8px; padding: 0.65rem 1.25rem; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: opacity 0.2s; &:hover { opacity: 0.9; } }
+.account-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  padding: 1.2rem 1.3rem;
+}
 
-.kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem; }
-.kpi-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.02); h4 { font-size: 0.85rem; font-weight: 500; color: #64748b; margin: 0 0 0.5rem 0; } .kpi-value { font-size: 2.2rem; font-weight: 700; color: #1e293b; margin: 0; } .money { color: #0284c7; } p { font-size: 0.8rem; color: #94a3b8; margin: 0.25rem 0 0 0; } }
+.account-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #eef7f5;
+  color: #347769;
 
-// --- TABLA ---
-.table-container { background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
-.custom-table { width: 100%; border-collapse: collapse; th { text-align: left; padding: 1rem 1.5rem; font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0; } td { padding: 1.25rem 1.5rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; } .main-text { font-weight: 700; color: #1e293b; font-size: 0.95rem; margin-bottom: 0.2rem;} .sub-text { font-size: 0.8rem; color: #64748b; } .badge-status { padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; background: #dbeafe; color: #1d4ed8;} }
+  svg {
+    width: 22px;
+    height: 22px;
+  }
+}
 
-// --- ACCIONES ---
-.action-buttons { display: flex; gap: 0.5rem; justify-content: flex-end; }
-.action-btn { background: none; border: none; cursor: pointer; color: #94a3b8; padding: 0.4rem; border-radius: 6px; transition: 0.2s; display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 600;}
-.action-btn:hover { background: #f3f4f6; color: #1e293b; }
-.delete-btn:hover { background-color: #fee2e2; color: #dc2626; }
+.account-card__body {
+  flex: 1;
+  min-width: 0;
+}
 
-// --- MODAL ---
-.modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; overflow-y: auto;}
-.modal-content { background: white; border-radius: 12px; width: 100%; max-width: 500px; padding: 2rem; position: relative; max-height: 90vh; overflow-y: auto; margin: 2rem 0; }
-.modal-close { position: absolute; top: 1.5rem; right: 1.5rem; background: none; border: none; font-size: 1.2rem; color: #94a3b8; cursor: pointer; }
-.form-group { margin-bottom: 1.25rem; label { display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 0.4rem; } input, select { width: 100%; padding: 0.65rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; } }
-.btn-submit { width: 100%; padding: 0.8rem; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 1rem; }
+.account-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.25rem;
+
+  h3 {
+    margin: 0;
+    font-size: 1.02rem;
+    font-weight: 800;
+    color: #0f172a;
+  }
+}
+
+.account-card__number {
+  margin: 0;
+  font-weight: 700;
+  color: #1e293b;
+  font-size: 0.95rem;
+}
+
+.account-card__meta {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  padding: 0.4rem;
+  border-radius: 6px;
+  transition: 0.2s;
+}
+
+.action-btn:hover {
+  background: #f3f4f6;
+  color: #1e293b;
+}
+
+.delete-btn:hover {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  padding: 2rem;
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+  margin: 2rem 0;
+}
+
+.modal-close {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+
+  label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 0.4rem;
+  }
+
+  input,
+  select {
+    width: 100%;
+    padding: 0.65rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    box-sizing: border-box;
+  }
+}
+
+.btn-submit {
+  width: 100%;
+  padding: 0.8rem;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 1rem;
+}
+
+@media (max-width: 767px) {
+  .account-card {
+    flex-wrap: wrap;
+  }
+
+  .action-buttons {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

@@ -47,124 +47,108 @@
 <!-- ============================================ -->
 <div>
   
-  <!-- CABECERA -->
-  <div class="header-section">
+  <div class="page-header">
     <div>
       <h1>Proyectos</h1>
       <p>{{ projects.length }} proyectos activos · Gestión general</p>
     </div>
-    <!-- BOTÓN QUE ABRE EL MODAL -->
-    <button *ngIf="canCreate" class="btn-new-project" (click)="openModal()">+ Nuevo proyecto</button>
+    <button *ngIf="canCreate" class="btn-primary btn-new-project" (click)="openModal()">+ Nuevo proyecto</button>
   </div>
 
-  <!-- TARJETAS KPI (Resumen) -->
   <div class="kpi-grid">
     <div class="kpi-card">
-      <h4>Proyectos activos</h4>
-      <p class="kpi-value">{{ projects.length }}</p>
-      <p>Registrados en el sistema</p>
+      <div class="kpi-card__icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.008v.008H6.75V6.75Zm0 3h.008v.008H6.75V9.75Zm0 3h.008v.008H6.75V12.75Zm0 3h.008v.008H6.75v-.008Zm3-9h.008v.008H9.75V6.75Zm0 3h.008v.008H9.75V9.75Zm0 3h.008v.008H9.75V12.75Zm0 3h.008v.008H9.75v-.008Zm3-9h.008v.008H12.75V6.75Zm0 3h.008v.008H12.75V9.75Zm0 3h.008v.008H12.75V12.75Zm0 3h.008v.008H12.75v-.008Z" />
+        </svg>
+      </div>
+      <div>
+        <p class="kpi-card__value">{{ projects.length }}</p>
+        <p class="kpi-card__label">Proyectos activos</p>
+      </div>
     </div>
     <div class="kpi-card">
-      <h4>Lotes disponibles</h4>
-      <!-- Dato Real: Lotes Disponibles -->
-      <p class="kpi-value">{{ totalAvailableLots }}</p>
-      <!-- Dato Real: Total de lotes sumados -->
-      <p>de {{ totalLots }} totales</p>
+      <div class="kpi-card__icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
+        </svg>
+      </div>
+      <div>
+        <p class="kpi-card__value">{{ totalAvailableLots }}</p>
+        <p class="kpi-card__label">Lotes disponibles de {{ totalLots }} totales</p>
+      </div>
     </div>
-    <div class="kpi-card">
-      <h4>Cartera en mora</h4>
-      <p class="kpi-value danger">$0</p>
-      <p>Monto pendiente de recaudo</p>
+    <div class="kpi-card kpi-card--danger">
+      <div class="kpi-card__icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+        </svg>
+      </div>
+      <div>
+        <p class="kpi-card__value">$0</p>
+        <p class="kpi-card__label">Cartera en mora</p>
+      </div>
     </div>
   </div>
 
-  <!-- TABLA DE DATOS -->
-  <div class="table-container">
-    
-    <!-- Filtros Superiores de la Tabla -->
-    <div class="table-controls">
-      <input type="text" placeholder="Filtrar por nombre o ubicación...">
-      <div class="tabs">
-        <button class="active">Todos</button>
-        <button>En venta</button>
-        <button>Preventa</button>
-        <button>Cerrado</button>
-      </div>
+  <div class="table-controls">
+    <input type="text" placeholder="Filtrar por nombre o ubicación...">
+    <div class="tabs">
+      <button class="active">Todos</button>
+      <button>En venta</button>
+      <button>Preventa</button>
+      <button>Cerrado</button>
     </div>
+  </div>
 
-    <!-- Tabla -->
-    <table class="custom-table">
-      <thead>
-        <tr>
-          <th>Proyecto</th>
-          <th>Lotes</th>
-          <th>Avance de Ventas</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Fila que se repite si no hay datos -->
-        <tr *ngIf="projects.length === 0">
-          <td colspan="6" style="text-align: center; color: #94a3b8; padding: 3rem;">No hay proyectos registrados. Crea uno nuevo.</td>
-        </tr>
-        
-        <!-- Filas dinámicas -->
-        <tr *ngFor="let p of projects">
-          <td>
-            <div class="project-name">{{ p.name }}</div>
-            <div class="project-loc">{{ p.location }}</div>
-          </td>
-          <td style="color: #475569; font-weight: 500;">
-            <!-- Consultamos el diccionario usando el ID del proyecto (p.id) -->
-            <div style="font-size: 1rem; color: #1e293b;">
-              {{ projectLotsStats[p.id]?.available || 0 }} <span style="font-size: 0.8rem; color: #64748b; font-weight: normal;">lotes disp.</span>
-            </div>
-            <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.2rem;">
-              de {{ projectLotsStats[p.id]?.total || 0 }} creados
-            </div>
-          </td>
-         <td>
-            <div class="progress-bar-bg">
-               <!-- Usamos el avance_ventas directo que calculó Laravel -->
-               <div class="progress-bar-fill" [style.width.%]="p.avance_ventas"></div>
-            </div>
-            <span style="font-size: 0.85rem; color: #475569; font-weight: 500;">
-               {{ p.avance_ventas }}%
-            </span>
-          </td>
-         
-          
-          <!-- Columna de Acciones -->
-          <td>
-            <div class="action-buttons">
-              
-              <!-- Botón Ver (Viaja a Lotes) -->
-              <button class="action-btn view-btn" title="Ver Lotes" [routerLink]="['/lots']" [queryParams]="{ projectId: p.id }">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                </svg>
-              </button>
+  <div *ngIf="projects.length === 0" class="empty-state">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.008v.008H6.75V6.75Zm0 3h.008v.008H6.75V9.75Zm0 3h.008v.008H6.75V12.75Zm0 3h.008v.008H6.75v-.008Zm3-9h.008v.008H9.75V6.75Zm0 3h.008v.008H9.75V9.75Zm0 3h.008v.008H9.75V12.75Zm0 3h.008v.008H9.75v-.008Zm3-9h.008v.008H12.75V6.75Zm0 3h.008v.008H12.75V9.75Zm0 3h.008v.008H12.75V12.75Zm0 3h.008v.008H12.75v-.008Z" />
+    </svg>
+    <p>No hay proyectos registrados. Crea uno nuevo.</p>
+  </div>
 
-              <!-- Botón Editar -->
-              <button class="action-btn edit-btn" title="Editar Proyecto">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-                </svg>
-              </button>
-
-              <!-- Botón Eliminar -->
-              <button class="action-btn delete-btn" title="Eliminar Proyecto">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                </svg>
-              </button>
-
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+  <div *ngIf="projects.length > 0" class="cards-grid">
+    <article *ngFor="let p of projects" class="card-elevated project-card">
+      <div class="project-card__head">
+        <h3>{{ p.name }}</h3>
+        <div class="action-buttons">
+          <button class="action-btn view-btn" title="Ver Lotes" [routerLink]="['/lots']" [queryParams]="{ projectId: p.id }">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+            </svg>
+          </button>
+          <button class="action-btn edit-btn" title="Editar Proyecto">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+            </svg>
+          </button>
+          <button class="action-btn delete-btn" title="Eliminar Proyecto">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <p class="project-card__location">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+        </svg>
+        {{ p.location }}
+      </p>
+      <p class="project-card__lots">
+        {{ projectLotsStats[p.id]?.available || 0 }} lotes disp.
+        <span>de {{ projectLotsStats[p.id]?.total || 0 }} creados</span>
+      </p>
+      <div class="project-card__progress">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" [style.width.%]="p.avance_ventas"></div>
+        </div>
+        <span>{{ p.avance_ventas }}%</span>
+      </div>
+    </article>
   </div>
 
 </div>

@@ -9,11 +9,12 @@ import {
 } from '../../../core/models/amortization-status';
 import { AmortizationFinancialsService } from '../../../core/services/amortization-financials.service';
 import { AmortizationStatusLabelPipe } from '../../pipes/amortization-status-label.pipe';
+import { PaginationComponent } from '../pagination/pagination.component';
 
 @Component({
   selector: 'app-amortization-table-presenter',
   standalone: true,
-  imports: [CommonModule, AmortizationStatusLabelPipe],
+  imports: [CommonModule, AmortizationStatusLabelPipe, PaginationComponent],
   templateUrl: './amortization-table-presenter.component.html',
   styleUrl: './amortization-table-presenter.component.scss',
 })
@@ -30,6 +31,13 @@ export class AmortizationTablePresenterComponent {
   @Output() paySelected = new EventEmitter<void>();
 
   selectedInstallments: any[] = [];
+  pageSize = 10;
+  currentPage = 1;
+
+  get pagedInstallments(): any[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.installments.slice(start, start + this.pageSize);
+  }
 
   feeStatus(fee: any): AmortizationStatus {
     return toAmortizationStatus(fee?.status);
@@ -126,6 +134,7 @@ export class AmortizationTablePresenterComponent {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['installments']) {
+      this.currentPage = 1;
       const validInstallmentNumbers = new Set((this.installments ?? []).map((fee: any) => fee.installment_number));
       const nextSelection = this.selectedInstallments.filter((item: any) => {
         const stillExists = validInstallmentNumbers.has(item.installment_number);

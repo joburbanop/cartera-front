@@ -63,9 +63,12 @@
 <div>
 
   <!-- CABECERA GLOBAL -->
-  <div class="mb-6" *ngIf="isGlobalView">
-    <h1 class="text-2xl font-bold text-slate-800">Inventario General de Lotes</h1>
-    <p class="text-sm text-slate-500">Listado completo de lotes registrados en el sistema.</p>
+  <div class="page-header" *ngIf="isGlobalView">
+    <div>
+      <h1>Inventario General de Lotes</h1>
+      <p>Listado completo de lotes registrados en el sistema.</p>
+    </div>
+    <button *ngIf="canCreate" class="btn-primary btn-new-lot" (click)="openModal()">+ Añadir Lote</button>
   </div>
 
   <!-- BARRA DE NAVEGACIÓN SUPERIOR -->
@@ -79,8 +82,7 @@
   <!-- CONTENIDO DEL PROYECTO (Si hay ID) -->
   <div>
     
-    <!-- Cabecera del Proyecto -->
-    <div class="header-section" *ngIf="!isGlobalView">
+    <div class="page-header" *ngIf="!isGlobalView">
       <div>
         <h1>{{ activeProject?.name || 'Proyecto' }}</h1>
         <p>
@@ -88,36 +90,48 @@
           {{ activeProject?.location || 'Ubicación no disponible' }}
         </p>
       </div>
-      <button *ngIf="canCreate" class="btn-new-lot" (click)="openModal()">+ Añadir Lote</button>
+      <button *ngIf="canCreate" class="btn-primary btn-new-lot" (click)="openModal()">+ Añadir Lote</button>
     </div>
 
-    <div class="header-section" *ngIf="isGlobalView" style="justify-content: flex-end;">
-      <button *ngIf="canCreate" class="btn-new-lot" (click)="openModal()">+ Añadir Lote</button>
-    </div>
-
-    <!-- KPIs Específicos del Proyecto -->
     <div class="kpi-grid" *ngIf="!isGlobalView">
       <div class="kpi-card">
-        <h4>Lotes Disponibles</h4>
-        <p class="kpi-value">{{ projectAvailableLots }}</p>
-        <p>de {{ projectTotalLots }} totales en la etapa</p>
+        <div class="kpi-card__icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
+        </div>
+        <div>
+          <p class="kpi-card__value">{{ projectAvailableLots }}</p>
+          <p class="kpi-card__label">Lotes disponibles de {{ projectTotalLots }}</p>
+        </div>
       </div>
       <div class="kpi-card">
-        <h4>Avance de Inventario</h4>
-        <p class="kpi-value" [ngStyle]="{'color': (projectAvailableLots === 0 && projectTotalLots > 0) ? '#16a34a' : '#1e293b'}">
-          {{ projectTotalLots > 0 ? (100 - (projectAvailableLots / projectTotalLots * 100) | number:'1.0-0') : 0 }}%
-        </p>
-        <p>Lotes separados o vendidos</p>
+        <div class="kpi-card__icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+          </svg>
+        </div>
+        <div>
+          <p class="kpi-card__value" [ngStyle]="{'color': (projectAvailableLots === 0 && projectTotalLots > 0) ? '#16a34a' : '#1e293b'}">
+            {{ projectTotalLots > 0 ? (100 - (projectAvailableLots / projectTotalLots * 100) | number:'1.0-0') : 0 }}%
+          </p>
+          <p class="kpi-card__label">Avance de inventario</p>
+        </div>
       </div>
       <div class="kpi-card">
-        <h4>Valor Total del Proyecto</h4>
-        <p class="kpi-value money">$ {{ (projectTotalValue / 1000000) | number:'1.0-1' }}M</p>
-        <p>Proyección en millones (COP)</p>
+        <div class="kpi-card__icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
+          </svg>
+        </div>
+        <div>
+          <p class="kpi-card__value">$ {{ (projectTotalValue / 1000000) | number:'1.0-1' }}M</p>
+          <p class="kpi-card__label">Valor total del proyecto</p>
+        </div>
       </div>
     </div>
 
-    <!-- Tabla de Lotes -->
-    <div class="table-container">
+    <div class="table-shell">
       <table class="custom-table">
         <thead>
           <tr>
@@ -131,27 +145,38 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngIf="lots.length === 0">
-            <td colspan="7" style="text-align: center; color: #94a3b8; padding: 3rem;">No hay lotes registrados.</td>
+          <tr *ngIf="lots.length === 0" class="empty-row">
+            <td colspan="7">
+              <div class="empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
+                </svg>
+                <p>No hay lotes registrados.</p>
+              </div>
+            </td>
           </tr>
 
-          <tr *ngFor="let lot of lots">
+          <tr *ngFor="let lot of pagedLots">
             <td>
-              <span style="color: #1e293b; font-weight: 600;">{{ lot.project?.name || 'Sin asignar' }}</span>
+              <span class="lot-project">{{ lot.project?.name || 'Sin asignar' }}</span>
             </td>
             <td>
               <div class="lot-name">Lote {{ lot.number }}</div>
               <div class="lot-detail">ID: #{{ lot.id }}</div>
             </td>
             <td>
-              <span style="color: #1e293b; font-weight: 500;">{{ lot.area_m2 }} m²</span>
+              <span class="lot-project">{{ lot.area_m2 }} m²</span>
             </td>
             <td>
-              <span style="color: #1e293b; font-weight: 500;">$ {{ lot.list_price | number }}</span>
+              <span class="lot-project">$ {{ lot.list_price | number }}</span>
             </td>
             <td>
-              <span class="badge-status"
-                    [ngClass]="{'badge-green': lot.status === 'disponible', 'badge-yellow': lot.status === 'preventa' || lot.status === 'reservado', 'badge-red': lot.status === 'vendido'}">
+              <span class="badge-pill"
+                    [ngClass]="{
+                      'badge-pill--success': lot.status === 'disponible',
+                      'badge-pill--warning': lot.status === 'preventa' || lot.status === 'reservado',
+                      'badge-pill--neutral': lot.status === 'vendido'
+                    }">
                 {{ lot.status }}
               </span>
             </td>
@@ -186,6 +211,13 @@
         </tbody>
       </table>
     </div>
+
+    <app-pagination
+      [totalItems]="lots.length"
+      [pageSize]="pageSize"
+      [currentPage]="currentPage"
+      (pageChange)="currentPage = $event">
+    </app-pagination>
 
   </div>
 </div>

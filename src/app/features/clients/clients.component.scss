@@ -1,300 +1,39 @@
-// ============================================
-// ESTILOS DEL MÓDULO DE CLIENTES
-// ============================================
+.clients-table {
+  min-width: 640px;
 
-.clients-container {
-  padding: 24px;
-  background-color: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  min-height: calc(100vh - 40px);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-}
-
-// ============================================
-// HEADER SECTION
-// ============================================
-.header-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 32px;
-
-  .title-area {
-    .breadcrumb {
-      font-size: 14px;
-      color: #64748b;
-      margin-bottom: 4px;
-      display: block;
-      
-      strong {
-        color: #0f172a;
-        font-weight: 700;
-      }
-    }
-
-    h1 {
-      font-size: 30px;
-      font-weight: 700;
-      color: #0f172a;
-      margin: 0 0 4px 0;
-      line-height: 1.2;
-    }
-
-    p {
-      font-size: 14px;
-      color: #64748b;
-      margin: 0;
-    }
+  .client-row {
+    cursor: pointer;
   }
 
-  .actions-area {
+  .client-cell {
     display: flex;
-    gap: 16px;
     align-items: center;
+    gap: 0.75rem;
+  }
 
-    .search-box {
-      position: relative;
+  .client-name {
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 4px 0;
+    font-size: 14px;
+  }
 
-      .search-icon {
-        position: absolute;
-        left: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 16px;
-        height: 16px;
-        color: #94a3b8;
-        pointer-events: none;
-      }
+  .client-doc {
+    font-size: 12px;
+    color: #94a3b8;
+    margin: 0;
+  }
 
-      input {
-        background-color: #242424;
-        color: #ffffff;
-        border: none;
-        border-radius: 8px;
-        padding: 10px 16px 10px 36px;
-        font-size: 14px;
-        width: 260px;
-        outline: none;
-        transition: box-shadow 0.2s;
+  .has-lote {
+    color: #347769;
+    font-weight: 600;
+  }
 
-        &::placeholder {
-          color: #94a3b8;
-        }
-
-        &:focus {
-          box-shadow: 0 0 0 2px #327365;
-        }
-      }
-    }
-
-    .btn-primary {
-      background-color: #327365;
-      color: white;
-      padding: 10px 20px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      border: none;
-      cursor: pointer;
-      transition: background-color 0.2s;
-
-      &:hover {
-        background-color: #25574c;
-      }
-
-      &:disabled {
-        background-color: #cbd5e1;
-        cursor: not-allowed;
-      }
-    }
+  .no-lote {
+    color: #94a3b8;
   }
 }
 
-// ============================================
-// KPI GRID
-// ============================================
-.kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 16px;
-  margin-bottom: 32px;
-
-  .kpi-card {
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 20px;
-    background-color: #ffffff;
-
-    h3 {
-      font-size: 14px;
-      font-weight: 500;
-      color: #64748b;
-      margin: 0 0 8px 0;
-    }
-
-    .kpi-value {
-      font-size: 32px;
-      font-weight: 700;
-      color: #1e293b;
-      margin: 0 0 4px 0;
-      line-height: 1;
-    }
-
-    .kpi-desc {
-      font-size: 12px;
-      color: #94a3b8;
-      margin: 0;
-    }
-
-    &.kpi-danger {
-      border-color: #fecaca;
-
-      h3 {
-        color: #b91c1c;
-        font-weight: 700;
-      }
-
-      .kpi-value {
-        color: #b91c1c;
-      }
-
-      .kpi-desc {
-        color: #ef4444;
-      }
-    }
-  }
-}
-
-// ============================================
-// TABLE CONTAINER
-// ============================================
-.table-container {
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  overflow: hidden;
-
-  .clients-table {
-    width: 100%;
-    border-collapse: collapse;
-    text-align: left;
-
-    thead tr {
-      background-color: #f8fafc;
-      border-bottom: 1px solid #e2e8f0;
-
-      th {
-        padding: 16px;
-        font-weight: 600;
-        color: #64748b;
-        font-size: 14px;
-      }
-    }
-
-    tbody tr {
-      border-bottom: 1px solid #f1f5f9;
-      transition: background-color 0.15s;
-
-      &:last-child {
-        border-bottom: none;
-      }
-
-      &:hover {
-        background-color: #f8fafc;
-      }
-
-      &.client-row {
-        cursor: pointer;
-      }
-
-      &.empty-state {
-        &:hover {
-          background-color: transparent;
-        }
-
-        td {
-          padding: 48px 16px;
-          text-align: center;
-
-          .empty-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 12px;
-
-            .empty-icon {
-              width: 48px;
-              height: 48px;
-              color: #cbd5e1;
-            }
-
-            p {
-              font-size: 14px;
-              color: #94a3b8;
-              margin: 0;
-            }
-          }
-        }
-      }
-
-      td {
-        padding: 16px;
-        font-size: 14px;
-        color: #475569;
-
-        .client-name {
-          font-weight: 700;
-          color: #1e293b;
-          margin: 0 0 4px 0;
-          font-size: 14px;
-        }
-
-        .client-doc {
-          font-size: 12px;
-          color: #94a3b8;
-          margin: 0;
-        }
-
-        &.has-lote {
-          color: #327365;
-          font-weight: 600;
-        }
-
-        &.no-lote {
-          color: #94a3b8;
-        }
-
-        .badge {
-          padding: 6px 12px;
-          border-radius: 9999px;
-          font-size: 12px;
-          font-weight: 700;
-          display: inline-block;
-
-          &.badge-al_dia {
-            background-color: #dcfce7;
-            color: #15803d;
-          }
-
-          &.badge-vencida {
-            background-color: #fee2e2;
-            color: #b91c1c;
-          }
-
-          &.badge-na,
-          &.badge-sin_contrato {
-            background-color: #f1f5f9;
-            color: #64748b;
-          }
-        }
-      }
-    }
-  }
-}
-
-// ============================================
-// MODAL
-// ============================================
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -486,11 +225,11 @@
     }
 
     &.btn-primary {
-      background-color: #327365;
+      background-color: #347769;
       color: white;
 
       &:hover {
-        background-color: #25574c;
+        background-color: #22544a;
       }
 
       &:disabled {
@@ -501,45 +240,7 @@
   }
 }
 
-// ============================================
-// RESPONSIVE
-// ============================================
 @media (max-width: 768px) {
-  .clients-container {
-    padding: 16px;
-  }
-
-  .header-section {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-
-    .actions-area {
-      width: 100%;
-      flex-direction: column;
-
-      .search-box input {
-        width: 100%;
-      }
-
-      .btn-primary {
-        width: 100%;
-      }
-    }
-  }
-
-  .kpi-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .table-container {
-    overflow-x: auto;
-
-    .clients-table {
-      min-width: 600px;
-    }
-  }
-
   .modal-container {
     max-width: 100%;
     margin: 16px;

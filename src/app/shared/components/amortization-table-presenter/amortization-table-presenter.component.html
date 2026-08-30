@@ -52,7 +52,7 @@
       </tr>
     </thead>
     <tbody>
-      <tr *ngFor="let fee of installments" [ngClass]="{'row-disabled': !isFeeSelectable(fee)}">
+      <tr *ngFor="let fee of pagedInstallments" [ngClass]="{'row-disabled': !isFeeSelectable(fee)}">
         <td style="text-align: center;">
           <input
             type="checkbox"
@@ -79,4 +79,13 @@
       </tr>
     </tbody>
   </table>
+
+  <div style="padding: 0 1.5rem 1.25rem;">
+    <app-pagination
+      [totalItems]="installments.length"
+      [pageSize]="pageSize"
+      [currentPage]="currentPage"
+      (pageChange)="currentPage = $event">
+    </app-pagination>
+  </div>
 </div>
