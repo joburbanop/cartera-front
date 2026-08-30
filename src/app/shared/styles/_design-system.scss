@@ -1,5 +1,9 @@
 /* Lenguaje visual compartido: login, toasts, ficha de cliente y listados. */
 
+:root {
+  --font-family-base: 'Montserrat', -apple-system, sans-serif;
+}
+
 .card-elevated {
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -18,7 +22,7 @@
   h1 {
     margin: 0 0 0.25rem;
     font-size: 1.8rem;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: -0.03em;
     color: #0f172a;
   }
@@ -92,7 +96,7 @@
 .kpi-card__value {
   margin: 0;
   font-size: 1.85rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.1;
   color: #0f172a;
 }
@@ -115,6 +119,28 @@
   }
 }
 
+.kpi-card--success {
+  .kpi-card__icon {
+    background: #ecfdf5;
+    color: #047857;
+  }
+
+  .kpi-card__value {
+    color: #047857;
+  }
+}
+
+.kpi-card--warning {
+  .kpi-card__icon {
+    background: #fff7ed;
+    color: #b45309;
+  }
+
+  .kpi-card__value {
+    color: #b45309;
+  }
+}
+
 .badge-pill {
   display: inline-flex;
   align-items: center;
@@ -122,7 +148,7 @@
   padding: 0.32rem 0.75rem;
   border-radius: 999px;
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
   border: 1px solid transparent;
@@ -171,7 +197,7 @@
   border-radius: 50%;
   background: #eef7f5;
   color: #347769;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.04em;
   border: 1px solid rgba(52, 119, 105, 0.2);
   text-transform: uppercase;
@@ -243,7 +269,7 @@
     text-align: left;
     padding: 1rem 1.5rem;
     font-size: 0.72rem;
-    font-weight: 800;
+    font-weight: 700;
     color: #94a3b8;
     text-transform: uppercase;
     letter-spacing: 0.05em;

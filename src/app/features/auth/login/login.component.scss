@@ -2,7 +2,7 @@
   display: block;
   height: 100vh;
   overflow: auto;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--font-family-base);
   color: #0f172a;
 }
 
@@ -50,7 +50,7 @@
   margin: 0;
   font-size: 4.25rem;
   line-height: 0.9;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.06em;
 }
 
@@ -119,7 +119,7 @@
   background: linear-gradient(135deg, #347769, #22544a);
   color: #ffffff;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.04em;
 }
 

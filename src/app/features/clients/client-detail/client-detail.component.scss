@@ -1,6 +1,6 @@
 :host {
   display: block;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-family-base);
   color: #0f172a;
 }
 
@@ -85,7 +85,7 @@
   justify-content: center;
   background: #eef7f5;
   color: #347769;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 1.15rem;
   letter-spacing: 0.04em;
   border: 1px solid rgba(52, 119, 105, 0.2);
@@ -97,7 +97,7 @@
   .eyebrow {
     margin: 0 0 0.2rem;
     font-size: 0.72rem;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #64748b;
@@ -107,7 +107,7 @@
     margin: 0;
     font-size: 1.9rem;
     line-height: 1.15;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: -0.03em;
     color: #0f172a;
   }
@@ -164,7 +164,7 @@
 
   h4 {
     font-size: 0.78rem;
-    font-weight: 800;
+    font-weight: 700;
     color: #94a3b8;
     text-transform: uppercase;
     margin: 0 0 1rem;
@@ -200,7 +200,7 @@
   display: block;
   color: #94a3b8;
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   margin-bottom: 0.2rem;
@@ -224,7 +224,7 @@
 .contracts-section h2 {
   margin: 0 0 1rem;
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #1e293b;
 }
 
@@ -261,7 +261,7 @@
   h3 {
     margin: 0;
     font-size: 1.02rem;
-    font-weight: 800;
+    font-weight: 700;
     color: #0f172a;
   }
 }
@@ -344,7 +344,7 @@
   padding: 0.32rem 0.75rem;
   border-radius: 999px;
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
   border: 1px solid transparent;
