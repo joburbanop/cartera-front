@@ -1,15 +1,20 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, ElementRef, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, FormArray, FormControl } from '@angular/forms';
 import { ProjectService } from '../../../core/services/project.service';
 import { BankAccountService } from '../../../core/services/bank-account.service';
 import { LotService } from '../../../core/services/lot.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { AppRoles } from '../../../core/models/app-roles';
 import { RouterModule } from '@angular/router';
+import { ToastService } from '../../../shared/services/toast.service';
+import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
+import { markAllAsTouched, requiredArray, scrollToFirstInvalid } from '../../../shared/utils/form-utils';
 
 @Component({
   selector: 'app-projects',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, FieldErrorComponent],
   templateUrl: './projects.component.html',
   styleUrl: './projects.component.scss'
 })
@@ -19,6 +24,13 @@ export class ProjectsComponent implements OnInit {
   private bankAccountService = inject(BankAccountService);
   private cdr = inject(ChangeDetectorRef);
   private lotService = inject(LotService);
+  private authService = inject(AuthService);
+  private toast = inject(ToastService);
+  private host = inject(ElementRef<HTMLElement>);
+
+  get canCreate(): boolean {
+    return this.authService.hasRole(AppRoles.ADMINISTRADOR);
+  }
 
   projects: any[] = [];
   availableBankAccounts: any[] = []; 
@@ -36,12 +48,14 @@ export class ProjectsComponent implements OnInit {
     name: ['', [Validators.required, Validators.maxLength(150)]],
     location: ['', Validators.required],
     description: [''],
-    bank_account_ids: this.fb.array([], Validators.required)
+    bank_account_ids: this.fb.array([], requiredArray)
   });
 
   ngOnInit(): void {
     this.loadProjects();
-    this.loadBankAccounts();
+    if (this.canCreate) {
+      this.loadBankAccounts();
+    }
     this.loadLotsStats();
   }
 
@@ -89,6 +103,9 @@ export class ProjectsComponent implements OnInit {
         i++;
       });
     }
+    bankAccountIds.markAsDirty();
+    bankAccountIds.markAsTouched();
+    bankAccountIds.updateValueAndValidity();
   }
 
  // --- LÓGICA DE KPIS ---
@@ -134,7 +151,10 @@ export class ProjectsComponent implements OnInit {
 
         this.cdr.detectChanges();
       },
-      error: (err) => console.error('Error cargando estadísticas de lotes', err)
+      error: (err) => {
+        console.error('Error cargando estadísticas de lotes', err);
+        this.toast.show('No se pudieron cargar las estadísticas de lotes.', 'error');
+      }
     });
   }
 
@@ -155,7 +175,9 @@ export class ProjectsComponent implements OnInit {
 
   onSubmit() {
     if (this.projectForm.invalid) {
-      this.errorMessage = 'Por favor completa todos los campos requeridos.';
+      markAllAsTouched(this.projectForm);
+      scrollToFirstInvalid(this.host.nativeElement);
+      this.toast.show('Formulario incompleto', 'error', 'Revisa los campos marcados en rojo');
       return;
     }
 

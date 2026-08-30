@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AmortizationService } from '../../../core/services/amortization.service';
@@ -12,10 +12,16 @@ import { AmortizationSelectionService } from './amortization-selection.service';
 import { ContractStatusLabelPipe } from '../../../shared/pipes/contract-status-label.pipe';
 import { PaymentMethodNamePipe } from '../../../shared/pipes/payment-method-name.pipe';
 import { AmortizationTablePresenterComponent } from '../../../shared/components/amortization-table-presenter/amortization-table-presenter.component';
+import { ContractSummaryCardComponent } from './contract-summary-card/contract-summary-card.component';
+import { PaymentPromiseTabComponent } from './payment-promise-tab/payment-promise-tab.component';
 import { PaymentPromiseService } from '../../../core/services/payment-promise.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { PageTitleService } from '../../../core/services/page-title.service';
+import { ToastService } from '../../../shared/services/toast.service';
 import { PaymentPromise } from '../../../core/models/payment-promise.model';
+import { AmortizationInstallment } from '../../../core/models/amortization-installment.model';
+import { AppRoles } from '../../../core/models/app-roles';
 import { isPaidStatus, isVencida } from '../../../core/models/amortization-status';
-import { HttpClient } from '@angular/common/http';
 @Component({
   selector: 'app-tabla-amortizacion',
   standalone: true,
@@ -25,15 +31,16 @@ import { HttpClient } from '@angular/common/http';
     FormsModule,
     ReactiveFormsModule,
     DrawerPagoComponent,
-    ContractStatusLabelPipe,
     PaymentMethodNamePipe,
     AmortizationTablePresenterComponent,
+    ContractSummaryCardComponent,
+    PaymentPromiseTabComponent,
   ],
   templateUrl: './tabla-amortizacion.component.html',
   styleUrl: './tabla-amortizacion.component.scss',
   providers: [AmortizationSelectionService],
 })
-export class AmortizationComponent implements OnInit {
+export class AmortizationComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private amortizationService = inject(AmortizationService);
@@ -44,7 +51,13 @@ export class AmortizationComponent implements OnInit {
   private financials = inject(AmortizationFinancialsService);
   private selection = inject(AmortizationSelectionService);
   private paymentPromiseService = inject(PaymentPromiseService);
-  private http = inject(HttpClient);
+  private authService = inject(AuthService);
+  private pageTitle = inject(PageTitleService);
+  private toast = inject(ToastService);
+
+  get canRegisterPayments(): boolean {
+    return this.authService.hasRole(AppRoles.ADMINISTRADOR);
+  }
 
   contractId!: number;
   activeTab: 'amortizacion' | 'promesa' = 'amortizacion';
@@ -96,6 +109,7 @@ export class AmortizationComponent implements OnInit {
     this.contractService.getContractById(this.contractId).subscribe({
       next: (response) => {
         this.contractData = response.data || response;
+        this.pageTitle.set(this.buildContractTitle(this.contractData));
         this.setDefaultView();
         this.calculateFinancials();
         this.loadPaymentPromises();
@@ -121,7 +135,7 @@ export class AmortizationComponent implements OnInit {
   cargarTablaAmortizacion(): void {
     this.amortizationService.getPlan(this.contractId).subscribe({
       next: (response) => {
-        const payload = response.data ?? response;
+        const payload = (response.data ?? response) as AmortizationInstallment[] | { rows?: AmortizationInstallment[] };
         const plan = Array.isArray(payload) ? payload : payload.rows ?? [];
 
         if (Array.isArray(plan) && plan.length === 0) {
@@ -376,10 +390,7 @@ export class AmortizationComponent implements OnInit {
     return;
   }
 
-  this.http.get(receiptUrl, {
-    responseType: 'blob',
-    observe: 'response'
-  }).subscribe({
+  this.recaudoService.getReceipt(receiptUrl).subscribe({
     next: (response) => {
       const blob = response.body;
 
@@ -564,9 +575,9 @@ export class AmortizationComponent implements OnInit {
 
     if (this.selectedFees.length) {
       this.selectedFees.forEach((fee: any) => {
-        const selectedId = fee.id ?? fee.installment_number;
-        formData.append('installment_numbers[]', String(Number(selectedId)));
-        formData.append('selected_installments[]', String(Number(selectedId)));
+        // El plan persistido siempre trae id; installment_number no se usa como fallback.
+        formData.append('installment_numbers[]', String(Number(fee.id)));
+        formData.append('selected_installments[]', String(Number(fee.id)));
       });
     }
 
@@ -584,7 +595,12 @@ export class AmortizationComponent implements OnInit {
         this.isDrawerOpen = false;
         this.clearTableSelection();
 
-        alert('Pago registrado correctamente.');
+        this.toast.show(
+          'Pago registrado',
+          'success',
+          'El abono se aplicó correctamente a la cuota seleccionada.',
+        );
+        this.cdr.detectChanges();
 
         this.cargarTablaAmortizacion();
         this.loadContractData();
@@ -599,11 +615,29 @@ export class AmortizationComponent implements OnInit {
               .find((msg: unknown) => typeof msg === 'string')
           : null;
 
-        alert(firstMessage ? String(firstMessage) : 'No se pudo registrar el pago.');
+        this.toast.show(
+          'No se pudo registrar el pago',
+          'error',
+          firstMessage ? String(firstMessage) : undefined,
+        );
         console.error('Error al registrar pago:', err);
         this.cdr.detectChanges();
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    this.pageTitle.clear();
+  }
+
+  private buildContractTitle(contract: any): string {
+    const contractNumber = contract?.contract_number;
+    const number = contractNumber
+      ? String(contractNumber)
+      : `#${contract?.id || this.contractId}`;
+    const customer = contract?.customer ?? {};
+    const customerName = customer.name || customer.nombre || contract?.customer_name || '';
+    return customerName ? `Contrato ${number} — ${customerName}` : `Contrato ${number}`;
   }
 
   getContractStatusLabel(status: string): string {

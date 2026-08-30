@@ -1,26 +1,26 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { ApiListResponse, ApiResourceResponse } from '../models/api-response';
+import { Contract } from '../models/contract.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ContractService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://127.0.0.1:8000/api/contracts';
+  private apiUrl = `${environment.apiUrl}/contracts`;
 
-  // US-12: Enviar los datos del formulario para crear el contrato y simular el plan v1
-  createContract(data: any): Observable<any> {
-    return this.http.post(this.apiUrl, data);
+  createContract(data: Partial<Contract> | Record<string, unknown>): Observable<ApiResourceResponse<Contract>> {
+    return this.http.post<ApiResourceResponse<Contract>>(this.apiUrl, data);
   }
 
-  // Obtener listado de contratos (historial)
-  getContracts(): Observable<any> {
-    return this.http.get(this.apiUrl);
+  getContracts(): Observable<ApiListResponse<Contract>> {
+    return this.http.get<ApiListResponse<Contract>>(this.apiUrl);
   }
 
-  // Consultar la ficha financiera de un contrato específico (con su plan de amortización)
-  getContractById(id: number): Observable<any> {
-    return this.http.get(`${this.apiUrl}/${id}`);
+  getContractById(id: number): Observable<ApiResourceResponse<Contract>> {
+    return this.http.get<ApiResourceResponse<Contract>>(`${this.apiUrl}/${id}`);
   }
 }

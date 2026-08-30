@@ -1,12 +1,17 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, ElementRef, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { BankAccountService } from '../../../core/services/bank-account.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { AppRoles } from '../../../core/models/app-roles';
+import { ToastService } from '../../../shared/services/toast.service';
+import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
+import { markAllAsTouched, scrollToFirstInvalid } from '../../../shared/utils/form-utils';
 
 @Component({
   selector: 'app-bank-accounts',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FieldErrorComponent],
   templateUrl: './bank-accounts.component.html', // O './bank-accounts.html' si tu archivo se llama así
   styleUrls: ['./bank-accounts.component.scss'] // O './bank-accounts.scss'
 })
@@ -14,6 +19,13 @@ export class BankAccountsComponent implements OnInit {
   private fb = inject(FormBuilder);
   private bankAccountService = inject(BankAccountService);
   private cdr = inject(ChangeDetectorRef);
+  private authService = inject(AuthService);
+  private toast = inject(ToastService);
+  private host = inject(ElementRef<HTMLElement>);
+
+  get canCreate(): boolean {
+    return this.authService.hasRole(AppRoles.ADMINISTRADOR);
+  }
   accounts: any[] = [];
   isLoading = false;
   successMessage = '';
@@ -63,6 +75,7 @@ export class BankAccountsComponent implements OnInit {
         } else {
            this.accounts = [];
         }
+        this.calculateKPIs();
         this.cdr.detectChanges();
       },
       error: (err) => console.error('Error cargando cuentas', err)
@@ -70,7 +83,12 @@ export class BankAccountsComponent implements OnInit {
   }
 
   onSubmit() {
-    if (this.accountForm.invalid) return;
+    if (this.accountForm.invalid) {
+      markAllAsTouched(this.accountForm);
+      scrollToFirstInvalid(this.host.nativeElement);
+      this.toast.show('Formulario incompleto', 'error', 'Revisa los campos marcados en rojo');
+      return;
+    }
 
     this.isLoading = true;
     this.successMessage = '';
@@ -85,7 +103,6 @@ export class BankAccountsComponent implements OnInit {
 
         this.accountForm.reset({ account_type: 'savings' });
         this.isModalOpen = false;
-        this.calculateKPIs();
         this.loadAccounts();
       },
       error: (err) => {

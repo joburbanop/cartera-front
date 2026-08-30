@@ -1,0 +1,93 @@
+---
+description: Auditoría de src/app/features/users (gestión de cuentas y roles).
+globs: src/app/features/users/**
+alwaysApply: false
+---
+
+# Users (feature) — auditoría del estado actual
+
+Pantalla de cuentas para `admin_sistema`. Ruta `/usuarios` bajo `MainLayoutComponent` + `authGuard` + `roleGuard` (`data.roles = [admin_sistema]`). Si el rol no coincide, redirige a `/dashboard`.
+
+El ítem de menú “Usuarios” solo lo muestra `MainLayoutComponent.canViewUsers()` (`hasRole('admin_sistema')`). Ya no lleva badge “Próx.”.
+
+HTTP 100 % vía `UserService` (core). Roles canónicos en `core/models/app-roles.ts`.
+
+---
+
+## 1. Inventario
+
+| Pieza | Tipo | Responsabilidad |
+|---|---|---|
+| `UsersComponent` (`app-users`) | Smart | Lista usuarios, KPIs por rol, modal reactivo de alta/edición, eliminar (soft delete en API). |
+| `users.spec.ts` | Test | Solo `should create`. |
+
+Sin servicios propios del feature. Select de rol con las 3 opciones reales, no texto libre.
+
+---
+
+## 2. Contratos públicos
+
+Sin `@Input` / `@Output`. Es página.
+
+```ts
+users: UserUI[]            // id, name, email, roles[]
+isLoading / isModalOpen / isEditing
+editingUserId: number | null
+userForm                 // name, email, password, role
+roleOptions              // socio_gerencia, admin_sistema, administrador
+currentUserId            // AuthService.getUserId()
+openCreateModal() / openEditModal(user) / closeModal()
+submit() / deleteUser(user) / loadUsers()
+canDelete(user)          // false si user.id === currentUserId
+roleLabel(role): string
+```
+
+Alta: password required min 8. Edición: no envía password; PUT `{ name, email, role }`.
+
+---
+
+## 3. Manejo de estado
+
+Estado local del componente + `ChangeDetectorRef`. Sin signals/subjects.
+
+`AuthService.getUserId()` decide si se muestra “Eliminar” (no auto-baja en UI). El backend vuelve a bloquear auto-eliminarse y al último `admin_sistema` (422).
+
+---
+
+## 4. Comunicación con el backend
+
+Delega a `UserService` (`environment.apiUrl` + `/users`):
+
+| Acción | Método | Ruta |
+|---|---|---|
+| Listar | GET | `/api/users` |
+| Crear | POST | `/api/users` `{ name, email, password, role }` |
+| Editar | PUT | `/api/users/:id` `{ name, email, role }` |
+| Eliminar | DELETE | `/api/users/:id` (soft delete) |
+
+Unwrap: `response.data ?? response`. Errores 422: aplana `err.error.errors`.
+
+---
+
+## 5. Convenciones observadas
+
+- Standalone + `ReactiveFormsModule` + `inject()`.
+- Patrón visual de Clients/Projects: header, KPIs, tabla, modal.
+- Labels UI: “Socio / Gerencia”, “Admin sistema”, “Administrador”; values = slugs Spatie.
+- Confirm nativo antes de eliminar.
+
+---
+
+## 6. Advertencia para futuros cambios
+
+Este código ya está implementado y probado. Cualquier feature nuevo debe consumir `UserService` — nunca duplicar HTTP de usuarios.
+
+No inventar un cuarto rol. El reset de contraseña **no existe** (ni endpoint ni campo en edición).
+
+---
+
+## Deuda técnica observada
+
+1. Spec solo `should create`.
+2. Edición no permite cambiar password (no hay endpoint de reset).
+3. `confirm()` nativo para borrar; no hay modal de confirmación propio.

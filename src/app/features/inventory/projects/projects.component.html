@@ -13,10 +13,12 @@
       <div class="app-form-group">
         <label class="app-form-label">Nombre del Proyecto</label>
         <input class="app-form-input" type="text" formControlName="name" placeholder="Ej. Condominio San Miguel">
+        <app-field-error [control]="projectForm.controls.name" label="El nombre del proyecto"></app-field-error>
       </div>
       <div class="app-form-group">
         <label class="app-form-label">Ubicación / Dirección</label>
         <input class="app-form-input" type="text" formControlName="location" placeholder="Ej. Calle 10 # 4-50">
+        <app-field-error [control]="projectForm.controls.location" label="La ubicación"></app-field-error>
       </div>
       <div class="app-form-group">
         <label class="app-form-label">Descripción (Opcional)</label>
@@ -30,6 +32,7 @@
             {{ account.bank_name }} ({{ account.account_number }})
           </label>
         </div>
+        <app-field-error [control]="projectForm.controls.bank_account_ids" label="Las cuentas bancarias vinculadas"></app-field-error>
       </div>
       <button type="submit" [disabled]="isLoading" class="app-form-button">
         {{ isLoading ? 'Guardando...' : 'Guardar Proyecto' }}
@@ -51,7 +54,7 @@
       <p>{{ projects.length }} proyectos activos · Gestión general</p>
     </div>
     <!-- BOTÓN QUE ABRE EL MODAL -->
-    <button class="btn-new-project" (click)="openModal()">+ Nuevo proyecto</button>
+    <button *ngIf="canCreate" class="btn-new-project" (click)="openModal()">+ Nuevo proyecto</button>
   </div>
 
   <!-- TARJETAS KPI (Resumen) -->

@@ -1,7 +1,13 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, ElementRef, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { CustomerService, Customer } from '../../core/services/customer.service';
+import { AuthService } from '../../core/services/auth.service';
+import { AppRoles } from '../../core/models/app-roles';
+import { RouterModule } from '@angular/router';
+import { ToastService } from '../../shared/services/toast.service';
+import { FieldErrorComponent } from '../../shared/components/field-error/field-error.component';
+import { markAllAsTouched, scrollToFirstInvalid } from '../../shared/utils/form-utils';
 
 interface ClienteUI {
   id?: number;
@@ -17,7 +23,7 @@ interface ClienteUI {
 @Component({
   selector: 'app-clients',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, FieldErrorComponent],
   templateUrl: './clients.component.html',
   styleUrl: './clients.component.scss'
 })
@@ -25,6 +31,13 @@ export class ClientsComponent implements OnInit {
   private customerService = inject(CustomerService);
   private fb = inject(FormBuilder);
   private cdr = inject(ChangeDetectorRef);
+  private authService = inject(AuthService);
+  private toast = inject(ToastService);
+  private host = inject(ElementRef<HTMLElement>);
+
+  get canCreate(): boolean {
+    return this.authService.hasRole(AppRoles.ADMINISTRADOR);
+  }
 
   // KPIs
   totalClientes = 0;
@@ -63,7 +76,7 @@ export class ClientsComponent implements OnInit {
     this.isLoading = true;
     this.customerService.getCustomers().subscribe({
       next: (response) => {
-        const customersData = response.data || response || [];
+        const customersData = (response.data || response || []) as Customer[];
 
         this.clientes = customersData.map((customer: any) => ({
           id: customer.id,
@@ -134,7 +147,9 @@ export class ClientsComponent implements OnInit {
 
   guardarCliente(): void {
     if (this.customerForm.invalid) {
-      this.errorMessage = 'Por favor complete todos los campos requeridos';
+      markAllAsTouched(this.customerForm);
+      scrollToFirstInvalid(this.host.nativeElement);
+      this.toast.show('Formulario incompleto', 'error', 'Revisa los campos marcados en rojo');
       return;
     }
 

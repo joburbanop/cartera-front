@@ -1,19 +1,22 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { ApiListResponse, ApiResourceResponse } from '../models/api-response';
+import { BankAccount } from '../models/bank-account.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class BankAccountService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://127.0.0.1:8000/api/bank-accounts';
+  private apiUrl = `${environment.apiUrl}/bank-accounts`;
 
-  getAccounts(): Observable<any> {
-    return this.http.get(this.apiUrl);
+  getAccounts(): Observable<ApiListResponse<BankAccount>> {
+    return this.http.get<ApiListResponse<BankAccount>>(this.apiUrl);
   }
 
-  createAccount(data: any): Observable<any> {
-    return this.http.post(this.apiUrl, data);
+  createAccount(data: Partial<BankAccount> | Record<string, unknown>): Observable<ApiResourceResponse<BankAccount>> {
+    return this.http.post<ApiResourceResponse<BankAccount>>(this.apiUrl, data);
   }
 }

@@ -1,0 +1,126 @@
+.global-search {
+  position: relative;
+}
+
+.search-box {
+  position: relative;
+
+  svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    color: #94a3b8;
+    pointer-events: none;
+  }
+
+  input {
+    background: #f1f5f9;
+    border: 1px solid transparent;
+    padding: 0.6rem 2.4rem 0.6rem 2.5rem;
+    border-radius: 10px;
+    width: 240px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    color: #0f172a;
+    transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s, width 0.2s;
+
+    &::placeholder {
+      color: #94a3b8;
+    }
+
+    &:focus {
+      outline: none;
+      background: #ffffff;
+      border-color: #347769;
+      width: 280px;
+      box-shadow: 0 0 0 3px rgba(52, 119, 105, 0.1);
+    }
+  }
+}
+
+.search-spinner {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  border: 2px solid #d1d5db;
+  border-top-color: #347769;
+  border-radius: 50%;
+  animation: search-spin 0.7s linear infinite;
+}
+
+.search-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  width: min(360px, 70vw);
+  max-height: 420px;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+  padding: 0.6rem 0;
+}
+
+.search-section {
+  padding: 0.25rem 0 0.5rem;
+
+  h3 {
+    margin: 0;
+    padding: 0.4rem 1rem 0.35rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #64748b;
+  }
+}
+
+.search-hit {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 0.55rem 1rem;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+
+  &:hover {
+    background: #eef7f5;
+  }
+}
+
+.hit-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.hit-meta {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.search-empty {
+  margin: 0;
+  padding: 1rem;
+  font-size: 0.85rem;
+  color: #64748b;
+  text-align: center;
+}
+
+@keyframes search-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

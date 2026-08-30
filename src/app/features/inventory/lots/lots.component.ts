@@ -1,15 +1,20 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, ElementRef, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ProjectService } from '../../../core/services/project.service';
 import { LotService } from '../../../core/services/lot.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { AppRoles } from '../../../core/models/app-roles';
 import { CurrencyMaskDirective } from '../../../shared/directives/currency-mask.directive';
+import { ToastService } from '../../../shared/services/toast.service';
+import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
+import { markAllAsTouched, scrollToFirstInvalid } from '../../../shared/utils/form-utils';
 
 @Component({
   selector: 'app-lots',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, CurrencyMaskDirective],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, CurrencyMaskDirective, FieldErrorComponent],
   templateUrl: './lots.component.html',
   styleUrl: './lots.component.scss'
 })
@@ -20,6 +25,13 @@ export class LotsComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
+  private authService = inject(AuthService);
+  private toast = inject(ToastService);
+  private host = inject(ElementRef<HTMLElement>);
+
+  get canCreate(): boolean {
+    return this.authService.hasRole(AppRoles.ADMINISTRADOR);
+  }
 
   projects: any[] = [];
   lots: any[] = [];
@@ -204,7 +216,12 @@ export class LotsComponent implements OnInit {
 
   // --- GUARDADO ---
   onSubmit() {
-    if (this.lotForm.invalid) return;
+    if (this.lotForm.invalid) {
+      markAllAsTouched(this.lotForm);
+      scrollToFirstInvalid(this.host.nativeElement);
+      this.toast.show('Formulario incompleto', 'error', 'Revisa los campos marcados en rojo');
+      return;
+    }
     this.isLoading = true;
     this.errorMessage = '';
 

@@ -19,21 +19,25 @@
               {{ project.name }}
             </option>
           </select>
+          <app-field-error [control]="lotForm.controls.project_id" label="El proyecto"></app-field-error>
         </div>
 
         <div class="app-form-group" style="grid-column: span 2;">
           <label class="app-form-label">Identificador del Lote</label>
           <input class="app-form-input" type="text" formControlName="number" placeholder="Ej. Lote 12 - Mz B">
+          <app-field-error [control]="lotForm.controls.number" label="El identificador del lote"></app-field-error>
         </div>
 
         <div class="app-form-group">
           <label class="app-form-label">Área (m²)</label>
           <input class="app-form-input" type="number" formControlName="area_m2" placeholder="120">
+          <app-field-error [control]="lotForm.controls.area_m2" label="El área"></app-field-error>
         </div>
 
         <div class="app-form-group">
           <label class="app-form-label">Precio de Lista ($)</label>
           <input class="app-form-input" type="text" formControlName="list_price" placeholder="85000000" appCurrencyMask>
+          <app-field-error [control]="lotForm.controls.list_price" label="El precio de lista"></app-field-error>
         </div>
       </div>
 
@@ -84,11 +88,11 @@
           {{ activeProject?.location || 'Ubicación no disponible' }}
         </p>
       </div>
-      <button class="btn-new-lot" (click)="openModal()">+ Añadir Lote</button>
+      <button *ngIf="canCreate" class="btn-new-lot" (click)="openModal()">+ Añadir Lote</button>
     </div>
 
     <div class="header-section" *ngIf="isGlobalView" style="justify-content: flex-end;">
-      <button class="btn-new-lot" (click)="openModal()">+ Añadir Lote</button>
+      <button *ngIf="canCreate" class="btn-new-lot" (click)="openModal()">+ Añadir Lote</button>
     </div>
 
     <!-- KPIs Específicos del Proyecto -->

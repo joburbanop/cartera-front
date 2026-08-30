@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError, Observable } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { AmortizationComponent } from './tabla-amortizacion.component';
@@ -9,9 +9,13 @@ import { ContractService } from '../../../core/services/contract.service';
 import { FinancialService } from '../../../core/services/financial.service';
 import { RecaudoService } from '../../../core/services/recaudo.service';
 import { PaymentPromiseService } from '../../../core/services/payment-promise.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { ToastService } from '../../../shared/services/toast.service';
 
 describe('AmortizationComponent', () => {
   let component: AmortizationComponent;
+  let toastService: ToastService;
+  let registerPaymentResult: Observable<unknown> = of({});
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -79,7 +83,7 @@ describe('AmortizationComponent', () => {
     } as Partial<FinancialService> as FinancialService;
 
     const recaudoServiceMock = {
-      registerPayment: () => of({}),
+      registerPayment: () => registerPaymentResult,
       getTransactionsByContract: () => of({ data: [] }),
       getAllTransactions: () => of({ data: [] }),
     } as Partial<RecaudoService> as RecaudoService;
@@ -87,6 +91,12 @@ describe('AmortizationComponent', () => {
     const paymentPromiseServiceMock = {
       getPromisesByContract: () => of([]),
     } as Partial<PaymentPromiseService> as PaymentPromiseService;
+
+    const authServiceMock = {
+      hasRole: () => true,
+      getRole: () => 'administrador',
+      isLoggedIn: () => true,
+    } as Partial<AuthService> as AuthService;
 
     const routerMock = {
       navigate: () => Promise.resolve(true),
@@ -96,6 +106,7 @@ describe('AmortizationComponent', () => {
       imports: [AmortizationComponent],
       providers: [
         AmortizationFinancialsService,
+        ToastService,
         { provide: ActivatedRoute, useValue: { params: of({}) } },
         { provide: Router, useValue: routerMock },
         { provide: AmortizationService, useValue: amortizationServiceMock },
@@ -103,11 +114,15 @@ describe('AmortizationComponent', () => {
         { provide: FinancialService, useValue: financialServiceMock },
         { provide: RecaudoService, useValue: recaudoServiceMock },
         { provide: PaymentPromiseService, useValue: paymentPromiseServiceMock },
+        { provide: AuthService, useValue: authServiceMock },
       ],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(AmortizationComponent);
     component = fixture.componentInstance;
+    toastService = TestBed.inject(ToastService);
+
+    registerPaymentResult = of({});
 
     component.contractData = {
       status: 'activo',
@@ -170,5 +185,45 @@ describe('AmortizationComponent', () => {
     expect(selectedIds).not.toContain(2);
     expect(selectedIds).not.toContain(3);
     expect(component.isDrawerOpen).toBeTruthy();
+  });
+
+  it('Debe registrar un toast de éxito en el servicio tras un pago correcto', () => {
+    registerPaymentResult = of({});
+    component.contractId = 1;
+    component.selectedFees = [{ ...cuota3 }];
+
+    component.procesarPago({
+      amount: 1000000,
+      payment_method: 'transfer',
+      transaction_date: '2026-08-30',
+      receipt: new Blob(),
+    });
+
+    const toasts = toastService.toasts();
+    expect(toasts.length).toBe(1);
+    expect(toasts[0].type).toBe('success');
+    expect(toasts[0].title).toBe('Pago registrado');
+  });
+
+  it('Debe registrar un toast de error en el servicio si el pago falla', () => {
+    registerPaymentResult = throwError(() => ({
+      status: 422,
+      error: { errors: { amount: ['El monto es insuficiente'] } },
+    }));
+    component.contractId = 1;
+    component.selectedFees = [{ ...cuota3 }];
+
+    component.procesarPago({
+      amount: 1000000,
+      payment_method: 'transfer',
+      transaction_date: '2026-08-30',
+      receipt: new Blob(),
+    });
+
+    const toasts = toastService.toasts();
+    expect(toasts.length).toBe(1);
+    expect(toasts[0].type).toBe('error');
+    expect(toasts[0].title).toBe('No se pudo registrar el pago');
+    expect(toasts[0].description).toBe('El monto es insuficiente');
   });
 });

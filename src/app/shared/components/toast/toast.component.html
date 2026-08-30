@@ -1,0 +1,34 @@
+<div class="toast-stack" aria-live="polite" aria-relevant="additions">
+  <div
+    *ngFor="let toast of toastService.toasts()"
+    class="toast"
+    [class.toast-success]="toast.type === 'success'"
+    [class.toast-error]="toast.type === 'error'"
+    [class.toast-leaving]="toast.leaving"
+    role="status"
+  >
+    <span class="toast-icon" aria-hidden="true">
+      <svg *ngIf="toast.type === 'success'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"></circle>
+        <path d="m8.5 12.5 2.5 2.5 4.5-5.5"></path>
+      </svg>
+      <svg *ngIf="toast.type === 'error'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"></circle>
+        <path d="m9 9 6 6"></path>
+        <path d="m15 9-6 6"></path>
+      </svg>
+    </span>
+
+    <div class="toast-copy">
+      <p class="toast-title">{{ toast.title }}</p>
+      <p *ngIf="toast.description" class="toast-description">{{ toast.description }}</p>
+    </div>
+
+    <button type="button" class="toast-close" (click)="toastService.dismiss(toast.id)" aria-label="Cerrar notificación">×</button>
+
+    <span
+      class="toast-progress"
+      [style.animation-duration]="toast.durationMs + 'ms'"
+    ></span>
+  </div>
+</div>

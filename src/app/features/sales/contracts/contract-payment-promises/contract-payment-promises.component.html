@@ -1,0 +1,132 @@
+        <div style="margin-top: 1.5rem; padding: 1rem; border: 0.5px solid #e2e8f0; border-radius: 10px; background: #ffffff;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; gap: 1rem; flex-wrap: wrap;">
+            <div>
+              <h5 style="margin: 0; color: #334155; font-size: 0.97rem;">Plan personalizado</h5>
+              <small style="color: #64748b;">Define cuotas variables, primas y cuotas balón.</small>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+              <button type="button" (click)="showBatchAssistantChange.emit(!showBatchAssistant)" style="background: #f59e0b; color: white; border: none; border-radius: 6px; padding: 0.6rem 0.9rem; font-weight: 700; cursor: pointer;">
+                {{ showBatchAssistant ? 'Ocultar asistente' : 'Mostrar asistente rapido' }}
+              </button>
+              <button type="button" (click)="addPaymentPromise()" style="background: linear-gradient(135deg, #347769 0%, #2a615d 100%); color: white; border: none; border-radius: 6px; padding: 0.6rem 0.9rem; font-weight: 700; cursor: pointer;">
+                + Agregar pago
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="showBatchAssistant" style="margin-bottom: 1rem; padding: 1rem; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px;">
+            <h6 style="margin: 0 0 0.85rem 0; color: #9a4d00; font-size: 0.92rem; font-weight: 800;">
+              Generacion Rapida por Lotes
+            </h6>
+
+            <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem;">
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">Cantidad de cuotas</label>
+                <input type="number" min="1" step="1" [ngModel]="batchCount" (ngModelChange)="batchCountChange.emit($event)" [ngModelOptions]="{standalone: true}" style="width: 100%; padding: 0.55rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">Valor por cuota</label>
+                <input type="text" min="1" [ngModel]="batchAmount" (ngModelChange)="batchAmountChange.emit($event)" [ngModelOptions]="{standalone: true}" appCurrencyMask style="width: 100%; padding: 0.55rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">Fecha inicial</label>
+                <input type="date" [ngModel]="batchStartDate" (ngModelChange)="batchStartDateChange.emit($event)" [ngModelOptions]="{standalone: true}" style="width: 100%; padding: 0.55rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">Concepto</label>
+                <input type="text" [ngModel]="batchDescription" (ngModelChange)="batchDescriptionChange.emit($event)" [ngModelOptions]="{standalone: true}" placeholder="Cuota ordinaria" style="width: 100%; padding: 0.55rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+              </div>
+            </div>
+
+            <button type="button" (click)="generateBatch.emit()" style="margin-top: 0.9rem; background: #f59e0b; color: white; border: none; border-radius: 6px; padding: 0.65rem 1rem; font-weight: 700; cursor: pointer;">
+              Inyectar Lote al Cronograma
+            </button>
+
+            <div *ngIf="batchErrorMessage" style="margin-top: 0.7rem; font-size: 0.84rem; color: #b91c1c; font-weight: 600;">
+              {{ batchErrorMessage }}
+              <span *ngIf="batchErrorMessage.includes('Valor Futuro')" style="display: block; margin-top: 0.2rem; color: #7f1d1d;">Límite actual: $ {{ valorFuturoDeuda | number:'1.0-0' }}</span>
+            </div>
+          </div>
+
+          <div *ngIf="paymentPromises.length === 0" style="padding: 0.75rem; border: 1px dashed #cbd5e1; border-radius: 6px; color: #475569; background: #f8fafc;">
+            Aún no hay pagos personalizados definidos.
+          </div>
+
+          <div *ngIf="paymentPromises.length > 0" style="margin-top: 1rem; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+            <div (click)="showGeneratedPromisesChange.emit(!showGeneratedPromises)"
+                 style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.85rem; background: #f8fafc; cursor: pointer; user-select: none;"
+                 [style.border-bottom]="showGeneratedPromises ? '1px solid #e2e8f0' : 'none'">
+              <span style="font-size: 0.88rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 0.45rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+                     style="width: 15px; height: 15px; transition: transform 0.2s;"
+                     [style.transform]="showGeneratedPromises ? 'rotate(90deg)' : 'rotate(0deg)'">
+                  <path d="M9 6l6 6-6 6" />
+                </svg>
+                Cuotas generadas ({{ paymentPromises.length }})
+              </span>
+              <span style="font-size: 0.8rem; font-weight: 600; color: #475569;">
+                {{ showGeneratedPromises ? 'Contraer' : 'Expandir' }}
+              </span>
+            </div>
+
+            <div *ngIf="showGeneratedPromises" style="max-height: 360px; overflow-y: auto; padding: 0.85rem; background: #ffffff; display: flex; flex-direction: column; gap: 0.75rem;">
+              <div *ngFor="let promise of paymentPromises.controls; let i = index" [formGroup]="promise" style="padding: 1rem; border: 1px solid #e2e8f0; border-radius: 8px; background: white; display: grid; grid-template-columns: 1fr 1fr 1.5fr auto; gap: 0.75rem; align-items: start;">
+                <div>
+                  <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">Fecha</label>
+                  <input type="date" formControlName="expected_date" style="width: 100%; padding: 0.55rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+                  <app-field-error [control]="promise.get('expected_date')" label="La fecha"></app-field-error>
+                </div>
+                <div>
+                  <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">Monto</label>
+                  <input type="text" formControlName="expected_amount" min="1" appCurrencyMask style="width: 100%; padding: 0.55rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+                  <app-field-error [control]="promise.get('expected_amount')" label="El monto"></app-field-error>
+                </div>
+                <div>
+                  <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">Descripción</label>
+                  <input type="text" formControlName="description" placeholder="Cuota inicial / prima / balón" style="width: 100%; padding: 0.55rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+                  <app-field-error [control]="promise.get('description')" label="La descripción"></app-field-error>
+                </div>
+                <div>
+                  <button type="button" (click)="removePaymentPromise(i)" style="padding: 0.6rem 0.8rem; border: 1px solid #fecaca; background: #fff1f2; color: #be123c; border-radius: 6px; font-weight: 700; cursor: pointer;">
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="isCustomPlan" style="margin-top: 1.5rem; padding: 1rem; border-radius: 10px; border: 1px solid; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem;"
+               [ngStyle]="{'background': !hasFinancialDifference ? '#ecfdf5' : '#fef2f2', 'border-color': !hasFinancialDifference ? '#bbf7d0' : '#fecaca'}">
+            <div style="padding: 0.9rem; border-radius: 8px; background: rgba(255,255,255,0.22);">
+              <span style="display: block; font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">Saldo a financiar</span>
+              <span style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">$ {{ saldoAFinanciar | number }}</span>
+            </div>
+            <div style="padding: 0.9rem; border-radius: 8px; background: rgba(255,255,255,0.22);">
+              <span style="display: block; font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">Distribuido</span>
+              <span style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">$ {{ totalCustomPromises | number }}</span>
+            </div>
+            <div style="padding: 0.9rem; border-radius: 8px; background: rgba(255,255,255,0.22);">
+              <span style="display: block; font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">Diferencia</span>
+              <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                <span *ngIf="!hasFinancialDifference" style="font-size: 1rem; color: #15803d;">✓</span>
+                <span *ngIf="hasFinancialDifference" style="font-size: 1rem; color: #b91c1c;">!</span>
+                <span [ngStyle]="{'color': !hasFinancialDifference ? '#15803d' : '#b91c1c', 'font-weight': '800'}">
+                  {{ !hasFinancialDifference ? 'Distribución válida' : (diferenciaFinanciera > 0 ? 'Faltan' : 'Sobran') }}
+                </span>
+              </div>
+              <div style="margin-top: 0.2rem; font-size: 0.92rem; font-weight: 700; color: #0f172a;">
+                $ {{ diferenciaFinanciera < 0 ? (diferenciaFinanciera * -1) : diferenciaFinanciera | number:'1.0-0' }}
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="isCustomPlan" style="margin-top: 0.75rem; display: flex; justify-content: flex-end;">
+            <button
+              type="button"
+              (click)="autoCuadrarUltimaCuota()"
+              [disabled]="paymentPromises.length === 0 || !hasFinancialDifference"
+              style="font-size: 0.75rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 6px; padding: 0.4rem 0.7rem; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+              Auto-cuadrar última cuota
+            </button>
+          </div>
+        </div>

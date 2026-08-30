@@ -17,6 +17,8 @@ export class ContractStatusLabelPipe implements PipeTransform {
         return 'Terminado';
       case 'rescindido':
         return 'Rescindido';
+      case 'vencido':
+        return 'Vencido';
       default:
         return value || 'Sin estado';
     }

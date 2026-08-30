@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { RecaudoService } from '../../../core/services/recaudo.service';
 
 @Component({
@@ -17,11 +17,12 @@ export class HistorialPagosComponent implements OnInit {
   isLoading = false;
 
   private cdr = inject(ChangeDetectorRef);
-  private http = inject(HttpClient);
-
-  constructor(private recaudoService: RecaudoService) {}
+  private recaudoService = inject(RecaudoService);
+  private route = inject(ActivatedRoute);
 
   ngOnInit(): void {
+    this.customerId = this.route.snapshot.queryParamMap.get('customer_id') ?? '';
+    this.lotId = this.route.snapshot.queryParamMap.get('lot_id') ?? '';
     this.loadTransactions();
   }
 
@@ -62,10 +63,7 @@ verComprobante(url: string): void {
     return;
   }
 
-  this.http.get(url, {
-    responseType: 'blob',
-    observe: 'response'
-  }).subscribe({
+  this.recaudoService.getReceipt(url).subscribe({
     next: (response) => {
       const blob = response.body;
 

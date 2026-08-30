@@ -10,7 +10,7 @@
       <div class="search-box">
        
       </div>
-      <button class="btn-primary" (click)="abrirModalNuevoCliente()">
+      <button *ngIf="canCreate" class="btn-primary" (click)="abrirModalNuevoCliente()">
         + Nuevo cliente
       </button>
     </div>
@@ -60,7 +60,11 @@
         </tr>
 
         <!-- Iteración de clientes -->
-        <tr *ngFor="let cliente of clientesFiltrados">
+        <tr
+          *ngFor="let cliente of clientesFiltrados"
+          class="client-row"
+          [routerLink]="cliente.id != null ? ['/clientes', cliente.id] : null"
+        >
           <td>
             <p class="client-name">{{ cliente.nombre }}</p>
             <p class="client-doc">CC {{ cliente.documento }}</p>
@@ -113,11 +117,8 @@
           <input 
             type="text" 
             formControlName="name"
-            placeholder="Juan Pérez García"
-            [class.input-error]="customerForm.get('name')?.invalid && customerForm.get('name')?.touched">
-          <p *ngIf="customerForm.get('name')?.invalid && customerForm.get('name')?.touched" class="error-text">
-            El nombre es requerido
-          </p>
+            placeholder="Juan Pérez García">
+          <app-field-error [control]="customerForm.controls.name" label="El nombre"></app-field-error>
         </div>
 
         <!-- Tipo y número de documento -->
@@ -136,11 +137,8 @@
             <input 
               type="text" 
               formControlName="document"
-              placeholder="1234567890"
-              [class.input-error]="customerForm.get('document')?.invalid && customerForm.get('document')?.touched">
-            <p *ngIf="customerForm.get('document')?.invalid && customerForm.get('document')?.touched" class="error-text">
-              El documento es requerido
-            </p>
+              placeholder="1234567890">
+            <app-field-error [control]="customerForm.controls.document" label="El documento"></app-field-error>
           </div>
         </div>
 
@@ -150,11 +148,8 @@
           <input 
             type="tel" 
             formControlName="phone"
-            placeholder="321 456 7890"
-            [class.input-error]="customerForm.get('phone')?.invalid && customerForm.get('phone')?.touched">
-          <p *ngIf="customerForm.get('phone')?.invalid && customerForm.get('phone')?.touched" class="error-text">
-            El teléfono es requerido
-          </p>
+            placeholder="321 456 7890">
+          <app-field-error [control]="customerForm.controls.phone" label="El teléfono"></app-field-error>
         </div>
 
         <!-- Email -->
@@ -163,11 +158,8 @@
           <input 
             type="email" 
             formControlName="email"
-            placeholder="cliente@ejemplo.com"
-            [class.input-error]="customerForm.get('email')?.invalid && customerForm.get('email')?.touched">
-          <p *ngIf="customerForm.get('email')?.invalid && customerForm.get('email')?.touched" class="error-text">
-            Ingrese un email válido
-          </p>
+            placeholder="cliente@ejemplo.com">
+          <app-field-error [control]="customerForm.controls.email" label="El correo"></app-field-error>
         </div>
 
         <!-- Dirección -->
@@ -194,7 +186,7 @@
         <button type="button" class="btn-secondary" (click)="cerrarModal()">
           Cancelar
         </button>
-        <button type="submit" class="btn-primary" [disabled]="customerForm.invalid || isLoading">
+        <button type="submit" class="btn-primary" [disabled]="isLoading">
           {{ isLoading ? 'Guardando...' : 'Guardar cliente' }}
         </button>
       </div>

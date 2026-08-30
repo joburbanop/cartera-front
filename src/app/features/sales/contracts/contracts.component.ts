@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, ElementRef, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, FormArray, FormGroup, FormsModule } from '@angular/forms';
 import { ContractService } from '../../../core/services/contract.service';
@@ -7,12 +7,20 @@ import { LotService } from '../../../core/services/lot.service';
 import { CustomerService, Customer } from '../../../core/services/customer.service';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FinancialService } from '../../../core/services/financial.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { AppRoles } from '../../../core/models/app-roles';
 import { CurrencyMaskDirective } from '../../../shared/directives/currency-mask.directive';
+import { ContractStatusLabelPipe } from '../../../shared/pipes/contract-status-label.pipe';
+import { ToastService } from '../../../shared/services/toast.service';
+import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
+import { markAllAsTouched, scrollToFirstInvalid } from '../../../shared/utils/form-utils';
+import { QuickCustomerModalComponent } from './quick-customer-modal/quick-customer-modal.component';
+import { ContractPaymentPromisesComponent, createPaymentPromiseGroup } from './contract-payment-promises/contract-payment-promises.component';
 
 @Component({
   selector: 'app-contracts',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule, CurrencyMaskDirective],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule, CurrencyMaskDirective, ContractStatusLabelPipe, FieldErrorComponent, QuickCustomerModalComponent, ContractPaymentPromisesComponent],
   templateUrl: './contracts.component.html',
   styleUrl: './contracts.component.scss'
 })
@@ -25,6 +33,13 @@ export class ContractsComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private financialService = inject(FinancialService);
   private route = inject(ActivatedRoute);
+  private authService = inject(AuthService);
+  private toast = inject(ToastService);
+  private host = inject(ElementRef<HTMLElement>);
+
+  get canCreate(): boolean {
+    return this.authService.hasRole(AppRoles.ADMINISTRADOR);
+  }
 
   contracts: any[] = [];
   customers: Customer[] = [];
@@ -60,13 +75,6 @@ export class ContractsComponent implements OnInit {
   // Control del Modal
   isModalOpen = false;
   showCustomerModal = false;
-
-  customerForm = this.fb.group({
-    name: ['', Validators.required],
-    document: ['', Validators.required],
-    phone: [''],
-    email: ['', [Validators.pattern(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/)]],
-  });
 
   contractForm = this.fb.group({
     contract_number: ['', Validators.required],
@@ -185,53 +193,6 @@ export class ContractsComponent implements OnInit {
     return Math.abs(this.diferenciaFinanciera) > 1000;
   }
 
-  autoCuadrarUltimaCuota(): void {
-    if (!this.isCustomPlan || this.paymentPromises.length === 0) {
-      return;
-    }
-
-    const termMonths = Number(this.contractForm.get('term_months')?.value ?? 0) || 0;
-    const valorFuturoDeuda = Math.round(this.cuotaFijaEstimada * termMonths);
-
-    if (!Number.isFinite(valorFuturoDeuda) || valorFuturoDeuda <= 0) {
-      this.errorMessage = 'No se pudo calcular el valor futuro de la deuda. Verifica precio, inicial, plazo y tasa.';
-      return;
-    }
-
-    const lastIndex = this.paymentPromises.length - 1;
-    const sumaParcial = this.paymentPromises.controls.slice(0, lastIndex).reduce((sum, control) => {
-      const rawValue = (control as FormGroup).get('expected_amount')?.value;
-
-      if (rawValue === null || rawValue === undefined || rawValue === '') {
-        return sum;
-      }
-
-      if (typeof rawValue === 'number') {
-        return sum + (Number.isFinite(rawValue) ? rawValue : 0);
-      }
-
-      if (typeof rawValue === 'string') {
-        const sanitized = rawValue.replace(/[\$\.,\s]/g, '');
-        const parsed = Number(sanitized);
-        return sum + (Number.isFinite(parsed) ? parsed : 0);
-      }
-
-      return sum;
-    }, 0);
-
-    const nuevoMontoUltimaCuota = Math.round(valorFuturoDeuda - sumaParcial);
-
-    if (nuevoMontoUltimaCuota <= 0) {
-      this.errorMessage = 'No se puede auto-cuadrar: la suma de las cuotas previas ya supera el valor futuro proyectado.';
-      return;
-    }
-
-    this.errorMessage = '';
-    (this.paymentPromises.at(lastIndex) as FormGroup).patchValue({
-      expected_amount: nuevoMontoUltimaCuota,
-    });
-  }
-
   private updatePlanModeValidators(isCustom: boolean): void {
     const termMonthsControl = this.contractForm.get('term_months');
     const firstInstallmentDateControl = this.contractForm.get('first_installment_date');
@@ -257,18 +218,8 @@ export class ContractsComponent implements OnInit {
   }
 
   addPaymentPromise(): void {
-    const promiseGroup = this.fb.group({
-      expected_date: ['', Validators.required],
-      expected_amount: [null, [Validators.required, Validators.min(1)]],
-      description: ['', Validators.required],
-    });
-
-    this.paymentPromises.push(promiseGroup);
+    this.paymentPromises.push(createPaymentPromiseGroup(this.fb));
     this.showGeneratedPromises = true;
-  }
-
-  removePaymentPromise(index: number): void {
-    this.paymentPromises.removeAt(index);
   }
 
   private clearPaymentPromises(): void {
@@ -424,7 +375,9 @@ export class ContractsComponent implements OnInit {
 
     this.updatePlanModeValidators(this.isCustomPlan);
 
-    this.loadCustomers();
+    if (this.canCreate) {
+      this.loadCustomers();
+    }
     this.loadProjects();
 
     // VIGILANTE REACTIVO: Escucha cada vez que cambia el select de proyecto
@@ -543,78 +496,12 @@ export class ContractsComponent implements OnInit {
     });
   }
 
-  saveQuickCustomer() {
-    if (this.customerForm.invalid) {
-      this.customerForm.markAllAsTouched();
-      return;
-    }
-
-    const rawCustomer = this.customerForm.getRawValue();
-    const documentValue = String(rawCustomer.document ?? '').trim();
-
-    const payload = {
-      name: String(rawCustomer.name ?? '').trim(),
-      document_type: 'CC',
-      document_number: documentValue,
-      phone: rawCustomer.phone?.trim() || '3000000000',
-      email: rawCustomer.email?.trim() || null,
-    };
-
-    this.customerService.createCustomer(payload).subscribe({
-      next: (response: any) => {
-        // La respuesta viene en formato { success, message, data: {...} }
-        const customer = response.data || response;
-
-        // Seleccionar automáticamente el cliente recién creado
-        this.contractForm.patchValue({ customer_id: customer.id });
-        
-        // Recargar la lista completa de clientes para mantener consistencia
-        this.loadCustomers();
-        
-        // Cerrar modal y mostrar mensaje
-        this.customerForm.reset();
-        this.showCustomerModal = false;
-        this.successMessage = 'Cliente registrado y seleccionado correctamente.';
-        this.errorMessage = '';
-      },
-      error: (err) => {
-        console.error('Error al crear cliente', err);
-        
-        // Manejo de errores de validación 422
-        if (err.status === 422 && err.error?.errors) {
-          const errors = err.error.errors;
-          const errorMessages: string[] = [];
-          
-          for (const field in errors) {
-            const messages = errors[field];
-            if (Array.isArray(messages)) {
-              errorMessages.push(...messages);
-            }
-          }
-          
-          this.errorMessage = errorMessages.join('. ');
-        } else {
-          this.errorMessage = err.error?.message || 'No se pudo crear el cliente.';
-        }
-      }
-    });
-  }
-
-  getContractStatusLabel(status: string): string {
-    const normalized = String(status || '').toLowerCase();
-
-    switch (normalized) {
-      case 'preventa_inactiva':
-        return 'Preventa';
-      case 'activo':
-        return 'Activo';
-      case 'terminado':
-        return 'Terminado';
-      case 'rescindido':
-        return 'Rescindido';
-      default:
-        return status || 'Sin estado';
-    }
+  onQuickCustomerCreated(customer: Customer): void {
+    this.contractForm.patchValue({ customer_id: customer.id as any });
+    this.loadCustomers();
+    this.showCustomerModal = false;
+    this.successMessage = 'Cliente registrado y seleccionado correctamente.';
+    this.errorMessage = '';
   }
 
   private findInvalidControls(): string[] {
@@ -654,16 +541,6 @@ export class ContractsComponent implements OnInit {
         }))
       : [];
 
-    if (isCustom && this.paymentPromises.invalid) {
-      console.warn('[Contracts] Bloqueado: payment_promises inválido', {
-        invalidControls: this.findInvalidControls(),
-      });
-      this.paymentPromises.markAllAsTouched();
-      this.errorMessage = 'Complete cada promesa de pago con fecha, monto y descripción.';
-      this.cdr.detectChanges();
-      return;
-    }
-
     if (isCustom && this.hasExceededTermLimit) {
       // Solo advertimos para diagnóstico: ya no se bloquea el envío por cantidad de cuotas.
       console.warn('[Contracts] Advertencia: cuotas personalizadas superan term_months, pero se permite continuar', {
@@ -672,22 +549,22 @@ export class ContractsComponent implements OnInit {
       });
     }
 
+    if (this.contractForm.invalid) {
+      if (isCustom) {
+        this.showGeneratedPromises = true;
+      }
+      markAllAsTouched(this.contractForm);
+      scrollToFirstInvalid(this.host.nativeElement);
+      this.toast.show('Formulario incompleto', 'error', 'Revisa los campos marcados en rojo');
+      return;
+    }
+
     if (isCustom && this.hasFinancialDifference) {
       console.warn('[Contracts] Bloqueado: diferencia financiera fuera de tolerancia', {
         diferenciaFinanciera: this.diferenciaFinanciera,
         tolerancia: 1000,
       });
       this.errorMessage = 'La suma de cuotas personalizadas debe cuadrar con el valor futuro de la deuda (PMT × plazo), con un margen de +/- $1,000.';
-      this.cdr.detectChanges();
-      return;
-    }
-
-    if (this.contractForm.invalid) {
-      console.warn('[Contracts] Bloqueado: contractForm inválido', {
-        invalidControls: this.findInvalidControls(),
-      });
-      this.contractForm.markAllAsTouched();
-      this.errorMessage = 'Por favor, complete todos los campos obligatorios.';
       this.cdr.detectChanges();
       return;
     }

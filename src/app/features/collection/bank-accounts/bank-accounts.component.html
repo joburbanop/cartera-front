@@ -14,11 +14,13 @@
       <div class="form-group">
         <label>Banco</label>
         <input type="text" formControlName="bank_name" placeholder="Ej. Bancolombia">
+        <app-field-error [control]="accountForm.controls.bank_name" label="El banco"></app-field-error>
       </div>
 
       <div class="form-group">
         <label>Número de Cuenta</label>
         <input type="text" formControlName="account_number" placeholder="Ej. 123-456789-00">
+        <app-field-error [control]="accountForm.controls.account_number" label="El número de cuenta"></app-field-error>
       </div>
 
       <div class="form-group">
@@ -32,9 +34,10 @@
       <div class="form-group">
         <label>Titular (Razón Social)</label>
         <input type="text" formControlName="holder_name" placeholder="Ej. Constructora Los Robles S.A.S">
+        <app-field-error [control]="accountForm.controls.holder_name" label="El titular"></app-field-error>
       </div>
 
-      <button type="submit" [disabled]="accountForm.invalid || isLoading" class="btn-submit">
+      <button type="submit" [disabled]="isLoading" class="btn-submit">
         {{ isLoading ? 'Guardando...' : 'Guardar Cuenta' }}
       </button>
     </form>
@@ -52,7 +55,7 @@
       <h1>Cuentas Bancarias</h1>
       <p>Gestión de cuentas para recaudos y pagos del proyecto</p>
     </div>
-    <button class="btn-primary" (click)="openModal()">+ Nueva Cuenta</button>
+    <button *ngIf="canCreate" class="btn-primary" (click)="openModal()">+ Nueva Cuenta</button>
   </div>
 
   <!-- TARJETAS KPI -->

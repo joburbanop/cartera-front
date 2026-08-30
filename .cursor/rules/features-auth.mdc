@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Auth (feature) — auditoría del estado actual
 
-Un único componente standalone de login. Ruta pública `/login` en `app.routes.ts` (sin `authGuard`). Tras éxito navega a `/dashboard`. No hay registro, recuperación de clave ni pantalla de logout.
+Un único componente standalone de login. Ruta pública `/login` en `app.routes.ts` (sin `authGuard`). Tras éxito navega a `/dashboard`. No hay registro ni recuperación de clave. El **Cerrar sesión** vive en `MainLayoutComponent` (llama `AuthService.logout()`), no en este feature.
 
 ---
 
@@ -48,7 +48,7 @@ Consume **solo** `AuthService` (core). El token lo persiste el servicio en `loca
 
 ## 4. Comunicación con el backend
 
-No llama HTTP directo. Delega a `AuthService.login` → `POST http://127.0.0.1:8000/api/login` con `{ email, password }`. Response `Observable<any>` (ver `core.mdc`).
+No llama HTTP directo. Delega a `AuthService.login` → `POST ${environment.apiUrl}/login` con `{ email, password }`. El servicio persiste token y roles. Response `Observable<any>` (ver `core.mdc`).
 
 Manejo de error: solo en `subscribe.error` del componente (líneas 37–50). No hay timeout ni retry.
 
@@ -74,10 +74,9 @@ El login HTTP y el almacenamiento del JWT están en `AuthService`, no en este co
 
 ## Deuda técnica observada
 
-Resuelto: credenciales de desarrollo ya no vienen pre-rellenadas; `isLoading` se apaga también en el camino feliz.
+Resuelto: credenciales de desarrollo **siguen vacías** (`email`/`password` `''`); `isLoading` se apaga también en el camino feliz; hay botón **Cerrar sesión** en el layout.
 
 Lo que queda:
 
-1. No hay `logout` en UI (el método de core no se usa).
-2. Spec no cubre error ni navegación.
-3. `login.component.scss` está vacío (0 líneas) y igual está en `styleUrls`.
+1. Spec no cubre error ni navegación.
+2. `login.component.scss` está vacío (0 líneas) y igual está en `styleUrls`.

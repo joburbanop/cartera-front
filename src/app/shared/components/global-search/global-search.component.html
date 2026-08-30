@@ -1,0 +1,63 @@
+<div class="global-search">
+  <div class="search-box">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="8"></circle>
+      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+    </svg>
+    <input
+      type="search"
+      [formControl]="query"
+      placeholder="Buscar cliente, contrato o lote..."
+      autocomplete="off"
+      aria-label="Búsqueda global"
+    >
+    <span class="search-spinner" *ngIf="isLoading" aria-hidden="true"></span>
+  </div>
+
+  <div class="search-dropdown" *ngIf="isOpen" role="listbox">
+    <ng-container *ngIf="hasAnyResults; else emptyResults">
+      <section *ngIf="results.clients.length" class="search-section">
+        <h3>Clientes</h3>
+        <button
+          type="button"
+          class="search-hit"
+          *ngFor="let client of results.clients"
+          (click)="goToClient(client.id)"
+        >
+          <span class="hit-title">{{ client.name }}</span>
+          <span class="hit-meta">{{ client.document_number }}</span>
+        </button>
+      </section>
+
+      <section *ngIf="results.contracts.length" class="search-section">
+        <h3>Contratos</h3>
+        <button
+          type="button"
+          class="search-hit"
+          *ngFor="let contract of results.contracts"
+          (click)="goToContract(contract.id)"
+        >
+          <span class="hit-title">{{ contract.contract_number }}</span>
+          <span class="hit-meta">{{ contract.customer_name }}</span>
+        </button>
+      </section>
+
+      <section *ngIf="results.lots.length" class="search-section">
+        <h3>Lotes</h3>
+        <button
+          type="button"
+          class="search-hit"
+          *ngFor="let lot of results.lots"
+          (click)="goToLot(lot.project_id)"
+        >
+          <span class="hit-title">{{ lot.number }}</span>
+          <span class="hit-meta">{{ lot.project_name }}</span>
+        </button>
+      </section>
+    </ng-container>
+
+    <ng-template #emptyResults>
+      <p class="search-empty">Sin resultados para '{{ lastQuery }}'</p>
+    </ng-template>
+  </div>
+</div>

@@ -203,6 +203,10 @@
         background-color: #f8fafc;
       }
 
+      &.client-row {
+        cursor: pointer;
+      }
+
       &.empty-state {
         &:hover {
           background-color: transparent;

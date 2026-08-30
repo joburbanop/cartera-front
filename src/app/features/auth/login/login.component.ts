@@ -1,13 +1,15 @@
-import { Component, inject } from '@angular/core';
+import { Component, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
+import { markAllAsTouched, scrollToFirstInvalid } from '../../../shared/utils/form-utils';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FieldErrorComponent],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']
 })
@@ -15,6 +17,7 @@ export class LoginComponent {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private router = inject(Router);
+  private host = inject(ElementRef<HTMLElement>);
 
   loginForm = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
@@ -25,7 +28,12 @@ export class LoginComponent {
   isLoading = false;
 
   onSubmit() {
-    if (this.loginForm.invalid) return;
+    if (this.loginForm.invalid) {
+      // Sin toast: ToastComponent solo vive en MainLayout (sesión autenticada).
+      markAllAsTouched(this.loginForm);
+      scrollToFirstInvalid(this.host.nativeElement);
+      return;
+    }
 
     this.isLoading = true;
     this.errorMessage = '';

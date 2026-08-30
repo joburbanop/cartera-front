@@ -1,0 +1,36 @@
+<div class="modal-backdrop" *ngIf="isOpen" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); display: flex; align-items: center; justify-content: center; z-index: 1200;">
+  <div class="modal-content-custom" style="background: white; border-radius: 12px; padding: 1.5rem; width: min(520px, 90vw); box-shadow: 0 16px 40px rgba(15, 23, 42, 0.2);">
+    <h3 style="margin: 0 0 1rem; color: #1e293b;">Registrar Nuevo Cliente</h3>
+    <form [formGroup]="customerForm" (ngSubmit)="saveQuickCustomer()" style="display: flex; flex-direction: column; gap: 1rem;">
+      <div>
+        <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Nombre Completo *</label>
+        <input type="text" formControlName="name" class="form-control" placeholder="Ej: William Rojas" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+        <app-field-error [control]="customerForm.controls.name" label="El nombre"></app-field-error>
+      </div>
+      <div>
+        <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Cédula / Documento *</label>
+        <input type="text" formControlName="document" class="form-control" placeholder="Ej: 94526871" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+        <app-field-error [control]="customerForm.controls.document" label="El documento"></app-field-error>
+      </div>
+      <div>
+        <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Teléfono *</label>
+        <input type="text" formControlName="phone" class="form-control" placeholder="Ej: 3150000000" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+        <app-field-error [control]="customerForm.controls.phone" label="El teléfono"></app-field-error>
+      </div>
+      <div>
+        <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #475569; margin-bottom: 0.25rem;">Correo Electrónico</label>
+        <input type="email" formControlName="email" class="form-control" placeholder="Ej: correo@ejemplo.com" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+        <app-field-error [control]="customerForm.controls.email" label="El correo"></app-field-error>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 0.5rem;">
+        <button type="button" (click)="closed.emit()" style="padding: 0.7rem 1rem; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer; color: #334155; font-weight: 600;">
+          Cancelar
+        </button>
+        <button type="submit" style="padding: 0.7rem 1rem; border: none; border-radius: 6px; background: #2563eb; color: white; cursor: pointer; font-weight: 700;">
+          Guardar y Seleccionar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

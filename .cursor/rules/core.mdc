@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Core — auditoría del estado actual
 
-Capa compartida de Angular: servicios `providedIn: 'root'`, un guard funcional, un interceptor HTTP y dos módulos de modelos. No hay `NgModule`. No hay `BehaviorSubject` ni signals en core. `environment.apiUrl` existe en `src/environments/environment.ts` (`http://127.0.0.1:8000/api`) y **ningún servicio de core lo importa**.
+Capa compartida de Angular: servicios `providedIn: 'root'`, guards funcionales (`authGuard`, `roleGuard`), un interceptor HTTP y modelos. No hay `NgModule`. No hay `BehaviorSubject` ni signals en core. Todos los servicios HTTP de core usan `environment.apiUrl` (`src/environments/environment.ts`, `http://127.0.0.1:8000/api`).
 
 ---
 
@@ -18,19 +18,22 @@ Capa compartida de Angular: servicios `providedIn: 'root'`, un guard funcional, 
 |---|---|
 | `models/amortization-status.ts` | Tipo `AmortizationStatus`, labels, clases de badge, mapa legado ES→EN y helpers `toAmortizationStatus` / `isPaidStatus` / `isPartialStatus` / `isOverdueStatus` / `amortizationStatusLabel` / **`isVencida(dueDate)`** (fecha < hoy, sin horas). Fuente única de “cuota vencida por fecha”. |
 | `models/payment-promise.model.ts` | Interface `PaymentPromise` (`id`, `contract_id`, `payment_number`, `expected_date`, `expected_amount`, `description`, `is_paid`). |
+| `models/app-roles.ts` | Slugs Spatie: `socio_gerencia`, `admin_sistema`, `administrador`. |
 
 ### Servicios (todos singleton `providedIn: 'root'`)
 
 | Servicio | Responsabilidad |
 |---|---|
-| `AuthService` | Login HTTP, persistencia del JWT en `localStorage` (`auth_token`), lectura de token y flag de sesión. |
+| `AuthService` | Login/logout HTTP, JWT + roles + `userId` en `localStorage`, `getRole()` / `hasRole()` / `getUserId()`. |
+| `UserService` | CRUD de usuarios (`/users`). Solo lo consume el feature `/usuarios`. |
 | `CustomerService` | Listar y crear clientes. Exporta también `Customer` y `CreateCustomerPayload`. |
 | `ProjectService` | Listar y crear proyectos. |
 | `LotService` | Listar lotes (filtro opcional `project_id`) y crear lote. |
 | `ContractService` | Crear contrato, listar contratos, ficha por id. |
 | `BankAccountService` | Listar y crear cuentas bancarias. |
 | `AmortizationService` | Plan de amortización, generación y descarga PDF. |
-| `RecaudoService` | Registrar pago (cascada o inicial) y listar transacciones. |
+| `RecaudoService` | Registrar pago (cascada o inicial), listar transacciones y descargar recibo (`getReceipt`). |
+| `SearchService` | Búsqueda global (`GET /search?q=`). Devuelve clientes, contratos y lotes según permisos. |
 | `PaymentPromiseService` | Promesas de pago de un contrato. |
 | `AmortizationFinancialsService` | Cálculo **puro** (sin HTTP) sobre un plan: inicial, mora, saldos, seleccionabilidad y **`getFeeDebtValue`** (deuda de una cuota para cobro). |
 | `FinancialService` | PMT francés y total proyectado (sin HTTP). `ContractsComponent.cuotaFijaEstimada` ya lo consume; no reimplementar la fórmula. |
@@ -39,8 +42,9 @@ Capa compartida de Angular: servicios `providedIn: 'root'`, un guard funcional, 
 
 | Pieza | Responsabilidad |
 |---|---|
-| `guards/auth.guard.ts` (`authGuard`) | `CanActivateFn`: deja pasar si `AuthService.isLoggedIn()`; si no, `navigate(['/login'])`. **No hay control por rol.** |
-| `interceptors/auth.interceptor.ts` (`authInterceptor`) | Interceptor funcional: clona cada request con `Accept: application/json` y, si hay token, `Authorization: Bearer …`. Registrado en `app.config.ts` vía `withInterceptors([authInterceptor])`. |
+| `guards/auth.guard.ts` (`authGuard`) | `CanActivateFn`: deja pasar si `AuthService.isLoggedIn()`; si no, `navigate(['/login'])`. |
+| `guards/role.guard.ts` (`roleGuard`) | `CanActivateFn`: exige `data.roles` / respeta `data.deniedRoles` vía `hasRole()`. Sin match → `/dashboard`. Sin sesión → `/login`. |
+| `interceptors/auth.interceptor.ts` (`authInterceptor`) | Clona cada request con `Accept: application/json` y Bearer si hay token. Si la respuesta es **401** y la URL no es `/logout`, llama `AuthService.logout()` y navega a `/login`. |
 
 ---
 
@@ -50,12 +54,25 @@ Capa compartida de Angular: servicios `providedIn: 'root'`, un guard funcional, 
 
 ```ts
 login(credentials: { email: string; password: string }): Observable<any>
-logout(): void
+logout(): Observable<void>
 getToken(): string | null
 isLoggedIn(): boolean
+getRole(): string | null
+hasRole(role: string | AppRole): boolean
+getRoles(): string[]
+getUserId(): number | null
 ```
 
-`login` hace `tap` sobre la respuesta: toma `response.data ?? response`, extrae `payload.access_token ?? response.access_token` y lo guarda en `localStorage` bajo `auth_token`. Si no hay token, **borra** la clave. No tipa el body.
+`login` hace `tap` sobre `response.data ?? response`: guarda `access_token` en `auth_token`, `roles` (`payload.roles ?? payload.user.roles`) en `auth_roles`, y `user.id` en `auth_user_id`. `POST /api/login` y `GET /api/me` devuelven esos roles. `logout()` pega primero `POST /api/logout` y **siempre** limpia storage (éxito o error); no reentra si la 401 ya venía de `/logout`.
+
+### `UserService`
+
+```ts
+getUsers(): Observable<any>
+createUser(data: CreateUserPayload): Observable<any>
+updateUser(id: number, data: any): Observable<any>
+deleteUser(id: number): Observable<any>
+```
 
 ### `CustomerService`
 
@@ -112,9 +129,20 @@ registerPayment(contractId: number, formData: FormData, transactionType: string 
 registerDownPayment(contractId: number, formData: FormData): Observable<any>  // delega a registerPayment(..., 'down_payment')
 getTransactionsByContract(contractId: number): Observable<any>
 getAllTransactions(filters?: any): Observable<any>
+getReceipt(receiptUrl: string): Observable<HttpResponse<Blob>>
 ```
 
 `registerPayment` añade `contract_id` al `FormData` si falta. El endpoint depende de `transactionType === 'down_payment'`.
+
+`getReceipt` hace GET de la URL absoluta del recibo (`responseType: 'blob'`, `observe: 'response'`). Lo usan `AmortizationComponent` e `HistorialPagosComponent` para abrir el blob; no reimplementar el GET en features.
+
+### `SearchService`
+
+```ts
+search(query: string): Observable<{ clients: any[]; contracts: any[]; lots: any[] }>
+```
+
+GET `/api/search?q=`. Desenvuelve `response.data`. El componente no llama si `q` tiene menos de 2 caracteres.
 
 ### `PaymentPromiseService`
 
@@ -180,7 +208,7 @@ Retorna `true` o `false` (el `navigate` a `/login` no se retorna como `UrlTree`)
 export const authInterceptor: HttpInterceptorFn
 ```
 
-No declara métodos; no hay `catchError`.
+En 401 (excepto `/logout`) dispara `logout()` + `/login`. Propaga el error con `throwError`.
 
 ---
 
@@ -188,22 +216,25 @@ No declara métodos; no hay `catchError`.
 
 No hay store, `BehaviorSubject`, `Subject` ni signals en core.
 
-- **Auth:** el único estado persistido es `localStorage['auth_token']`. `isLoggedIn()` es `!!getToken()` (líneas 37–39 de `auth.service.ts`). No hay usuario, roles ni expiración en memoria.
+- **Auth:** `localStorage` guarda `auth_token`, `auth_roles` (JSON) y `auth_user_id`. `isLoggedIn()` sigue siendo `!!getToken()`. `getRole()` / `hasRole()` leen el arreglo en memoria (hidratado al construir el servicio). No valida expiración del JWT.
 - **Resto de servicios:** stateless; cada llamada HTTP es independiente. El estado vive en los componentes que se suscriben.
 - **Cálculo:** `AmortizationFinancialsService` y `FinancialService` son funciones puras sobre argumentos; no cachean.
 
-Consumidores (fuera de core): features de inventory/sales/collection/clients/auth inyectan estos singletons. `AmortizationSelectionService` **no** está en core: es `providedIn` de componente en `tabla-amortizacion`.
+Consumidores (fuera de core): features de inventory/sales/collection/clients/users/auth inyectan estos singletons. `AmortizationSelectionService` **no** está en core: es `providedIn` de componente en `tabla-amortizacion`.
 
 ---
 
 ## 4. Comunicación con el backend
 
-Base real en código: string literal `http://127.0.0.1:8000/api` (o `…/api/<recurso>`), no `environment.apiUrl`.
+Base: `environment.apiUrl` (`http://127.0.0.1:8000/api`).
 
 | Método | Ruta | Request | Response tipada en código |
 |---|---|---|---|
-| POST | `/api/login` | `{ email, password }` | `Observable<any>`; se lee `data.access_token` o `access_token` |
-| GET | `/api/customers` | — | `Observable<any>` |
+| POST | `/api/login` | `{ email, password }` | `Observable<any>`; se leen `data.access_token` y `data.roles` / `data.user.roles` |
+| GET | `/api/me` | Bearer | `user` + `roles` |
+| POST | `/api/logout` | Bearer | se ignora el body; se limpia storage igual |
+| GET/POST/PUT/DELETE | `/api/users` | CRUD; create `{ name, email, password, role }` | `Observable<any>` |
+| GET | `/api/search?q=` | query `q` | `{ clients, contracts, lots }` |
 | POST | `/api/customers` | `CreateCustomerPayload \| Partial<Customer>` | `Observable<any>` |
 | GET | `/api/projects` | — | `Observable<any>` |
 | POST | `/api/projects` | `any` | `Observable<any>` |
@@ -225,18 +256,18 @@ Base real en código: string literal `http://127.0.0.1:8000/api` (o `…/api/<re
 
 Ningún servicio de core tiene `subscribe` con `error`, `catchError` ni reintento. Los errores los manejan (o ignoran) los componentes.
 
-El interceptor no inspecciona status 401/403: un token inválido viaja igual en el header.
+El interceptor sí reacciona a **401** (logout + `/login`). Un **403** lo maneja el componente (mensaje), no redirige.
 
 ---
 
 ## 5. Convenciones observadas
 
 - Servicios HTTP: `@Injectable({ providedIn: 'root' })` + `inject(HttpClient)`. Nunca providers de feature.
-- URLs: propiedad privada `apiUrl` hardcodeada por clase, no `environment`.
+- URLs: `private apiUrl = environment.apiUrl` (o `` `${environment.apiUrl}/recurso` ``).
 - Tipado de respuesta: `Observable<any>` salvo PDF (`Blob`) y promesas (`PaymentPromise[]`).
 - Los features desenvuelven Laravel con `response.data?.data \|\| response.data \|\| []` (paginación vs recurso).
-- RxJS: `Observable` + `subscribe({ next, error })` en componentes. En core, el único operador es `tap` en `login`.
-- Sin signals, sin interceptores de error, sin refresh token.
+- RxJS: `Observable` + `subscribe({ next, error })` en componentes. En core: `tap` en `login`; `catchError`/`finalize` en `logout` y en el interceptor (401).
+- Sin signals, sin refresh token. Hay `roleGuard` además de `authGuard`.
 - Nombres de archivo kebab-case; clases `*Service`. Auth es `CanActivateFn` exportada, no clase.
 - Cálculo de cartera: `AmortizationFinancialsService` (plan persistido) vs `FinancialService` (proyección francesa al crear contrato). No mezclar responsabilidades.
 - Status de cuota: canon EN (`pending`/`paid`/`partial`/`overdue`) con aliases ES en `LEGACY_STATUS_MAP`.
@@ -252,11 +283,10 @@ Este código ya está implementado y probado. Cualquier feature nuevo debe consu
 
 ## Deuda técnica observada
 
-Cálculo de cobro (isVencida / getFeeDebtValue) **ya está centralizado**. Lo que sigue es infra de HTTP/auth, no del motor de cuotas:
+Resuelto (no reabrir): URL base vía `environment.apiUrl`; `logout()` pega `POST /api/logout` y limpia storage; interceptor 401; `roleGuard`; login/`GET /me` devuelven roles; `AuthService.getRole()` / `hasRole()`.
 
-1. **URL base hardcodeada por servicio.** `environment.apiUrl` existe y no se usa.
-2. **Respuestas HTTP tipadas `Observable<any>`**, salvo `downloadPdf` y `getPromisesByContract`.
-3. **`isLoggedIn()` solo verifica presencia del token**, no expiración. El interceptor no maneja 401.
-4. **`logout()` solo borra `localStorage`**. No hay invalidación en backend ni botón de salida en el layout.
-5. **No hay guards por rol**, pese a lo que dice `arquitectura.mdc`.
-6. **`AmortizationFinancialsService` sigue parametrizando plan/cuota como `any`.** `overdueFees` / `activeMoraDebt` existen para banners/KPIs; el flujo de cobro usa `isVencida` + `getFeeDebtValue` + la fusión de `openDrawer`.
+Cálculo de cobro (isVencida / getFeeDebtValue) **ya está centralizado**. Lo que sigue:
+
+1. **Respuestas HTTP tipadas `Observable<any>`**, salvo `downloadPdf` y `getPromisesByContract`.
+2. **`isLoggedIn()` solo verifica presencia del token**, no expiración.
+3. **`AmortizationFinancialsService` sigue parametrizando plan/cuota como `any`.** `overdueFees` / `activeMoraDebt` existen para banners/KPIs; el flujo de cobro usa `isVencida` + `getFeeDebtValue` + la fusión de `openDrawer`.

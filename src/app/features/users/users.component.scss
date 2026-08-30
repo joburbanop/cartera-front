@@ -1,0 +1,227 @@
+.users-container {
+  padding: 24px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  min-height: calc(100vh - 40px);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 32px;
+
+  .title-area {
+    h1 {
+      font-size: 30px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 4px 0;
+    }
+
+    p {
+      font-size: 14px;
+      color: #64748b;
+      margin: 0;
+    }
+  }
+
+  .btn-primary {
+    background-color: #327365;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+
+    &:hover { background-color: #25574c; }
+  }
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+
+  .kpi-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    background-color: #ffffff;
+
+    h3 { font-size: 14px; font-weight: 500; color: #64748b; margin: 0 0 8px; }
+    .kpi-value { font-size: 32px; font-weight: 700; color: #1e293b; margin: 0 0 4px; }
+    .kpi-desc { font-size: 12px; color: #94a3b8; margin: 0; }
+  }
+}
+
+.alert {
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+
+  &.alert-error {
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+  }
+}
+
+.table-container {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+
+  th {
+    padding: 16px;
+    background-color: #f8fafc;
+    color: #64748b;
+    font-size: 14px;
+  }
+
+  td {
+    padding: 16px;
+    font-size: 14px;
+    color: #475569;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  .user-name {
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+  }
+
+  .empty-state td {
+    text-align: center;
+    padding: 48px 16px;
+    color: #94a3b8;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 700;
+    background-color: #eef7f5;
+    color: #22544a;
+    margin-right: 6px;
+  }
+
+  .badge-empty {
+    background-color: #f1f5f9;
+    color: #64748b;
+  }
+
+  .row-actions {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .btn-link {
+    background: none;
+    border: none;
+    color: #327365;
+    font-weight: 600;
+    cursor: pointer;
+    margin-left: 12px;
+
+    &.danger { color: #b91c1c; }
+  }
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal-container {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 520px;
+}
+
+.modal-header {
+  padding: 24px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+
+  h2 { margin: 0 0 4px; font-size: 24px; color: #0f172a; }
+  p { margin: 0; color: #64748b; font-size: 14px; }
+
+  .btn-close {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+  }
+}
+
+.modal-body {
+  padding: 24px;
+
+  .form-grid { display: flex; flex-direction: column; gap: 16px; }
+
+  .form-group {
+    label { display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px; }
+
+    input, select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 16px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+  }
+}
+
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+
+  button {
+    flex: 1;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .btn-secondary {
+    background: white;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+  }
+
+  .btn-primary {
+    background: #327365;
+    border: none;
+    color: white;
+
+    &:disabled { background: #cbd5e1; cursor: not-allowed; }
+  }
+}

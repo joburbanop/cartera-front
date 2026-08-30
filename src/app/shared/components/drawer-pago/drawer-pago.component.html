@@ -15,6 +15,7 @@
         <div>
           <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #1e293b; margin-bottom: 0.4rem;">Monto a pagar</label>
           <input type="text" formControlName="amount" appCurrencyMask style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1.1rem; color: #1e293b;">
+          <app-field-error [control]="paymentForm.get('amount')" label="El monto"></app-field-error>
           <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem; font-weight: 500;">
              <span class="text-slate-600" style="color: #475569;">Deuda seleccionada:</span>
               <span class="font-semibold text-slate-800" style="font-weight: 700; color: #1e293b;">$ {{ montoSugeridoTotal | number:'1.0-0' }}</span>
@@ -48,6 +49,7 @@
           <label style="font-size: 0.85rem; color: #1e3a8a; display: flex; align-items: center; gap: 0.5rem;">
             <input type="radio" formControlName="surplus_action" value="adelantar_cuotas"> Adelanto de Cuotas (pagar meses futuros)
           </label>
+          <app-field-error [control]="paymentForm.get('surplus_action')" label="El destino del excedente"></app-field-error>
         </div>
 
         <div>
@@ -58,11 +60,12 @@
             <option value="card">Tarjeta</option>
             <option value="barter">Permuta</option>
           </select>
+          <app-field-error [control]="paymentForm.get('payment_method')" label="El método de pago"></app-field-error>
         </div>
 
         <div *ngIf="paymentForm.get('payment_method')?.value === 'transfer'" style="animation: fadeIn 0.3s;">
           <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #1e293b; margin-bottom: 0.4rem;">Cuenta de destino</label>
-          <select formControlName="bank_account_id" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; background-color: white;" [ngStyle]="{'border-color': (paymentForm.get('bank_account_id')?.invalid && paymentForm.get('bank_account_id')?.touched) ? '#dc2626' : '#cbd5e1'}">
+          <select formControlName="bank_account_id" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; background-color: white;">
             <option value="">-- Seleccione la cuenta bancaria --</option>
             
             <!-- Recorremos las cuentas que nos mande el componente padre -->
@@ -70,25 +73,30 @@
               {{ acc.bank_name }} - {{ acc.account_number }}
             </option>
           </select>
-          
-          <!-- Mensaje de error si intenta pagar sin seleccionar cuenta -->
-          <div *ngIf="paymentForm.get('bank_account_id')?.invalid && paymentForm.get('bank_account_id')?.touched" style="color: #dc2626; font-size: 0.75rem; margin-top: 0.4rem; font-weight: 500;">
-            * La cuenta es obligatoria para transferencias.
-          </div>
+          <app-field-error [control]="paymentForm.get('bank_account_id')" label="La cuenta de destino"></app-field-error>
         </div>
 
         <div>
           <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #1e293b; margin-bottom: 0.4rem;">Fecha de pago</label>
           <input type="date" formControlName="transaction_date" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+          <app-field-error [control]="paymentForm.get('transaction_date')" label="La fecha de pago"></app-field-error>
         </div>
 
         <!-- CAMPO PARA EL SOPORTE DE PAGO -->
-        <div>
+        <div [class.ng-invalid]="receiptMissing">
           <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #1e293b; margin-bottom: 0.4rem;">Soporte de pago (Recibo)</label>
           <input type="file" (change)="onFileSelected($event)" accept="image/*,application/pdf" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; background-color: #f8fafc;">
           <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem;">
             * Obligatorio. Formatos aceptados: JPG, PNG, PDF.
           </div>
+          <p class="field-error" *ngIf="receiptMissing" role="alert">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <span>El comprobante es obligatorio</span>
+          </p>
         </div>
 
         <!-- MENSAJES DE ESTADO DE PAGO -->
@@ -110,7 +118,7 @@
 
     <div class="panel-footer">
       <button class="btn-outline" (click)="close()">Cancelar</button>
-      <button class="btn-success" (click)="submit()" [disabled]="paymentForm.invalid || isProcessing">
+      <button class="btn-success" (click)="submit()" [disabled]="isProcessing">
         {{ isProcessing ? 'Registrando...' : 'Confirmar pago' }}
       </button>
     </div>

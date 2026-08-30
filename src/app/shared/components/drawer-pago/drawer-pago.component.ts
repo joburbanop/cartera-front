@@ -1,13 +1,16 @@
-import { Component, Input, Output, EventEmitter, inject, OnInit, HostListener } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, OnInit, HostListener, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CurrencyMaskDirective } from '../../directives/currency-mask.directive';
 import { AmortizationFinancialsService } from '../../../core/services/amortization-financials.service';
+import { ToastService } from '../../services/toast.service';
+import { FieldErrorComponent } from '../field-error/field-error.component';
+import { markAllAsTouched, scrollToFirstInvalid } from '../../utils/form-utils';
 
 @Component({
   selector: 'app-drawer-pago',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, CurrencyMaskDirective],
+  imports: [CommonModule, ReactiveFormsModule, CurrencyMaskDirective, FieldErrorComponent],
   templateUrl: './drawer-pago.component.html',
   styleUrl: './drawer-pago.component.scss'
 })
@@ -31,7 +34,10 @@ export class DrawerPagoComponent implements OnInit {
 
   private fb = inject(FormBuilder);
   private financials = inject(AmortizationFinancialsService);
+  private toast = inject(ToastService);
+  private host = inject(ElementRef<HTMLElement>);
   selectedFile: File | null = null;
+  receiptMissing = false;
   totalSelectedAmount = 0;
   montoSugeridoTotal = 0;
 
@@ -126,6 +132,7 @@ export class DrawerPagoComponent implements OnInit {
     const file: File = event.target.files[0];
     if (file) {
       this.selectedFile = file;
+      this.receiptMissing = false;
     }
   }
 
@@ -182,6 +189,7 @@ export class DrawerPagoComponent implements OnInit {
 
   private resetState() {
     this.selectedFile = null;
+    this.receiptMissing = false;
     this.paymentForm.reset({
       amount: this.montoSugeridoTotal,
       payment_method: 'transfer',
@@ -216,29 +224,28 @@ export class DrawerPagoComponent implements OnInit {
       return;
     }
 
-    if (this.hasSurplus && !this.paymentForm.get('surplus_action')?.value) {
-      this.paymentForm.get('surplus_action')?.markAsTouched();
+    this.receiptMissing = !this.selectedFile;
+
+    if (this.paymentForm.invalid || this.receiptMissing) {
+      markAllAsTouched(this.paymentForm);
+      scrollToFirstInvalid(this.host.nativeElement);
+      this.toast.show('Formulario incompleto', 'error', 'Revisa los campos marcados en rojo');
       return;
     }
 
-    if (this.paymentForm.valid && this.selectedFile) {
-      this._isProcessing = true;
+    this._isProcessing = true;
 
-      const selectedDate = this.paymentForm.get('transaction_date')?.value;
-      const normalizedDate = this.normalizeSelectedDate(selectedDate);
+    const selectedDate = this.paymentForm.get('transaction_date')?.value;
+    const normalizedDate = this.normalizeSelectedDate(selectedDate);
 
-      const paymentData = {
-        ...this.paymentForm.value,
-        transaction_date: normalizedDate,
-        payment_date: normalizedDate,
-        receipt: this.selectedFile,
-        payment_option: this.paymentForm.get('surplus_action')?.value || ''
-      };
+    const paymentData = {
+      ...this.paymentForm.value,
+      transaction_date: normalizedDate,
+      payment_date: normalizedDate,
+      receipt: this.selectedFile,
+      payment_option: this.paymentForm.get('surplus_action')?.value || ''
+    };
 
-      this.confirmPayment.emit(paymentData);
-      return;
-    }
-
-    this.paymentForm.markAllAsTouched();
+    this.confirmPayment.emit(paymentData);
   }
 }
