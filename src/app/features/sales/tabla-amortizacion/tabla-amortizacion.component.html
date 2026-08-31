@@ -10,8 +10,30 @@
       Volver a Contratos
     </a>
 
-    <div style="display: flex; align-items: center; gap: 0.75rem;">
-      <button class="btn-outline" (click)="abrirHistorialPagos()">Ver Historial de Pagos</button>
+    <div class="top-nav-right">
+      <div class="top-nav-actions">
+        <button class="btn-outline top-nav-action-btn top-nav-action-btn--history" type="button" (click)="abrirHistorialPagos()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
+            <path d="M3 12a9 9 0 1 0 3-6.708" />
+            <path d="M3 4v5h5" />
+            <path d="M12 7v5l3 2" />
+          </svg>
+          Ver Historial de Pagos
+        </button>
+      <button
+        class="btn-success top-nav-action-btn top-nav-action-btn--pay"
+        type="button"
+        [disabled]="!hasPendingPaymentsForGeneralFlow"
+        (click)="openGeneralPaymentDrawer()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
+          <rect x="3" y="6" width="18" height="12" rx="2" />
+          <path d="M3 10h18" />
+          <path d="M15 14h3" />
+          <path d="M9 14c0-1.1.9-2 2-2h2" />
+        </svg>
+        {{ generalPayButtonLabel }}
+      </button>
+      </div>
       <div class="view-switch">
         <button [class.active]="currentView === 'venta'" (click)="currentView = 'venta'">Venta</button>
         <button [class.active]="currentView === 'preventa'" (click)="currentView = 'preventa'">Preventa</button>
@@ -275,6 +297,7 @@
   <app-drawer-pago 
     [isOpen]="isDrawerOpen"
     [selectedFees]="selectedFees"
+    [prefilledAmount]="drawerSuggestedAmount"
     [isProcessing]="isProcessingPayment"
     [bankAccounts]="contractData?.lot?.project?.bank_accounts || contractData?.project?.bank_accounts || []" 
     (closeDrawer)="closeDrawer()"

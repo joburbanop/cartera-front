@@ -16,6 +16,11 @@ describe('AmortizationComponent', () => {
   let component: AmortizationComponent;
   let toastService: ToastService;
   let registerPaymentResult: Observable<unknown> = of({});
+  let lastRegisterPaymentArgs: {
+    contractId: number;
+    formData: FormData;
+    transactionType: string;
+  } | null = null;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -83,7 +88,10 @@ describe('AmortizationComponent', () => {
     } as Partial<FinancialService> as FinancialService;
 
     const recaudoServiceMock = {
-      registerPayment: () => registerPaymentResult,
+      registerPayment: (contractId: number, formData: FormData, transactionType: string) => {
+        lastRegisterPaymentArgs = { contractId, formData, transactionType };
+        return registerPaymentResult;
+      },
       getTransactionsByContract: () => of({ data: [] }),
       getAllTransactions: () => of({ data: [] }),
     } as Partial<RecaudoService> as RecaudoService;
@@ -123,6 +131,7 @@ describe('AmortizationComponent', () => {
     toastService = TestBed.inject(ToastService);
 
     registerPaymentResult = of({});
+    lastRegisterPaymentArgs = null;
 
     component.contractData = {
       status: 'activo',
@@ -225,5 +234,59 @@ describe('AmortizationComponent', () => {
     expect(toasts[0].type).toBe('error');
     expect(toasts[0].title).toBe('No se pudo registrar el pago');
     expect(toasts[0].description).toBe('El monto es insuficiente');
+  });
+
+  it('Debe sugerir la suma de cuotas vencidas en flujo de pago general', () => {
+    component.amortizationPlan = [cuotaInicial, cuota1, cuota2, cuota3];
+
+    component.openGeneralPaymentDrawer();
+
+    expect(component.isDrawerOpen).toBeTruthy();
+    expect(component.selectedFees).toEqual([]);
+    expect(component.drawerSuggestedAmount).toBe(1000000);
+  });
+
+  it('Debe sugerir la siguiente cuota pendiente si no hay vencidas', () => {
+    const cuotaFuturaA = {
+      ...cuota1,
+      id: 11,
+      installment_number: 11,
+      due_date: isoWithOffset(5),
+      quota_debt: 250000,
+      status: 'pending',
+    };
+    const cuotaFuturaB = {
+      ...cuota3,
+      id: 12,
+      installment_number: 12,
+      due_date: isoWithOffset(20),
+      quota_debt: 750000,
+      status: 'pending',
+    };
+
+    component.amortizationPlan = [cuotaInicial, cuotaFuturaB, cuotaFuturaA];
+
+    component.openGeneralPaymentDrawer();
+
+    expect(component.drawerSuggestedAmount).toBe(250000);
+  });
+
+  it('Debe omitir selected_installments e installment_numbers en flujo de pago general', () => {
+    component.contractId = 1;
+    component.amortizationPlan = [cuotaInicial, cuota1, cuota2, cuota3];
+
+    component.openGeneralPaymentDrawer();
+    component.procesarPago({
+      amount: component.drawerSuggestedAmount,
+      payment_method: 'cash',
+      transaction_date: '2026-08-30',
+      receipt: new Blob(),
+    });
+
+    expect(lastRegisterPaymentArgs).not.toBeNull();
+
+    const formData = lastRegisterPaymentArgs?.formData as FormData;
+    expect(formData.getAll('installment_numbers[]').length).toBe(0);
+    expect(formData.getAll('selected_installments[]').length).toBe(0);
   });
 });

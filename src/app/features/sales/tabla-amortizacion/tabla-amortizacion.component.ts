@@ -70,6 +70,8 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   isProcessingPayment = false;
   currentView: 'venta' | 'preventa' = 'venta';
   resetSelectionFlag = false;
+  isGeneralPaymentFlow = false;
+  drawerSuggestedAmount: number | null = null;
   transactions: any[] = [];
   isHistoryModalOpen = false;
   isLoadingHistory = false;
@@ -263,6 +265,9 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   }
 
   openDrawer(): void {
+    this.isGeneralPaymentFlow = false;
+    this.drawerSuggestedAmount = null;
+
     // Filtrar las seleccionadas manualmente que aún sean elegibles
     const seleccionadasValidas = this.selectedFees.filter(
       (fee: any) => this.isFeeSelectable(fee)
@@ -308,9 +313,54 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  get hasPendingPaymentsForGeneralFlow(): boolean {
+    return this.getRegularPendingInstallmentsSorted().length > 0;
+  }
+
+  get generalPayButtonLabel(): string {
+    return this.hasPendingPaymentsForGeneralFlow ? 'Pagar' : 'No hay pagos pendientes';
+  }
+
+  openGeneralPaymentDrawer(): void {
+    const regularPendingInstallments = this.getRegularPendingInstallmentsSorted();
+    if (regularPendingInstallments.length === 0) {
+      return;
+    }
+
+    const overdueInstallments = regularPendingInstallments.filter((fee: any) => this.isVencida(fee?.due_date));
+
+    const suggestedAmount = overdueInstallments.length > 0
+      ? overdueInstallments.reduce((sum: number, fee: any) => sum + this.financials.getFeeDebtValue(fee), 0)
+      : this.financials.getFeeDebtValue(regularPendingInstallments[0]);
+
+    this.isGeneralPaymentFlow = true;
+    this.drawerSuggestedAmount = Math.round(suggestedAmount);
+    this.selectedFees = [];
+    this.isDrawerOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  private getRegularPendingInstallmentsSorted(): any[] {
+    return [...(this.amortizationPlan ?? [])]
+      .filter((fee: any) => Number(fee?.installment_number) > 0)
+      .filter((fee: any) => !isPaidStatus(this.getFeeStatus(fee)))
+      .sort((a: any, b: any) => {
+        const dueA = a?.due_date ? new Date(a.due_date).getTime() : Number.POSITIVE_INFINITY;
+        const dueB = b?.due_date ? new Date(b.due_date).getTime() : Number.POSITIVE_INFINITY;
+
+        if (dueA === dueB) {
+          return Number(a?.installment_number ?? 0) - Number(b?.installment_number ?? 0);
+        }
+
+        return dueA - dueB;
+      });
+  }
+
   closeDrawer(): void {
     this.isProcessingPayment = false;
     this.isDrawerOpen = false;
+    this.isGeneralPaymentFlow = false;
+    this.drawerSuggestedAmount = null;
     this.clearTableSelection();
   }
 
@@ -556,7 +606,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   procesarPago(paymentData: any): void {
     this.isProcessingPayment = true;
 
-    const transactionType = this.selectedFees.some((fee: any) => Number(fee.installment_number) === 0)
+    const transactionType = !this.isGeneralPaymentFlow && this.selectedFees.some((fee: any) => Number(fee.installment_number) === 0)
       ? 'down_payment'
       : 'regular_payment';
 
@@ -573,7 +623,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       formData.append('payment_option', String(paymentOption));
     }
 
-    if (this.selectedFees.length) {
+    if (!this.isGeneralPaymentFlow && this.selectedFees.length) {
       this.selectedFees.forEach((fee: any) => {
         // El plan persistido siempre trae id; installment_number no se usa como fallback.
         formData.append('installment_numbers[]', String(Number(fee.id)));
