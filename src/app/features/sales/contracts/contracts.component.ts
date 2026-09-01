@@ -402,12 +402,14 @@ export class ContractsComponent implements OnInit {
         next: (response) => {
           // Extraemos el arreglo inteligente
           let allLots: any[] = [];
-          if (Array.isArray(response)) {
-            allLots = response;
-          } else if (response.data && Array.isArray(response.data)) {
-            allLots = response.data;
-          } else if (response.data?.data && Array.isArray(response.data.data)) {
-            allLots = response.data.data;
+          const data = Array.isArray(response)
+            ? response
+            : response?.data;
+
+          if (Array.isArray(data)) {
+            allLots = data;
+          } else if (data && typeof data === 'object' && 'data' in data && Array.isArray((data as { data?: unknown }).data)) {
+            allLots = (data as { data: any[] }).data;
           }
 
           this.availableLots = allLots.filter((lot: any) => {
@@ -419,7 +421,11 @@ export class ContractsComponent implements OnInit {
 
           this.cdr.detectChanges();
         },
-        error: (err) => console.error('Error cargando lotes:', err)
+        error: (err) => {
+          console.error('Error cargando lotes:', err);
+          this.availableLots = [];
+          this.cdr.detectChanges();
+        }
       });
     });
     this.contractForm.valueChanges.subscribe(values => {
@@ -446,7 +452,17 @@ export class ContractsComponent implements OnInit {
     this.currentPage = 1;
     this.contractService.getContracts().subscribe({
       next: (response) => {
-        const allContracts = response.data?.data || response.data || [];
+        const responseData = Array.isArray(response)
+          ? response
+          : response && typeof response === 'object' && 'data' in response
+            ? response.data
+            : undefined;
+
+        const allContracts = Array.isArray(responseData)
+          ? responseData
+          : Array.isArray((responseData as { data?: unknown })?.data)
+            ? (responseData as { data: any[] }).data
+            : [];
         this.contracts = [...allContracts];
 
         if (this.selectedLotId) {
@@ -481,7 +497,18 @@ export class ContractsComponent implements OnInit {
   loadProjects() {
     this.projectService.getProjects().subscribe({
       next: (response) => {
-        this.projects = response.data?.data || response.data || [];
+        const responseData = Array.isArray(response)
+          ? response
+          : response && typeof response === 'object' && 'data' in response
+            ? response.data
+            : undefined;
+
+        const allProjects = Array.isArray(responseData)
+          ? responseData
+          : Array.isArray((responseData as { data?: unknown })?.data)
+            ? (responseData as { data: any[] }).data
+            : [];
+        this.projects = allProjects;
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -496,12 +523,21 @@ export class ContractsComponent implements OnInit {
   loadCustomers() {
     this.customerService.getCustomers().subscribe({
       next: (response: any) => {
-        // La respuesta viene en formato { success, message, data: [...] }
-        const customers = response.data || response || [];
-        this.customers = Array.isArray(customers) ? customers : [];
+        const payload = Array.isArray(response)
+          ? response
+          : response && typeof response === 'object' && 'data' in response
+            ? response.data
+            : response ?? [];
+
+        const customers = Array.isArray(payload) ? payload : [];
+        this.customers = customers;
         this.cdr.detectChanges();
       },
-      error: (err) => console.error('Error cargando clientes', err)
+      error: (err) => {
+        console.error('Error cargando clientes', err);
+        this.customers = [];
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -511,6 +547,12 @@ export class ContractsComponent implements OnInit {
     this.showCustomerModal = false;
     this.successMessage = 'Cliente registrado y seleccionado correctamente.';
     this.errorMessage = '';
+    this.cdr.detectChanges();
+  }
+
+  onQuickCustomerFailed(message: string): void {
+    this.errorMessage = message;
+    this.cdr.detectChanges();
   }
 
   private findInvalidControls(): string[] {
@@ -620,6 +662,7 @@ export class ContractsComponent implements OnInit {
         this.isModalOpen = false;
 
         this.loadContracts();
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('[Contracts] Error al crear contrato', err);

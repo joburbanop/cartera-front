@@ -45,7 +45,13 @@ export class ClientDetailComponent implements OnInit {
     this.isLoading = true;
     this.customerService.getCustomerById(id).subscribe({
       next: (response) => {
-        this.customer = (response.data ?? response) as CustomerDetail;
+        const payload = Array.isArray(response)
+          ? response
+          : response && typeof response === 'object' && 'data' in response
+            ? response.data
+            : response;
+
+        this.customer = (payload ?? null) as CustomerDetail | null;
         this.isLoading = false;
         this.loadActivity();
         this.cdr.detectChanges();
@@ -70,7 +76,13 @@ export class ClientDetailComponent implements OnInit {
     this.isLoadingActivity = true;
     this.activityService.getActivity('customer', Number(this.customer.id)).subscribe({
       next: (response) => {
-        this.activityEntries = (response.data ?? []) as ActivityEntry[];
+        const payload = Array.isArray(response)
+          ? response
+          : response && typeof response === 'object' && 'data' in response
+            ? response.data
+            : [];
+
+        this.activityEntries = (payload ?? []) as ActivityEntry[];
         this.isLoadingActivity = false;
         this.cdr.detectChanges();
       },

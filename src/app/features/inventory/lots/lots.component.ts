@@ -97,9 +97,9 @@ export class LotsComponent implements OnInit {
   loadProjects() {
     this.projectService.getProjects().subscribe({
       next: (response) => {
-        this.projects = response.data?.data || response.data || [];
-        
-        // Si hay un ID seleccionado, buscamos la info completa del proyecto
+        const data = response && typeof response === 'object' && 'data' in response ? response.data : response;
+        this.projects = Array.isArray(data) ? data : Array.isArray((data as { data?: unknown })?.data) ? (data as { data: any[] }).data : [];
+
         if (this.selectedProjectId) {
           this.activeProject = this.projects.find(p => p.id === this.selectedProjectId);
         }
@@ -153,13 +153,16 @@ export class LotsComponent implements OnInit {
     request$.subscribe({
       next: (response) => {
         let allLots: any[] = [];
+        const data = Array.isArray(response)
+          ? response
+          : response && typeof response === 'object' && 'data' in response
+            ? response.data
+            : undefined;
 
-        if (Array.isArray(response)) {
-          allLots = response;
-        } else if (response?.data && Array.isArray(response.data)) {
-          allLots = response.data;
-        } else if (response?.data?.data && Array.isArray(response.data.data)) {
-          allLots = response.data.data;
+        if (Array.isArray(data)) {
+          allLots = data;
+        } else if (data && typeof data === 'object' && 'data' in data && Array.isArray((data as { data?: unknown }).data)) {
+          allLots = (data as { data: any[] }).data;
         }
 
         this.lots = allLots;
@@ -250,7 +253,8 @@ export class LotsComponent implements OnInit {
       next: (response) => {
         this.isLoading = false;
         this.closeModal();
-        this.loadLots(); 
+        this.loadLots();
+        this.cdr.detectChanges();
       },
       error: (err) => {
         this.isLoading = false;

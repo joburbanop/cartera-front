@@ -1,4 +1,4 @@
-import { Component, ElementRef, EventEmitter, Input, Output, inject } from '@angular/core';
+import { Component, ChangeDetectorRef, ElementRef, EventEmitter, Input, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CustomerService } from '../../../../core/services/customer.service';
@@ -18,6 +18,7 @@ export class QuickCustomerModalComponent {
   private customerService = inject(CustomerService);
   private toast = inject(ToastService);
   private host = inject(ElementRef<HTMLElement>);
+  private cdr = inject(ChangeDetectorRef);
 
   @Input() isOpen = false;
   @Output() closed = new EventEmitter<void>();
@@ -52,11 +53,18 @@ export class QuickCustomerModalComponent {
 
     this.customerService.createCustomer(payload).subscribe({
       next: (response) => {
-        const customer = (response.data || response) as Customer;
+        const customerPayload = Array.isArray(response)
+          ? response
+          : response && typeof response === 'object' && 'data' in response
+            ? response.data
+            : response;
+
+        const customer = customerPayload as Customer;
 
         this.customerForm.reset();
         this.customerCreated.emit(customer);
         this.closed.emit();
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Error al crear cliente', err);
@@ -76,6 +84,8 @@ export class QuickCustomerModalComponent {
         } else {
           this.createFailed.emit(err.error?.message || 'No se pudo crear el cliente.');
         }
+
+        this.cdr.markForCheck();
       }
     });
   }

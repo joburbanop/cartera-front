@@ -192,7 +192,7 @@
   [isOpen]="showCustomerModal"
   (closed)="showCustomerModal = false"
   (customerCreated)="onQuickCustomerCreated($event)"
-  (createFailed)="errorMessage = $event">
+  (createFailed)="onQuickCustomerFailed($event)">
 </app-quick-customer-modal>
 
 <!-- ============================================ -->

@@ -85,7 +85,13 @@ export class ClientsComponent implements OnInit {
     this.isLoading = true;
     this.customerService.getCustomers().subscribe({
       next: (response) => {
-        const customersData = (response.data || response || []) as Customer[];
+        const payload = Array.isArray(response)
+          ? response
+          : response && typeof response === 'object' && 'data' in response
+            ? response.data
+            : response ?? [];
+
+        const customersData = (Array.isArray(payload) ? payload : []) as Customer[];
 
         this.clientes = customersData.map((customer: any) => ({
           id: customer.id,
@@ -187,6 +193,7 @@ export class ClientsComponent implements OnInit {
           this.cerrarModal();
           this.cargarClientes();
         }, 1500);
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error al crear cliente:', err);
@@ -225,6 +232,8 @@ export class ClientsComponent implements OnInit {
           // Error genérico
           this.errorMessage = err.error?.message || 'No se pudo crear el cliente. Intente nuevamente.';
         }
+
+        this.cdr.detectChanges();
       }
     });
   }

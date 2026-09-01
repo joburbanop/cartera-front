@@ -182,8 +182,8 @@ export class DashboardComponent implements OnInit {
   private loadCarteraEnMora(): void {
     this.dashboardService.getCarteraEnMora().subscribe({
       next: (response) => {
-        const payload = response?.data?.data || response?.data || {};
-        this.totalVencido = payload.total_vencido ?? '0';
+        const payload = this.unwrapPayload(response) as Record<string, any>;
+        this.totalVencido = payload['total_vencido'] ?? '0';
         this.cdr.detectChanges();
       },
       error: () => {
@@ -196,8 +196,8 @@ export class DashboardComponent implements OnInit {
   private loadRecaudoReciente(): void {
     this.dashboardService.getRecaudoReciente().subscribe({
       next: (response) => {
-        const payload = response?.data?.data || response?.data || {};
-        this.totalRecaudado = payload.total_recaudado ?? '0';
+        const payload = this.unwrapPayload(response) as Record<string, any>;
+        this.totalRecaudado = payload['total_recaudado'] ?? '0';
         this.cdr.detectChanges();
       },
       error: () => {
@@ -210,9 +210,9 @@ export class DashboardComponent implements OnInit {
   private loadProximosVencimientos(): void {
     this.dashboardService.getProximosVencimientos().subscribe({
       next: (response) => {
-        const payload = response?.data?.data || response?.data || {};
-        this.totalPorVencer = payload.total_por_vencer ?? '0';
-        this.cantidadPorVencer = Number(payload.cantidad_cuotas ?? 0);
+        const payload = this.unwrapPayload(response) as Record<string, any>;
+        this.totalPorVencer = payload['total_por_vencer'] ?? '0';
+        this.cantidadPorVencer = Number(payload['cantidad_cuotas'] ?? 0);
         this.cdr.detectChanges();
       },
       error: () => {
@@ -226,7 +226,7 @@ export class DashboardComponent implements OnInit {
   private loadActividadReciente(): void {
     this.dashboardService.getActividadReciente().subscribe({
       next: (response) => {
-        const payload = response?.data?.data || response?.data || [];
+        const payload = this.unwrapPayload(response) as any[];
         this.actividadReciente = Array.isArray(payload) ? payload : [];
         this.cdr.detectChanges();
       },
@@ -237,16 +237,31 @@ export class DashboardComponent implements OnInit {
     });
   }
 
+  private unwrapPayload(response: any): unknown {
+    const payload = response && typeof response === 'object' && 'data' in response ? response.data : response;
+
+    if (payload && typeof payload === 'object' && 'data' in payload && Array.isArray((payload as { data?: unknown }).data)) {
+      return (payload as { data: unknown }).data;
+    }
+
+    return payload ?? {};
+  }
+
   private unwrapList(response: any): any[] {
     if (Array.isArray(response)) {
       return response;
     }
-    if (Array.isArray(response?.data?.data)) {
-      return response.data.data;
+
+    const payload = response && typeof response === 'object' && 'data' in response ? response.data : response;
+
+    if (Array.isArray(payload)) {
+      return payload;
     }
-    if (Array.isArray(response?.data)) {
-      return response.data;
+
+    if (payload && typeof payload === 'object' && 'data' in payload && Array.isArray((payload as { data?: unknown }).data)) {
+      return (payload as { data: any[] }).data;
     }
+
     return [];
   }
 }

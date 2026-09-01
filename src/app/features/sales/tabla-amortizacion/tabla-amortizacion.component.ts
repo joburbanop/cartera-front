@@ -126,7 +126,13 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   loadContractData(): void {
     this.contractService.getContractById(this.contractId).subscribe({
       next: (response) => {
-        this.contractData = response.data || response;
+        const payload = Array.isArray(response)
+          ? response
+          : response && typeof response === 'object' && 'data' in response
+            ? response.data
+            : response;
+
+        this.contractData = payload;
         this.pageTitle.set(this.buildContractTitle(this.contractData));
         this.setDefaultView();
         this.calculateFinancials();
@@ -147,6 +153,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.paymentPromises = [];
+        this.cdr.markForCheck();
       }
     });
   }
@@ -160,7 +167,13 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     this.isLoadingActivity = true;
     this.activityService.getActivity('contract', this.contractId).subscribe({
       next: (response) => {
-        this.activityEntries = (response.data ?? []) as ActivityEntry[];
+        const payload = Array.isArray(response)
+          ? response
+          : response && typeof response === 'object' && 'data' in response
+            ? response.data
+            : [];
+
+        this.activityEntries = (Array.isArray(payload) ? payload : []) as ActivityEntry[];
         this.isLoadingActivity = false;
         this.cdr.detectChanges();
       },
@@ -175,8 +188,14 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   cargarTablaAmortizacion(): void {
     this.amortizationService.getPlan(this.contractId).subscribe({
       next: (response) => {
-        const payload = (response.data ?? response) as AmortizationInstallment[] | { rows?: AmortizationInstallment[] };
-        const plan = Array.isArray(payload) ? payload : payload.rows ?? [];
+        const payload = Array.isArray(response)
+          ? response
+          : response && typeof response === 'object' && 'data' in response
+            ? response.data
+            : response;
+
+        const planData = payload as AmortizationInstallment[] | { rows?: AmortizationInstallment[] };
+        const plan = Array.isArray(planData) ? planData : planData.rows ?? [];
 
         if (Array.isArray(plan) && plan.length === 0) {
           this.generatePlan();
@@ -191,6 +210,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.isLoading = false;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -222,6 +242,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.isGenerating = false;
+        this.cdr.markForCheck();
       },
     });
   }

@@ -62,7 +62,17 @@ export class ProjectsComponent implements OnInit {
   loadBankAccounts() {
     this.bankAccountService.getAccounts().subscribe({
       next: (response) => {
-        this.availableBankAccounts = response.data?.data || response.data || [];
+        const responseData = Array.isArray(response)
+          ? response
+          : response && typeof response === 'object' && 'data' in response
+            ? response.data
+            : undefined;
+
+        this.availableBankAccounts = Array.isArray(responseData)
+          ? responseData
+          : Array.isArray((responseData as { data?: unknown })?.data)
+            ? (responseData as { data: any[] }).data
+            : [];
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -77,7 +87,17 @@ export class ProjectsComponent implements OnInit {
   loadProjects() {
     this.projectService.getProjects().subscribe({
       next: (response) => {
-        this.projects = response.data?.data || response.data || [];
+        const responseData = Array.isArray(response)
+          ? response
+          : response && typeof response === 'object' && 'data' in response
+            ? response.data
+            : undefined;
+
+        this.projects = Array.isArray(responseData)
+          ? responseData
+          : Array.isArray((responseData as { data?: unknown })?.data)
+            ? (responseData as { data: any[] }).data
+            : [];
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -113,12 +133,14 @@ export class ProjectsComponent implements OnInit {
     this.lotService.getAllLots().subscribe({
       next: (response) => {
         let allLots: any[] = [];
-        if (Array.isArray(response)) {
-          allLots = response;
-        } else if (response.data && Array.isArray(response.data)) {
-          allLots = response.data;
-        } else if (response.data?.data && Array.isArray(response.data.data)) {
-          allLots = response.data.data;
+        const data = Array.isArray(response)
+          ? response
+          : response?.data;
+
+        if (Array.isArray(data)) {
+          allLots = data;
+        } else if (data && typeof data === 'object' && 'data' in data && Array.isArray((data as { data?: unknown }).data)) {
+          allLots = (data as { data: any[] }).data;
         }
 
         this.totalLots = allLots.length;
@@ -154,6 +176,7 @@ export class ProjectsComponent implements OnInit {
       error: (err) => {
         console.error('Error cargando estadísticas de lotes', err);
         this.toast.show('No se pudieron cargar las estadísticas de lotes.', 'error');
+        this.cdr.detectChanges();
       }
     });
   }
@@ -190,7 +213,8 @@ export class ProjectsComponent implements OnInit {
         this.isLoading = false;
         // Al guardar con éxito, cerramos el modal y recargamos la tabla
         this.closeModal(); 
-        this.loadProjects(); 
+        this.loadProjects();
+        this.cdr.detectChanges();
       },
       error: (err) => {
         this.isLoading = false;
