@@ -57,6 +57,7 @@ export class ProjectsComponent implements OnInit {
       this.loadBankAccounts();
     }
     this.loadLotsStats();
+    
   }
 
   loadBankAccounts() {
@@ -79,6 +80,7 @@ export class ProjectsComponent implements OnInit {
       next: (response) => {
         this.projects = response.data?.data || response.data || [];
         this.cdr.detectChanges();
+        
       },
       error: (err) => {
         console.error('Error cargando proyectos', err);
@@ -112,14 +114,7 @@ export class ProjectsComponent implements OnInit {
   loadLotsStats() {
     this.lotService.getAllLots().subscribe({
       next: (response) => {
-        let allLots: any[] = [];
-        if (Array.isArray(response)) {
-          allLots = response;
-        } else if (response.data && Array.isArray(response.data)) {
-          allLots = response.data;
-        } else if (response.data?.data && Array.isArray(response.data.data)) {
-          allLots = response.data.data;
-        }
+     const allLots = response.data ?? [];
 
         this.totalLots = allLots.length;
         this.totalAvailableLots = 0; // Reiniciamos
@@ -159,7 +154,80 @@ export class ProjectsComponent implements OnInit {
   }
 
   // --- LÓGICA DEL MODAL ---
+  isEditMode = false;
+  selectedProject: any = null;
+  
+
+
+
+
+  openEditModal(project: any): void {
+  this.isEditMode = true;
+  this.selectedProject = project;
+
+  const bankAccountIds = this.projectForm.get('bank_account_ids') as FormArray;
+  bankAccountIds.clear();
+
+  this.projectForm.patchValue({
+    name: project.name,
+    location: project.location,
+    description: project.description
+  });
+
+  if (project.bank_accounts) {
+    project.bank_accounts.forEach((account: any) => {
+      bankAccountIds.push(new FormControl(account.id));
+    });
+  }
+
+  this.isModalOpen = true;
+}
+
+archiveProject(project: any): void {
+  this.projectService.archiveProject(project.id).subscribe({
+    next: () => {
+      this.toast.show('Proyecto archivado correctamente.', 'success');
+      this.loadProjects();
+    },
+    error: (err) => {
+      if (err.status === 422) {
+        this.toast.show(
+          err.error?.message || 'Solo se pueden archivar proyectos activos.',
+          'error'
+        );
+      } else {
+        this.toast.show('No se pudo archivar el proyecto.', 'error');
+      }
+    }
+  });
+}
+
+activateProject(project: any): void {
+  this.projectService.activateProject(project.id).subscribe({
+    next: () => {
+      this.toast.show('Proyecto activado correctamente.', 'success');
+      this.loadProjects();
+    },
+    error: (err) => {
+      if (err.status === 422) {
+        this.toast.show(
+          err.error?.message || 'Solo se pueden activar proyectos archivados.',
+          'error'
+        );
+      } else {
+        this.toast.show('No se pudo activar el proyecto.', 'error');
+      }
+    }
+  });
+}
+
   openModal() {
+    this.isEditMode = false;
+    this.selectedProject = null;
+
+    this.projectForm.reset();
+    (this.projectForm.get('bank_account_ids') as FormArray).clear();
+
     this.isModalOpen = true;
     this.successMessage = '';
     this.errorMessage = '';

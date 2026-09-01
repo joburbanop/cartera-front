@@ -19,4 +19,31 @@ export class ProjectService {
   createProject(data: Partial<Project> | Record<string, unknown>): Observable<ApiResourceResponse<Project>> {
     return this.http.post<ApiResourceResponse<Project>>(this.apiUrl, data);
   }
+  updateProject(
+      id: number,
+      data: Partial<Project> | Record<string, unknown>
+    ): Observable<ApiResourceResponse<Project>> {
+      return this.http.put<ApiResourceResponse<Project>>(
+        `${this.apiUrl}/${id}`,
+        data
+      );
+    }
+
+  archiveProject(
+      id: number
+    ): Observable<ApiResourceResponse<Project>> {
+      return this.http.patch<ApiResourceResponse<Project>>(
+        `${this.apiUrl}/${id}/archive`,
+        {}
+      );
+    }
+
+  activateProject(
+      id: number
+    ): Observable<ApiResourceResponse<Project>> {
+      return this.http.patch<ApiResourceResponse<Project>>(
+        `${this.apiUrl}/${id}/activate`,
+        {}
+      );
+    }
 }

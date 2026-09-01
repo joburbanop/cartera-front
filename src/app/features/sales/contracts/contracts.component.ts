@@ -401,14 +401,7 @@ export class ContractsComponent implements OnInit {
       this.lotService.getLotsByProject(Number(projectId)).subscribe({
         next: (response) => {
           // Extraemos el arreglo inteligente
-          let allLots: any[] = [];
-          if (Array.isArray(response)) {
-            allLots = response;
-          } else if (response.data && Array.isArray(response.data)) {
-            allLots = response.data;
-          } else if (response.data?.data && Array.isArray(response.data.data)) {
-            allLots = response.data.data;
-          }
+         const allLots = response.data ?? [];
 
           this.availableLots = allLots.filter((lot: any) => {
             const statusStr = typeof lot.status === 'object' ? (lot.status?.value || lot.status?.name) : lot.status;
