@@ -1,0 +1,122 @@
+:host {
+  display: block;
+}
+
+.bitacora-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1.35rem 1.5rem;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.05);
+}
+
+.bitacora-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.bitacora-eyebrow {
+  margin: 0 0 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.bitacora-header h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.1rem;
+}
+
+.bitacora-state {
+  padding: 1rem 0;
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.bitacora-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.bitacora-entry {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1rem 1.05rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.bitacora-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.bitacora-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.bitacora-description {
+  margin: 0.55rem 0 0;
+  color: #1e293b;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.bitacora-details {
+  margin-top: 0.8rem;
+}
+
+.bitacora-details summary {
+  cursor: pointer;
+  color: #347769;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.changes-block {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed #dbe3ec;
+}
+
+.changes-block h4 {
+  margin: 0 0 0.45rem;
+  color: #475569;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.change-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) 1fr;
+  gap: 0.6rem;
+  padding: 0.2rem 0;
+}
+
+.change-key {
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.change-value {
+  color: #1e293b;
+  font-size: 0.84rem;
+  word-break: break-word;
+}

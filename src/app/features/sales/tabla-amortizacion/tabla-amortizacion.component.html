@@ -291,6 +291,13 @@
     (registerAbono)="openPreventaPayment()">
   </app-payment-promise-tab>
 
+  <app-bitacora
+    *ngIf="canViewBitacora"
+    [entries]="activityEntries"
+    [isLoading]="isLoadingActivity"
+    emptyMessage="No hay movimientos del contrato registrados todavía.">
+  </app-bitacora>
+
 
   <!-- ========================================== -->
   <!-- COMPONENTE: DRAWER PAGO                    -->

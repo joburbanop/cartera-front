@@ -9,6 +9,7 @@ import { ContractService } from '../../../core/services/contract.service';
 import { FinancialService } from '../../../core/services/financial.service';
 import { RecaudoService } from '../../../core/services/recaudo.service';
 import { PaymentPromiseService } from '../../../core/services/payment-promise.service';
+import { ActivityService } from '../../../core/services/activity.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../shared/services/toast.service';
 
@@ -100,6 +101,10 @@ describe('AmortizationComponent', () => {
       getPromisesByContract: () => of([]),
     } as Partial<PaymentPromiseService> as PaymentPromiseService;
 
+    const activityServiceMock = {
+      getActivity: () => of({ data: [] }),
+    } as Partial<ActivityService> as ActivityService;
+
     const authServiceMock = {
       hasRole: () => true,
       getRole: () => 'administrador',
@@ -122,6 +127,7 @@ describe('AmortizationComponent', () => {
         { provide: FinancialService, useValue: financialServiceMock },
         { provide: RecaudoService, useValue: recaudoServiceMock },
         { provide: PaymentPromiseService, useValue: paymentPromiseServiceMock },
+        { provide: ActivityService, useValue: activityServiceMock },
         { provide: AuthService, useValue: authServiceMock },
       ],
     }).compileComponents();

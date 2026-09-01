@@ -162,6 +162,13 @@
           </article>
         </div>
       </section>
+
+      <app-bitacora
+        *ngIf="canViewBitacora"
+        [entries]="activityEntries"
+        [isLoading]="isLoadingActivity"
+        emptyMessage="No hay movimientos de cliente registrados todavía.">
+      </app-bitacora>
     </div>
   </ng-container>
 </div>

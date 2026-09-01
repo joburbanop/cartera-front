@@ -6,7 +6,9 @@ import { ContractService } from '../../../core/services/contract.service';
 import { FinancialService } from '../../../core/services/financial.service';
 import { DrawerPagoComponent } from '../../../shared/components/drawer-pago/drawer-pago.component';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { ActivityEntry } from '../../../core/models/activity-entry.model';
 import { RecaudoService } from '../../../core/services/recaudo.service';
+import { ActivityService } from '../../../core/services/activity.service';
 import { AmortizationFinancialsService } from '../../../core/services/amortization-financials.service';
 import { AmortizationSelectionService } from './amortization-selection.service';
 import { ContractStatusLabelPipe } from '../../../shared/pipes/contract-status-label.pipe';
@@ -19,6 +21,7 @@ import { PaymentPromiseService } from '../../../core/services/payment-promise.se
 import { AuthService } from '../../../core/services/auth.service';
 import { PageTitleService } from '../../../core/services/page-title.service';
 import { ToastService } from '../../../shared/services/toast.service';
+import { BitacoraComponent } from '../../../shared/components/bitacora/bitacora.component';
 import { PaymentPromise } from '../../../core/models/payment-promise.model';
 import { AmortizationInstallment } from '../../../core/models/amortization-installment.model';
 import { AppRoles } from '../../../core/models/app-roles';
@@ -37,6 +40,7 @@ import { isPaidStatus, isVencida } from '../../../core/models/amortization-statu
     ContractSummaryCardComponent,
     PaymentPromiseTabComponent,
     EditDueDateModalComponent,
+    BitacoraComponent,
   ],
   templateUrl: './tabla-amortizacion.component.html',
   styleUrl: './tabla-amortizacion.component.scss',
@@ -50,6 +54,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   private financialService = inject(FinancialService);
   private cdr = inject(ChangeDetectorRef);
   private recaudoService = inject(RecaudoService);
+  private activityService = inject(ActivityService);
   private financials = inject(AmortizationFinancialsService);
   private selection = inject(AmortizationSelectionService);
   private paymentPromiseService = inject(PaymentPromiseService);
@@ -78,9 +83,15 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   isHistoryModalOpen = false;
   isLoadingHistory = false;
   paymentPromises: PaymentPromise[] = [];
+  activityEntries: ActivityEntry[] = [];
+  isLoadingActivity = false;
   isEditDueDateModalOpen = false;
   isUpdatingDueDate = false;
   editingInstallment: AmortizationInstallment | null = null;
+
+  get canViewBitacora(): boolean {
+    return this.authService.hasRole(AppRoles.SOCIO_GERENCIA);
+  }
 
   get selectedFees(): any[] {
     return this.selection.selectedFees;
@@ -120,6 +131,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
         this.setDefaultView();
         this.calculateFinancials();
         this.loadPaymentPromises();
+        this.loadActivity();
         this.cdr.detectChanges();
       },
       error: () => this.router.navigate(['/contracts']),
@@ -136,6 +148,27 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       error: () => {
         this.paymentPromises = [];
       }
+    });
+  }
+
+  private loadActivity(): void {
+    if (!this.canViewBitacora || !this.contractId) {
+      this.activityEntries = [];
+      return;
+    }
+
+    this.isLoadingActivity = true;
+    this.activityService.getActivity('contract', this.contractId).subscribe({
+      next: (response) => {
+        this.activityEntries = (response.data ?? []) as ActivityEntry[];
+        this.isLoadingActivity = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.activityEntries = [];
+        this.isLoadingActivity = false;
+        this.cdr.detectChanges();
+      },
     });
   }
 

@@ -1,0 +1,51 @@
+<section class="bitacora-card">
+  <header class="bitacora-header">
+    <div>
+      <p class="bitacora-eyebrow">Bitacora</p>
+      <h3>Actividad reciente</h3>
+    </div>
+  </header>
+
+  <div *ngIf="isLoading" class="bitacora-state">Cargando movimientos...</div>
+  <div *ngIf="!isLoading && entries.length === 0" class="bitacora-state">{{ emptyMessage }}</div>
+
+  <div *ngIf="!isLoading && entries.length > 0" class="bitacora-list">
+    <article *ngFor="let entry of entries" class="bitacora-entry">
+      <div class="bitacora-meta">
+        <span class="bitacora-date">{{ entry.date | date:'dd/MM/yyyy HH:mm' }}</span>
+        <span class="bitacora-dot" aria-hidden="true"></span>
+        <span class="bitacora-user">{{ entry.causer_name || 'Sistema' }}</span>
+      </div>
+
+      <p class="bitacora-description">{{ entry.description }}</p>
+
+      <details *ngIf="hasDetails(entry)" class="bitacora-details">
+        <summary>Ver detalle</summary>
+
+        <div *ngIf="entry.changes?.before && (entry.changes?.before | keyvalue).length > 0" class="changes-block">
+          <h4>Antes</h4>
+          <div class="change-row" *ngFor="let item of entry.changes?.before | keyvalue">
+            <span class="change-key">{{ item.key }}</span>
+            <span class="change-value">{{ item.value }}</span>
+          </div>
+        </div>
+
+        <div *ngIf="entry.changes?.after && (entry.changes?.after | keyvalue).length > 0" class="changes-block">
+          <h4>Despues</h4>
+          <div class="change-row" *ngFor="let item of entry.changes?.after | keyvalue">
+            <span class="change-key">{{ item.key }}</span>
+            <span class="change-value">{{ item.value }}</span>
+          </div>
+        </div>
+
+        <div *ngIf="entry.properties && (entry.properties | keyvalue).length > 0" class="changes-block">
+          <h4>Detalle</h4>
+          <div class="change-row" *ngFor="let item of entry.properties | keyvalue">
+            <span class="change-key">{{ item.key }}</span>
+            <span class="change-value">{{ item.value }}</span>
+          </div>
+        </div>
+      </details>
+    </article>
+  </div>
+</section>
