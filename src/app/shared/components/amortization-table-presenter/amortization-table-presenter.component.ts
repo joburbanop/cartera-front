@@ -7,6 +7,7 @@ import {
   isVencida,
   toAmortizationStatus,
 } from '../../../core/models/amortization-status';
+import { AmortizationInstallment } from '../../../core/models/amortization-installment.model';
 import { AmortizationFinancialsService } from '../../../core/services/amortization-financials.service';
 import { AmortizationStatusLabelPipe } from '../../pipes/amortization-status-label.pipe';
 import { PaginationComponent } from '../pagination/pagination.component';
@@ -29,6 +30,7 @@ export class AmortizationTablePresenterComponent {
   @Output() selectionChanged = new EventEmitter<any[]>();
   @Output() downloadPdf = new EventEmitter<'internal' | 'client'>();
   @Output() paySelected = new EventEmitter<void>();
+  @Output() editDueDate = new EventEmitter<AmortizationInstallment>();
 
   selectedInstallments: any[] = [];
   pageSize = 10;
@@ -163,5 +165,20 @@ export class AmortizationTablePresenterComponent {
     }
 
     this.paySelected.emit();
+  }
+
+  canEditDueDate(fee: any): boolean {
+    return this.selectable && !isPaidStatus(fee?.status) && Number(fee?.installment_number) > 0;
+  }
+
+  emitEditDueDate(fee: AmortizationInstallment, event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!this.canEditDueDate(fee)) {
+      return;
+    }
+
+    this.editDueDate.emit(fee);
   }
 }

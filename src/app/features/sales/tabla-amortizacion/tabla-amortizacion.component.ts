@@ -14,6 +14,7 @@ import { PaymentMethodNamePipe } from '../../../shared/pipes/payment-method-name
 import { AmortizationTablePresenterComponent } from '../../../shared/components/amortization-table-presenter/amortization-table-presenter.component';
 import { ContractSummaryCardComponent } from './contract-summary-card/contract-summary-card.component';
 import { PaymentPromiseTabComponent } from './payment-promise-tab/payment-promise-tab.component';
+import { EditDueDateModalComponent } from './edit-due-date-modal/edit-due-date-modal.component';
 import { PaymentPromiseService } from '../../../core/services/payment-promise.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { PageTitleService } from '../../../core/services/page-title.service';
@@ -35,6 +36,7 @@ import { isPaidStatus, isVencida } from '../../../core/models/amortization-statu
     AmortizationTablePresenterComponent,
     ContractSummaryCardComponent,
     PaymentPromiseTabComponent,
+    EditDueDateModalComponent,
   ],
   templateUrl: './tabla-amortizacion.component.html',
   styleUrl: './tabla-amortizacion.component.scss',
@@ -76,6 +78,9 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   isHistoryModalOpen = false;
   isLoadingHistory = false;
   paymentPromises: PaymentPromise[] = [];
+  isEditDueDateModalOpen = false;
+  isUpdatingDueDate = false;
+  editingInstallment: AmortizationInstallment | null = null;
 
   get selectedFees(): any[] {
     return this.selection.selectedFees;
@@ -228,6 +233,66 @@ export class AmortizationComponent implements OnInit, OnDestroy {
 
   onInstallmentSelectionChange(selected: any[]): void {
     this.selectedFees = selected;
+  }
+
+  onEditDueDate(installment: AmortizationInstallment): void {
+    if (!this.canRegisterPayments) {
+      return;
+    }
+
+    if (!installment || Number(installment.installment_number) <= 0 || isPaidStatus(installment.status)) {
+      return;
+    }
+
+    this.editingInstallment = installment;
+    this.isEditDueDateModalOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  closeEditDueDateModal(): void {
+    if (this.isUpdatingDueDate) {
+      return;
+    }
+
+    this.isEditDueDateModalOpen = false;
+    this.editingInstallment = null;
+    this.cdr.detectChanges();
+  }
+
+  saveInstallmentDueDate(dueDate: string): void {
+    if (!this.editingInstallment?.id) {
+      return;
+    }
+
+    this.isUpdatingDueDate = true;
+
+    this.amortizationService
+      .updateInstallmentDueDate(this.contractId, Number(this.editingInstallment.id), dueDate)
+      .subscribe({
+        next: () => {
+          this.isUpdatingDueDate = false;
+          this.isEditDueDateModalOpen = false;
+          this.editingInstallment = null;
+
+          this.toast.show(
+            'Fecha actualizada',
+            'success',
+            'La fecha de vencimiento se actualizo correctamente.',
+          );
+
+          this.cargarTablaAmortizacion();
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.isUpdatingDueDate = false;
+          this.toast.show(
+            'No se pudo actualizar la fecha',
+            'error',
+            this.readFirstBackendError(err),
+          );
+          this.cdr.detectChanges();
+        },
+      });
   }
 
   toggleSelectAll(event: any): void {
@@ -512,19 +577,10 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   }
 
   get totalDineroVencido(): number {
-    return this.cuotasVencidas.reduce((sum: number, cuota: any) => {
-      const valor = Number(
-        cuota?.saldo_pendiente ??
-        cuota?.projected_balance ??
-        cuota?.remaining_balance ??
-        cuota?.amount ??
-        cuota?.quota_debt ??
-        cuota?.installment_value ??
-        0
-      );
-
-      return sum + (Number.isFinite(valor) ? valor : 0);
-    }, 0);
+    return this.cuotasVencidas.reduce(
+      (sum: number, cuota: any) => sum + this.financials.getFeeDebtValue(cuota),
+      0,
+    );
   }
 
   get tieneCarteraVencida(): boolean {
@@ -698,5 +754,24 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   getPaymentMethodName(method: string): string {
     const pipe = new PaymentMethodNamePipe();
     return pipe.transform(method);
+  }
+
+  private readFirstBackendError(err: any): string | undefined {
+    const backendErrors = err?.error?.errors ?? null;
+    const firstMessage = backendErrors
+      ? Object.values(backendErrors)
+          .flat()
+          .find((msg: unknown) => typeof msg === 'string')
+      : null;
+
+    if (firstMessage) {
+      return String(firstMessage);
+    }
+
+    if (typeof err?.error?.message === 'string' && err.error.message.trim()) {
+      return err.error.message;
+    }
+
+    return undefined;
   }
 }

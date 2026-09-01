@@ -25,4 +25,11 @@ export class AmortizationService {
       responseType: 'blob'
     });
   }
+
+  updateInstallmentDueDate(contractId: number, installmentId: number, dueDate: string): Observable<any> {
+    return this.http.patch(
+      `${this.apiUrl}/${contractId}/installments/${installmentId}/due-date`,
+      { due_date: dueDate },
+    );
+  }
 }

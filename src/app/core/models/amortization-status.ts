@@ -50,7 +50,7 @@ export function amortizationStatusLabel(value: unknown): string {
 }
 
 /**
- * True si la fecha de vencimiento es estrictamente anterior a hoy
+ * True si la fecha de vencimiento es hoy o anterior
  * (comparación por día, sin horas).
  */
 export function isVencida(dueDate: string | Date | null | undefined): boolean {
@@ -63,5 +63,5 @@ export function isVencida(dueDate: string | Date | null | undefined): boolean {
   const limitDate = new Date(dueDate);
   limitDate.setHours(0, 0, 0, 0);
 
-  return limitDate < today;
+  return limitDate <= today;
 }

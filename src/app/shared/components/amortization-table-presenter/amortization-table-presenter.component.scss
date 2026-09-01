@@ -35,6 +35,37 @@
   vertical-align: middle;
 }
 
+.due-date-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.due-date-edit-btn {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.due-date-edit-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.due-date-edit-btn:hover {
+  background: #eef7f5;
+  border-color: #347769;
+  color: #2d6c5e;
+}
+
 .custom-table tbody tr:last-child td {
   border-bottom: none;
 }

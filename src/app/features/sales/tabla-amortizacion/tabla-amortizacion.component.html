@@ -272,6 +272,7 @@
         [currentView]="currentView"
         [resetSelection]="resetSelectionFlag"
         (selectionChanged)="onInstallmentSelectionChange($event)"
+        (editDueDate)="onEditDueDate($event)"
         (downloadPdf)="downloadPdf($event)"
         (paySelected)="openDrawer()">
       </app-amortization-table-presenter>
@@ -304,5 +305,13 @@
     (onClose)="closeDrawer()"
     (confirmPayment)="procesarPago($event)">
   </app-drawer-pago>
+
+  <app-edit-due-date-modal
+    [isOpen]="isEditDueDateModalOpen"
+    [installment]="editingInstallment"
+    [isSaving]="isUpdatingDueDate"
+    (closeModal)="closeEditDueDateModal()"
+    (saveDueDate)="saveInstallmentDueDate($event)">
+  </app-edit-due-date-modal>
 
 </div> <!-- FIN DEL CONTENEDOR PRINCIPAL (amortization-page) -->
