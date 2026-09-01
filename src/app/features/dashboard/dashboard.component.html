@@ -91,6 +91,40 @@
   </div>
 </div>
 
+<section *ngIf="canViewCharts()" class="charts-grid">
+  <app-chart-card
+    type="bar"
+    title="Recaudo mensual"
+    format="currency"
+    [labels]="recaudoLabels"
+    [datasets]="recaudoDatasets">
+  </app-chart-card>
+
+  <app-chart-card
+    type="doughnut"
+    title="Cartera vencida vs al día"
+    format="count"
+    [labels]="carteraLabels"
+    [datasets]="carteraDatasets">
+  </app-chart-card>
+
+  <app-chart-card
+    type="doughnut"
+    title="Contratos por estado"
+    format="count"
+    [labels]="contratosLabels"
+    [datasets]="contratosDatasets">
+  </app-chart-card>
+
+  <app-chart-card
+    type="doughnut"
+    title="Lotes por estado"
+    format="count"
+    [labels]="lotesLabels"
+    [datasets]="lotesDatasets">
+  </app-chart-card>
+</section>
+
 <section class="dashboard-panel card-elevated">
   <h2>Distribución de lotes</h2>
   <ul class="lot-distribution">

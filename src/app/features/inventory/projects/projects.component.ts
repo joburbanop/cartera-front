@@ -6,15 +6,17 @@ import { BankAccountService } from '../../../core/services/bank-account.service'
 import { LotService } from '../../../core/services/lot.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AppRoles } from '../../../core/models/app-roles';
+import { ActivitySubjectType } from '../../../core/models/activity-entry.model';
 import { RouterModule } from '@angular/router';
 import { ToastService } from '../../../shared/services/toast.service';
 import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
+import { BitacoraModalComponent } from '../../../shared/components/bitacora-modal/bitacora-modal.component';
 import { markAllAsTouched, requiredArray, scrollToFirstInvalid } from '../../../shared/utils/form-utils';
 
 @Component({
   selector: 'app-projects',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, FieldErrorComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, FieldErrorComponent, BitacoraModalComponent],
   templateUrl: './projects.component.html',
   styleUrl: './projects.component.scss'
 })
@@ -32,6 +34,10 @@ export class ProjectsComponent implements OnInit {
     return this.authService.hasRole(AppRoles.ADMINISTRADOR);
   }
 
+  get canViewBitacora(): boolean {
+    return this.authService.hasRole(AppRoles.SOCIO_GERENCIA);
+  }
+
   projects: any[] = [];
   availableBankAccounts: any[] = []; 
   
@@ -43,6 +49,10 @@ export class ProjectsComponent implements OnInit {
   projectLotsStats: { [key: number]: { total: number, available: number } } = {}; 
   // Control del Modal
   isModalOpen = false;
+  isBitacoraOpen = false;
+  bitacoraTitle = 'Bitácora del proyecto';
+  bitacoraSubjectType: ActivitySubjectType = 'project';
+  bitacoraSubjectId: number | null = null;
 
   projectForm = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(150)]],
@@ -194,6 +204,22 @@ export class ProjectsComponent implements OnInit {
     (this.projectForm.get('bank_account_ids') as FormArray).clear();
     // Limpiar checkboxes físicos
     document.querySelectorAll('input[type=checkbox]').forEach((el: any) => el.checked = false);
+  }
+
+  openBitacora(project: { id?: number; name?: string }): void {
+    if (!this.canViewBitacora || project.id == null) {
+      return;
+    }
+
+    this.bitacoraTitle = project.name ? `Bitácora de ${project.name}` : 'Bitácora del proyecto';
+    this.bitacoraSubjectType = 'project';
+    this.bitacoraSubjectId = Number(project.id);
+    this.isBitacoraOpen = true;
+  }
+
+  closeBitacora(): void {
+    this.isBitacoraOpen = false;
+    this.bitacoraSubjectId = null;
   }
 
   onSubmit() {

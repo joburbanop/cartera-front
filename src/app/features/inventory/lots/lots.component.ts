@@ -6,16 +6,18 @@ import { ProjectService } from '../../../core/services/project.service';
 import { LotService } from '../../../core/services/lot.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AppRoles } from '../../../core/models/app-roles';
+import { ActivitySubjectType } from '../../../core/models/activity-entry.model';
 import { CurrencyMaskDirective } from '../../../shared/directives/currency-mask.directive';
 import { ToastService } from '../../../shared/services/toast.service';
 import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
+import { BitacoraModalComponent } from '../../../shared/components/bitacora-modal/bitacora-modal.component';
 import { markAllAsTouched, scrollToFirstInvalid } from '../../../shared/utils/form-utils';
 
 @Component({
   selector: 'app-lots',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, CurrencyMaskDirective, FieldErrorComponent, PaginationComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, CurrencyMaskDirective, FieldErrorComponent, PaginationComponent, BitacoraModalComponent],
   templateUrl: './lots.component.html',
   styleUrl: './lots.component.scss'
 })
@@ -34,6 +36,10 @@ export class LotsComponent implements OnInit {
     return this.authService.hasRole(AppRoles.ADMINISTRADOR);
   }
 
+  get canViewBitacora(): boolean {
+    return this.authService.hasRole(AppRoles.SOCIO_GERENCIA);
+  }
+
   projects: any[] = [];
   lots: any[] = [];
   selectedProjectId: number | null = null;
@@ -47,6 +53,10 @@ export class LotsComponent implements OnInit {
   // Control del UI
   isLoading = false;
   isModalOpen = false;
+  isBitacoraOpen = false;
+  bitacoraTitle = 'Bitácora del lote';
+  bitacoraSubjectType: ActivitySubjectType = 'lot';
+  bitacoraSubjectId: number | null = null;
   errorMessage = '';
   hasProjectInRoute = false;
   pageSize = 10;
@@ -226,6 +236,22 @@ export class LotsComponent implements OnInit {
       status: 'disponible',
       price_m2: '0'
     });
+  }
+
+  openBitacora(lot: { id?: number; number?: string }): void {
+    if (!this.canViewBitacora || lot.id == null) {
+      return;
+    }
+
+    this.bitacoraTitle = lot.number ? `Bitácora del lote ${lot.number}` : 'Bitácora del lote';
+    this.bitacoraSubjectType = 'lot';
+    this.bitacoraSubjectId = Number(lot.id);
+    this.isBitacoraOpen = true;
+  }
+
+  closeBitacora(): void {
+    this.isBitacoraOpen = false;
+    this.bitacoraSubjectId = null;
   }
 
   // --- GUARDADO ---

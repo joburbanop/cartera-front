@@ -1,111 +1,211 @@
-<!-- Contenedor Principal (Flex Row por defecto en :host) -->
-<div class="layout-container" style="display: contents;"> 
-  
-  <!-- IZQUIERDA: Sidebar -->
-  <aside class="sidebar">
-    
-    <div class="brand-area">
-      <div class="logo-box">CI</div>
-      <div>
-        <h2>Cartera Inmobiliaria</h2>
-        <span>Casas y Lotes</span>
-      </div>
+<div class="layout-container">
+  <div
+    class="sidebar-backdrop"
+    *ngIf="isMobileMenuOpen"
+    (click)="closeMobileMenu()"
+    aria-hidden="true"
+  ></div>
+
+  <aside
+    #sidebarElement
+    class="sidebar"
+    [class.collapsed]="isCollapsed"
+    [class.mobile-open]="isMobileMenuOpen"
+    [class.is-resizing]="isResizing"
+    [style.width.px]="isCollapsed ? 72 : sidebarWidth"
+    [style.minWidth.px]="isCollapsed ? 72 : sidebarWidth"
+  >
+    <div class="sidebar-header">
+      <button
+        type="button"
+        class="sidebar-toggle"
+        (click)="toggleSidebar()"
+        [attr.aria-label]="isCollapsed ? 'Expandir menú' : 'Colapsar menú'"
+        [title]="isCollapsed ? 'Expandir menú' : 'Colapsar menú'"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M15 18l-6-6 6-6" *ngIf="!isCollapsed"></path>
+          <path d="M9 18l6-6-6-6" *ngIf="isCollapsed"></path>
+        </svg>
+      </button>
+
     </div>
 
+    <div
+      *ngIf="!isCollapsed && !isMobileViewport()"
+      class="sidebar-resize-handle"
+      [class.active]="isResizing"
+      (mousedown)="startResize($event)"
+      aria-hidden="true"
+    ></div>
+
     <nav class="nav-menu">
-      
-      <a routerLink="/dashboard" routerLinkActive="active" class="menu-link">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-        Dashboard
-      </a>
-
-      <ng-container *ngIf="canViewBusinessNav()">
-        <div class="category-title">Inventario</div>
-        
-        <a routerLink="/projects" routerLinkActive="active" class="menu-link">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg>
-          Proyectos
+      <div class="section-block" *ngIf="hasVisibleItemsInSection('general')">
+        <div class="category-title" *ngIf="!isCollapsed">General</div>
+        <a
+          routerLink="/dashboard"
+          routerLinkActive="active"
+          class="menu-link"
+          [title]="'Dashboard'"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          <span>Dashboard</span>
         </a>
+      </div>
 
-        <a routerLink="/lots" routerLinkActive="active" class="menu-link">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-          Lotes
-        </a>
+      <ng-container *ngIf="hasVisibleItemsInSection('inventario')">
+        <div class="section-block">
+          <div class="category-title" *ngIf="!isCollapsed">Inventario</div>
+          <a
+            routerLink="/projects"
+            routerLinkActive="active"
+            class="menu-link"
+            [title]="'Proyectos'"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 21h18"></path>
+              <path d="M5 21V7l7-4 7 4v14"></path>
+              <path d="M9 21v-6h6v6"></path>
+            </svg>
+            <span>Proyectos</span>
+          </a>
+
+          <a
+            routerLink="/lots"
+            routerLinkActive="active"
+            class="menu-link"
+            [title]="'Lotes'"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            <span>Lotes</span>
+          </a>
+        </div>
       </ng-container>
 
-      <div class="category-title" *ngIf="canViewClientes() || canViewUsers()">Personas</div>
+      <div class="section-block" *ngIf="hasVisibleItemsInSection('ventas')">
+        <div class="category-title" *ngIf="!isCollapsed">Ventas</div>
 
-      <a *ngIf="canViewClientes()" routerLink="/clientes" routerLinkActive="active" class="menu-link">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-        Clientes
-      </a>
+        <a *ngIf="canViewClientes()" routerLink="/clientes" routerLinkActive="active" class="menu-link" [title]="'Clientes'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          <span>Clientes</span>
+        </a>
 
-      <a *ngIf="canViewUsers()" routerLink="/usuarios" routerLinkActive="active" class="menu-link">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06-.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-        Usuarios
-      </a>
+        <a routerLink="/contracts" routerLinkActive="active" class="menu-link" [title]="'Contratos'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          <span>Contratos</span>
+        </a>
+      </div>
+
+      <ng-container *ngIf="hasVisibleItemsInSection('finanzas')">
+        <div class="section-block">
+          <div class="category-title" *ngIf="!isCollapsed">Finanzas</div>
+          <a *ngIf="canViewClientes()" routerLink="/bank-accounts" routerLinkActive="active" class="menu-link" [title]="'Cuentas bancarias'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="3" y1="21" x2="21" y2="21"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+              <path d="M5 6l7-3 7 3"></path>
+              <line x1="4" y1="10" x2="4" y2="21"></line>
+              <line x1="20" y1="10" x2="20" y2="21"></line>
+              <line x1="8" y1="14" x2="8" y2="17"></line>
+              <line x1="12" y1="14" x2="12" y2="17"></line>
+              <line x1="16" y1="14" x2="16" y2="17"></line>
+            </svg>
+            <span>Cuentas bancarias</span>
+          </a>
+        </div>
+      </ng-container>
+
+      <div class="section-block" *ngIf="hasVisibleItemsInSection('administracion')">
+        <div class="category-title" *ngIf="!isCollapsed">Administración</div>
+        <a routerLink="/usuarios" routerLinkActive="active" class="menu-link" [title]="'Usuarios'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06-.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span>Usuarios</span>
+        </a>
+      </div>
 
       <ng-container *ngIf="canViewBusinessNav()">
-        <div class="category-title">Cartera y Pagos</div>
-
-        <a *ngIf="canViewClientes()" routerLink="/bank-accounts" routerLinkActive="active" class="menu-link">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="21" x2="21" y2="21"></line><line x1="3" y1="10" x2="21" y2="10"></line><path d="M5 6l7-3 7 3"></path><line x1="4" y1="10" x2="4" y2="21"></line><line x1="20" y1="10" x2="20" y2="21"></line><line x1="8" y1="14" x2="8" y2="17"></line><line x1="12" y1="14" x2="12" y2="17"></line><line x1="16" y1="14" x2="16" y2="17"></line></svg>
-          Cuentas bancarias
-        </a>
-
-        <a routerLink="/contracts" routerLinkActive="active" class="menu-link">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-          Contratos
-        </a>
-
-        <a routerLink="/historial-pagos" routerLinkActive="active" class="menu-link">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M12 18v-6"></path><path d="M9 15l3 3 3-3"></path></svg>
-          Historial de pagos
-        </a>
-
-        <div class="category-title upcoming-title">Próximamente</div>
-        <a class="menu-link disabled" aria-disabled="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-          Cartera vencida
-          <span class="badge-prox">Próx.</span>
-        </a>
-        <a class="menu-link disabled" aria-disabled="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-          Devoluciones
-          <span class="badge-prox">Próx.</span>
-        </a>
+        <div class="section-block upcoming">
+          <div class="category-title" *ngIf="!isCollapsed">Próximamente</div>
+          <a class="menu-link disabled" aria-disabled="true" [title]="'Cartera vencida'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <span>Cartera vencida</span>
+            <span class="badge-prox">Próx.</span>
+          </a>
+          <a class="menu-link disabled" aria-disabled="true" [title]="'Devoluciones'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <span>Devoluciones</span>
+            <span class="badge-prox">Próx.</span>
+          </a>
+        </div>
       </ng-container>
     </nav>
+
+    <div class="user-card">
+      <div class="user-avatar" [attr.title]="userName()">{{ userInitials() }}</div>
+      <div class="user-meta" *ngIf="!isCollapsed">
+        <span class="user-name">{{ userName() || 'Usuario' }}</span>
+        <span class="user-role">{{ canViewUsers() ? 'Administrador' : (canViewClientes() ? 'Administrador' : 'Socio') }}</span>
+      </div>
+    </div>
   </aside>
 
-  <!-- DERECHA: Contenido Principal -->
   <main class="main-wrapper">
-    
     <header class="top-bar">
-       <!-- Reemplaza tu div .breadcrumbs actual por esto -->
+      <button type="button" class="mobile-menu-toggle" (click)="toggleMobileMenu()" aria-label="Abrir menú" title="Abrir menú">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 6h18"></path>
+          <path d="M3 12h18"></path>
+          <path d="M3 18h18"></path>
+        </svg>
+      </button>
+
       <nav class="breadcrumbs">
         <ng-container *ngFor="let crumb of breadcrumbs; let last = last">
-          
-          <!-- Usa [routerLink] con corchetes porque crumb.url es una variable -->
           <a *ngIf="!last" [routerLink]="crumb.url" class="breadcrumb-link">
             {{ crumb.label }}
           </a>
-          
           <span *ngIf="!last" class="breadcrumb-separator">/</span>
-          
-          <!-- El último no lleva enlace -->
           <span *ngIf="last" class="breadcrumb-current">{{ crumb.label }}</span>
-          
         </ng-container>
       </nav>
-       
-       <div class="actions-right">
-         <app-global-search *ngIf="canViewSearch()"></app-global-search>
-         <div class="user-profile">
-           <div class="avatar" [attr.title]="userName()">{{ userInitials() }}</div>
-           <button type="button" class="logout-button" (click)="logout()">Cerrar sesión</button>
-         </div>
-       </div>
+
+      <div class="actions-right">
+        <app-global-search *ngIf="canViewSearch()"></app-global-search>
+        <div class="user-profile">
+          <div class="avatar" [attr.title]="userName()">{{ userInitials() }}</div>
+          <button type="button" class="logout-button" (click)="logout()">Cerrar sesión</button>
+        </div>
+      </div>
     </header>
 
     <section class="content-area">
@@ -114,3 +214,4 @@
   </main>
 </div>
 <app-toast></app-toast>
+

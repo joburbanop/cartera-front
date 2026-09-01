@@ -67,7 +67,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   }
 
   contractId!: number;
-  activeTab: 'amortizacion' | 'promesa' = 'amortizacion';
+  activeTab: 'amortizacion' | 'promesa' | 'bitacora-contrato' | 'bitacora-cliente' = 'amortizacion';
   contractData: any = null;
   amortizationPlan: any[] = [];
   totalWithInterest = 0;
@@ -85,12 +85,22 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   paymentPromises: PaymentPromise[] = [];
   activityEntries: ActivityEntry[] = [];
   isLoadingActivity = false;
+  customerActivityEntries: ActivityEntry[] = [];
+  isLoadingCustomerActivity = false;
+  private amortizationGenerationAttempts = 0;
+  private readonly maxAmortizationGenerationAttempts = 1;
   isEditDueDateModalOpen = false;
   isUpdatingDueDate = false;
   editingInstallment: AmortizationInstallment | null = null;
 
   get canViewBitacora(): boolean {
     return this.authService.hasRole(AppRoles.SOCIO_GERENCIA);
+  }
+
+  get customerId(): number | null {
+    const raw = this.contractData?.customer_id ?? this.contractData?.customer?.id;
+    const id = Number(raw);
+    return Number.isFinite(id) && id > 0 ? id : null;
   }
 
   get selectedFees(): any[] {
@@ -138,6 +148,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
         this.calculateFinancials();
         this.loadPaymentPromises();
         this.loadActivity();
+        this.loadCustomerActivity();
         this.cdr.detectChanges();
       },
       error: () => this.router.navigate(['/contracts']),
@@ -167,13 +178,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     this.isLoadingActivity = true;
     this.activityService.getActivity('contract', this.contractId).subscribe({
       next: (response) => {
-        const payload = Array.isArray(response)
-          ? response
-          : response && typeof response === 'object' && 'data' in response
-            ? response.data
-            : [];
-
-        this.activityEntries = (Array.isArray(payload) ? payload : []) as ActivityEntry[];
+        this.activityEntries = this.unwrapActivity(response);
         this.isLoadingActivity = false;
         this.cdr.detectChanges();
       },
@@ -183,6 +188,39 @@ export class AmortizationComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       },
     });
+  }
+
+  private loadCustomerActivity(): void {
+    if (!this.canViewBitacora || !this.customerId) {
+      this.customerActivityEntries = [];
+      return;
+    }
+
+    this.isLoadingCustomerActivity = true;
+    this.activityService.getActivity('customer', this.customerId).subscribe({
+      next: (response) => {
+        this.customerActivityEntries = this.unwrapActivity(response);
+        this.isLoadingCustomerActivity = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.customerActivityEntries = [];
+        this.isLoadingCustomerActivity = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  private unwrapActivity(response: unknown): ActivityEntry[] {
+    if (Array.isArray(response)) {
+      return response as ActivityEntry[];
+    }
+
+    const payload = response && typeof response === 'object' && 'data' in response
+      ? (response as { data: unknown }).data
+      : [];
+
+    return Array.isArray(payload) ? (payload as ActivityEntry[]) : [];
   }
 
   cargarTablaAmortizacion(): void {
@@ -198,10 +236,27 @@ export class AmortizationComponent implements OnInit, OnDestroy {
         const plan = Array.isArray(planData) ? planData : planData.rows ?? [];
 
         if (Array.isArray(plan) && plan.length === 0) {
+          if (this.isGenerating) {
+            return;
+          }
+
+          if (this.amortizationGenerationAttempts >= this.maxAmortizationGenerationAttempts) {
+            this.isLoading = false;
+            this.toast.show(
+              'No se pudo cargar la tabla de amortización',
+              'error',
+              'La tabla de amortización no está disponible en este momento. Intenta nuevamente más tarde.',
+            );
+            this.cdr.detectChanges();
+            return;
+          }
+
+          this.amortizationGenerationAttempts += 1;
           this.generatePlan();
           return;
         }
 
+        this.amortizationGenerationAttempts = 0;
         this.amortizationPlan = plan;
         this.clearTableSelection();
         this.selection.setPlan(this.amortizationPlan);
@@ -210,6 +265,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.isLoading = false;
+        this.amortizationGenerationAttempts = 0;
         this.cdr.markForCheck();
       },
     });
@@ -240,8 +296,15 @@ export class AmortizationComponent implements OnInit, OnDestroy {
         this.isGenerating = false;
         this.loadAmortizationPlan();
       },
-      error: () => {
+      error: (err) => {
         this.isGenerating = false;
+        this.amortizationGenerationAttempts = 0;
+        const backendMessage = this.readFirstBackendError(err);
+        this.toast.show(
+          'No se pudo generar la tabla de amortización',
+          'error',
+          backendMessage ?? 'La generación del plan no pudo completarse en este momento.',
+        );
         this.cdr.markForCheck();
       },
     });

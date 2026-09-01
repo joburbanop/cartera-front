@@ -3,6 +3,7 @@ import { of, throwError, Observable } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { AmortizationComponent } from './tabla-amortizacion.component';
+import { AppRoles } from '../../../core/models/app-roles';
 import { AmortizationFinancialsService } from '../../../core/services/amortization-financials.service';
 import { AmortizationService } from '../../../core/services/amortization.service';
 import { ContractService } from '../../../core/services/contract.service';
@@ -135,6 +136,9 @@ describe('AmortizationComponent', () => {
     const fixture = TestBed.createComponent(AmortizationComponent);
     component = fixture.componentInstance;
     toastService = TestBed.inject(ToastService);
+    toastService.toasts().forEach((toast) => toastService.dismiss(toast.id));
+    (toastService as any).toastsState.set([]);
+    (toastService as any).timers.clear();
 
     registerPaymentResult = of({});
     lastRegisterPaymentArgs = null;
@@ -206,6 +210,8 @@ describe('AmortizationComponent', () => {
     registerPaymentResult = of({});
     component.contractId = 1;
     component.selectedFees = [{ ...cuota3 }];
+    vi.spyOn(component, 'cargarTablaAmortizacion').mockImplementation(() => undefined);
+    vi.spyOn(component, 'loadContractData').mockImplementation(() => undefined);
 
     component.procesarPago({
       amount: 1000000,
@@ -294,5 +300,45 @@ describe('AmortizationComponent', () => {
     const formData = lastRegisterPaymentArgs?.formData as FormData;
     expect(formData.getAll('installment_numbers[]').length).toBe(0);
     expect(formData.getAll('selected_installments[]').length).toBe(0);
+  });
+
+  it('oculta Pagar y muestra las pestañas de bitácora para socio_gerencia', () => {
+    const auth = TestBed.inject(AuthService);
+    vi.spyOn(auth, 'hasRole').mockImplementation((role) => role === AppRoles.SOCIO_GERENCIA);
+
+    const fixture = TestBed.createComponent(AmortizationComponent);
+    fixture.componentInstance.contractData = {
+      status: 'activo',
+      customer_id: 7,
+      transactions: [],
+      down_payment_pactada: 2000000,
+    };
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.canRegisterPayments).toBe(false);
+    expect(fixture.componentInstance.canViewBitacora).toBe(true);
+    expect(fixture.nativeElement.querySelector('.top-nav-action-btn--pay')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Ver Historial de Pagos');
+    expect(fixture.nativeElement.textContent).toContain('Venta');
+    expect(fixture.nativeElement.textContent).toContain('Preventa');
+    expect(fixture.nativeElement.textContent).toContain('Bitácora del contrato');
+    expect(fixture.nativeElement.textContent).toContain('Bitácora del cliente');
+  });
+
+  it('debe cortar la recursión si el plan sigue vacío después de intentar generarlo', () => {
+    const getPlanSpy = vi.spyOn(component['amortizationService'], 'getPlan').mockReturnValue(of({ data: [] }));
+    const generatePlanSpy = vi.spyOn(component['amortizationService'], 'generatePlan').mockReturnValue(of({}));
+    const toastSpy = vi.spyOn(toastService, 'show');
+
+    component.contractId = 42;
+    component.loadAmortizationPlan();
+
+    expect(getPlanSpy).toHaveBeenCalledTimes(2);
+    expect(generatePlanSpy).toHaveBeenCalledTimes(1);
+    expect(toastSpy).toHaveBeenCalledWith(
+      'No se pudo cargar la tabla de amortización',
+      'error',
+      expect.stringContaining('no está disponible')
+    );
   });
 });

@@ -1,12 +1,12 @@
 ---
-description: Auditoría de recaudo, pagos y cobranza (cuentas bancarias, tabla de amortización, historial). Incluye cómo se calcula el monto sugerido del drawer.
-globs: src/app/features/collection/**,src/app/features/sales/tabla-amortizacion/**,src/app/features/sales/historial-pagos/**
+description: Auditoría de recaudo, pagos y cobranza (cuentas bancarias, tabla de amortización). Incluye cómo se calcula el monto sugerido del drawer.
+globs: src/app/features/collection/**,src/app/features/sales/tabla-amortizacion/**
 alwaysApply: false
 ---
 
 # Collection / cartera — auditoría del estado actual
 
-Rutas: `/bank-accounts`, `/amortization/:id`, `/historial-pagos`. El cobro de cuotas **no** vive en `features/collection/`: está en `features/sales/tabla-amortizacion` + drawer shared. `features/collection/` solo tiene cuentas bancarias.
+Rutas: `/bank-accounts`, `/amortization/:id`. El cobro de cuotas **no** vive en `features/collection/`: está en `features/sales/tabla-amortizacion` + drawer shared. `features/collection/` solo tiene cuentas bancarias. El historial de pagos vive en el **modal de la ficha de contrato** (`abrirHistorialPagos` → `getTransactionsByContract`), no en una pantalla global.
 
 El menú “Cartera vencida” está disabled y **no tiene ruta**.
 
@@ -19,7 +19,6 @@ El menú “Cartera vencida” está disabled y **no tiene ruta**.
 | `BankAccountsComponent` (`app-bank-accounts`) | Smart | CRUD visual de cuentas (listar + modal crear). |
 | `AmortizationComponent` (`app-tabla-amortizacion`) | Smart contenedor | Ficha de contrato, plan, preventa, promesas, historial modal, orquesta pago. |
 | `AmortizationSelectionService` | Servicio **no** `root`: `providers: [AmortizationSelectionService]` en el componente | Selección de cuotas. `getFeeDebtValue` **delega** a `AmortizationFinancialsService`. Una instancia por visita a la página. |
-| `HistorialPagosComponent` (`app-historial-pagos`) | Smart | Listado global de transacciones con filtros `customer_id` / `lot_id` (ngModel). |
 
 UI reutilizada (documentada en `shared.mdc`): `DrawerPagoComponent`, `AmortizationTablePresenterComponent`, pipes de status y método de pago.
 
@@ -59,10 +58,6 @@ Métodos de flujo: `loadContractData`, `loadAmortizationPlan`/`cargarTablaAmorti
 
 Tabs locales: `activeTab: 'amortizacion' | 'promesa'`. Vista `currentView: 'venta' | 'preventa'` según `contractData.status === 'preventa_inactiva'`.
 
-### `HistorialPagosComponent`
-
-`loadTransactions()`, `applyFilters()`, `verComprobante(url: string)`. Filtros template-driven (`FormsModule`).
-
 ---
 
 ## 3. Manejo de estado
@@ -71,7 +66,7 @@ Tabs locales: `activeTab: 'amortizacion' | 'promesa'`. Vista `currentView: 'vent
 - Amortización: `contractData`, `amortizationPlan`, `selectedFees` (proxy al selection service), `paymentPromises`, `transactions` del modal. `ChangeDetectorRef` tras cada HTTP.
 - Selection service: estado de selección **por componente**, no global.
 - Consume core: `AmortizationService`, `ContractService`, `FinancialService` (totales de ficha, no el drawer), `RecaudoService`, `AmortizationFinancialsService`, `PaymentPromiseService`. Además `HttpClient` **directo** para abrir recibos (`verComprobante`).
-- Historial: `RecaudoService.getAllTransactions` + `HttpClient` directo para blobs de recibo.
+- Historial del contrato: `RecaudoService.getTransactionsByContract` en el modal de la ficha.
 
 `overdueFees` / `activeMoraFees` / `activeMoraDebt` / `overdueAmount` / `overdueLevelLabel` / `hasOverdueFees` están definidos en el `.ts` y **no aparecen en el template**. El banner rojo usa `tieneCarteraVencida` + `cuotasVencidas` (`tabla-amortizacion.component.html:207–215`).
 
@@ -88,7 +83,7 @@ Tabs locales: `activeTab: 'amortizacion' | 'promesa'`. Vista `currentView: 'vent
 | Generar plan | POST `/api/contracts/:id/generate-amortization` `{}` | luego recarga GET |
 | PDF | GET `/api/contracts/:id/download-pdf?type=` blob | error: no-op |
 | Promesas | GET `/api/contracts/:id/payment-promises` | `data` o array; error → `[]` |
-| Historial modal / página | GET `/api/contracts/:id/transactions` o GET `/api/transactions?customer_id&lot_id` | `data` o array |
+| Historial modal | GET `/api/contracts/:id/transactions` | `data` o array |
 | Pago inicial | POST `/api/contracts/:id/transactions/down-payment` `FormData` | ver `procesarPago` |
 | Pago regular/cascada | POST `/api/collections/cascade` `FormData` | idem |
 | Recibo | GET `receiptUrl` (URL absoluta que venga del API) `responseType: 'blob'` | abre blob en pestaña; **no pasa por RecaudoService** |
@@ -107,7 +102,7 @@ Error de pago: primer string de `err.error.errors` o alert genérico.
 ## 5. Convenciones observadas
 
 - Pago: el componente **nunca** llama `http.post`; solo `RecaudoService.registerPayment`. Excepción: GET blob de comprobante.
-- Reactive forms en bank-accounts; historial es template-driven; amortización no tiene form propio (el drawer sí).
+- Reactive forms en bank-accounts; amortización no tiene form propio (el drawer sí).
 - `alert()` para éxito/error de pago (no toast).
 - Presenter en vista `venta`; preventa cobra inicial con `openPreventaPayment` (tab promesa).
 - Spec de amortización es el contrato de la fusión de mora: conviene no romper `openDrawer` sin pasar esos casos.
@@ -148,7 +143,7 @@ Lo que queda:
 
 1. El banner `cuotasVencidas` usa umbral 500 y otra cascada de campos; no es el mismo conjunto que `openDrawer`. Es recorte de UI, no una tercera copia de `isVencida`.
 2. Getters `overdueFees` / `activeMoraDebt` del contenedor no se usan en el HTML.
-3. `HttpClient.get(receiptUrl)` duplicado en amortización e historial; URLs crudas.
+3. `verComprobante` abre el blob vía `RecaudoService.getReceipt`; URLs crudas.
 4. `BankAccountsComponent.loadAccounts` no actualiza KPIs al GET.
 5. `installment_numbers[]` manda `fee.id ?? installment_number` (ambiguo si no hay PK).
 6. Éxito de pago con `alert()`.

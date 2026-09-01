@@ -33,12 +33,6 @@
             </p>
           </div>
         </div>
-        <a class="btn-history" [routerLink]="['/historial-pagos']" [queryParams]="{ customer_id: customer.id }">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-          </svg>
-          Ver historial de pagos
-        </a>
       </header>
 
       <section class="info-card">
@@ -165,9 +159,10 @@
 
       <app-bitacora
         *ngIf="canViewBitacora"
+        title="Bitácora del cliente"
         [entries]="activityEntries"
         [isLoading]="isLoadingActivity"
-        emptyMessage="No hay movimientos de cliente registrados todavía.">
+        emptyMessage="Sin movimientos registrados todavía">
       </app-bitacora>
     </div>
   </ng-container>

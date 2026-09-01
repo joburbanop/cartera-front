@@ -36,7 +36,7 @@ Sin `@Input`/`@Output`. Estado y métodos públicos:
 - `toggleCartera()`, `toggleInventario()`
 - El template **no usa** esos toggles: el menú es una lista plana de `routerLink`.
 
-Rutas del menú (html): `/dashboard`, `/projects`, `/lots`, `/clientes`, `/usuarios` (disabled “Próx.”, **sin ruta**), `/bank-accounts`, `/contracts`, `/historial-pagos`, más dos enlaces disabled (“Cartera vencida”, “Devoluciones”). Buscador del top-bar es input estático (no filtra). Avatar “JD” estático. **No hay logout.**
+Rutas del menú (html): `/dashboard`, `/projects`, `/lots`, `/clientes`, `/usuarios` (disabled “Próx.”, **sin ruta**), `/bank-accounts`, `/contracts`, más dos enlaces disabled (“Cartera vencida”, “Devoluciones”). Buscador del top-bar es input estático (no filtra). Avatar “JD” estático. **No hay logout.**
 
 ### `DrawerPagoComponent`
 

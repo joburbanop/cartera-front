@@ -130,31 +130,6 @@
   }
 }
 
-.btn-history {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.15rem;
-  border-radius: 10px;
-  border: 1px solid rgba(52, 119, 105, 0.22);
-  background: #347769;
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 0.9rem;
-  text-decoration: none;
-  box-shadow: 0 8px 18px rgba(52, 119, 105, 0.22);
-  transition: background 0.2s ease, transform 0.2s ease;
-
-  svg {
-    width: 18px;
-    height: 18px;
-  }
-
-  &:hover {
-    background: #22544a;
-  }
-}
-
 .info-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -418,11 +393,6 @@
 
   .header-copy h1 {
     font-size: 1.55rem;
-  }
-
-  .btn-history {
-    width: 100%;
-    justify-content: center;
   }
 
   .btn-amortization {

@@ -1,0 +1,11 @@
+<div class="bitacora-modal-backdrop" *ngIf="isOpen" (click)="close()">
+  <div class="bitacora-modal-panel" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+    <button class="bitacora-modal-close" type="button" (click)="close()" aria-label="Cerrar bitácora">✕</button>
+    <app-bitacora
+      [title]="title"
+      [entries]="entries"
+      [isLoading]="isLoading"
+      emptyMessage="Sin movimientos registrados todavía">
+    </app-bitacora>
+  </div>
+</div>

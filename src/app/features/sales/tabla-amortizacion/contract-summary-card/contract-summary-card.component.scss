@@ -3,19 +3,106 @@
   width: 100%;
 }
 
-.summary-grid { 
-  display: grid; 
+.summary-grid {
+  display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem; 
-  margin-bottom: 2rem; 
+  gap: 1.5rem;
+  margin-bottom: 2rem;
   width: 100%;
 }
-.info-card { 
-  background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; 
-  h4 { font-size: 0.85rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin: 0 0 1rem 0; letter-spacing: 0.05em; } 
-  .data-row { display: flex; justify-content: space-between; margin-bottom: 0.75rem; border-bottom: 1px dashed #f1f5f9; padding-bottom: 0.25rem; } 
-  .label { color: #64748b; font-size: 0.85rem; } 
-  .value { color: #1e293b; font-weight: 600; font-size: 0.9rem; text-align: right; } 
+
+.info-card {
+  padding: 1.4rem 1.5rem;
+
+  h4 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    margin: 0 0 1.15rem;
+    letter-spacing: 0.06em;
+  }
+
+  .data-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin: 0;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid #f1f5f9;
+
+    &:last-child {
+      border-bottom: none;
+      padding-bottom: 0.35rem;
+    }
+  }
+
+  .label {
+    color: #94a3b8;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .value {
+    color: #1e293b;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-align: right;
+    line-height: 1.35;
+  }
 }
 
-.badge-status { padding: 0.3rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+.card-heading-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #eef7f5;
+  color: #347769;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.total-financed {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+  padding: 0.75rem 0.9rem;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 12px;
+}
+
+.total-financed__label {
+  color: #047857;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.total-financed__value {
+  color: #047857;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+@media (max-width: 900px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+}

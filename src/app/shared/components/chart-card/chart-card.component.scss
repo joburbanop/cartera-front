@@ -1,0 +1,19 @@
+:host {
+  display: block;
+}
+
+.chart-card {
+  padding: 1.25rem 1.35rem;
+}
+
+.chart-card h2 {
+  margin: 0 0 1rem;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.chart-card__canvas {
+  position: relative;
+  height: 240px;
+}
