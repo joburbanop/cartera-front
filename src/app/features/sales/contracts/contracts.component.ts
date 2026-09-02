@@ -398,7 +398,7 @@ export class ContractsComponent implements OnInit {
 
       // 2. Pedimos los lotes a Laravel
       // 2. Pedimos los lotes a Laravel
-      this.lotService.getLotsByProject(Number(projectId)).subscribe({
+      this.lotService.getLotsByProject(Number(projectId), 1, 100).subscribe({
         next: (response) => {
           // Extraemos el arreglo inteligente
           let allLots: any[] = [];

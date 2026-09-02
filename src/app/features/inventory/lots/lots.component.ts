@@ -13,6 +13,7 @@ import { FieldErrorComponent } from '../../../shared/components/field-error/fiel
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { BitacoraModalComponent } from '../../../shared/components/bitacora-modal/bitacora-modal.component';
 import { markAllAsTouched, scrollToFirstInvalid } from '../../../shared/utils/form-utils';
+import { unwrapPaginator } from '../../../core/models/api-response';
 
 @Component({
   selector: 'app-lots',
@@ -59,16 +60,16 @@ export class LotsComponent implements OnInit {
   bitacoraSubjectId: number | null = null;
   errorMessage = '';
   hasProjectInRoute = false;
-  pageSize = 10;
+  pageSize = 20;
   currentPage = 1;
+  lotsTotal = 0;
 
   get isGlobalView(): boolean {
     return !this.selectedProjectId;
   }
 
   get pagedLots(): any[] {
-    const start = (this.currentPage - 1) * this.pageSize;
-    return this.lots.slice(start, start + this.pageSize);
+    return this.lots;
   }
 
   lotForm = this.fb.group({
@@ -91,7 +92,7 @@ export class LotsComponent implements OnInit {
         this.lotForm.patchValue({ project_id: selectedProjectId.toString() });
         this.activeProject = this.projects.find(p => p.id === selectedProjectId) ?? null;
         this.loadProjects();
-        this.loadLots();
+        this.loadLots(1);
         return;
       }
 
@@ -100,7 +101,7 @@ export class LotsComponent implements OnInit {
       this.activeProject = null;
       this.lotForm.patchValue({ project_id: '' });
       this.loadProjects();
-      this.loadLots();
+      this.loadLots(1);
     });
   }
 
@@ -151,36 +152,30 @@ export class LotsComponent implements OnInit {
       this.activeProject = this.projects.find(p => p.id === projectId);
     }
 
-    this.loadLots();
+    this.loadLots(1);
   }
 
-  loadLots() {
-    this.currentPage = 1;
+  onLotsPageChange(page: number): void {
+    this.loadLots(page);
+  }
+
+  loadLots(page = this.currentPage) {
+    this.currentPage = page;
     const request$ = this.selectedProjectId
-      ? this.lotService.getLotsByProject(this.selectedProjectId)
-      : this.lotService.getAllLots();
+      ? this.lotService.getLotsByProject(this.selectedProjectId, page, this.pageSize)
+      : this.lotService.getAllLots(page, this.pageSize);
 
     request$.subscribe({
       next: (response) => {
-        let allLots: any[] = [];
-        const data = Array.isArray(response)
-          ? response
-          : response && typeof response === 'object' && 'data' in response
-            ? response.data
-            : undefined;
-
-        if (Array.isArray(data)) {
-          allLots = data;
-        } else if (data && typeof data === 'object' && 'data' in data && Array.isArray((data as { data?: unknown }).data)) {
-          allLots = (data as { data: any[] }).data;
-        }
-
-        this.lots = allLots;
+        const pageData = unwrapPaginator(response);
+        this.lots = pageData.items;
+        this.lotsTotal = pageData.total;
+        this.currentPage = pageData.currentPage;
 
         if (this.selectedProjectId) {
           this.calculateProjectKPIs();
         } else {
-          this.projectTotalLots = this.lots.length;
+          this.projectTotalLots = this.lotsTotal;
           this.projectAvailableLots = this.lots.filter(lot => {
             const status = typeof lot.status === 'object' ? (lot.status?.value || lot.status?.name) : lot.status;
             return String(status).toLowerCase().trim() === 'disponible';
@@ -193,6 +188,7 @@ export class LotsComponent implements OnInit {
       error: (err) => {
         console.error('Error cargando lotes', err);
         this.lots = [];
+        this.lotsTotal = 0;
         this.cdr.detectChanges();
       }
     });
@@ -200,21 +196,9 @@ export class LotsComponent implements OnInit {
 
   // --- MATEMÁTICAS DEL PROYECTO ---
   calculateProjectKPIs() {
-    this.projectTotalLots = this.lots.length;
-    this.projectAvailableLots = 0;
-    this.projectTotalValue = 0;
-
-    this.lots.forEach(lot => {
-      // Precio acumulado
-      this.projectTotalValue += Number(lot.list_price || 0);
-
-      // Disponibilidad
-      const statusStr = typeof lot.status === 'object' ? (lot.status?.value || lot.status?.name) : lot.status;
-      const statusLimpio = String(statusStr).toLowerCase().trim();
-      if (statusLimpio === 'available' || statusLimpio === 'disponible') {
-        this.projectAvailableLots++;
-      }
-    });
+    this.projectTotalLots = Number(this.activeProject?.total_lots_count ?? this.lotsTotal);
+    this.projectAvailableLots = Number(this.activeProject?.available_lots_count ?? 0);
+    this.projectTotalValue = this.lots.reduce((sum, lot) => sum + Number(lot.list_price || 0), 0);
   }
 
   // --- CONTROL DEL MODAL ---

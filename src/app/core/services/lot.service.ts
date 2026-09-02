@@ -12,8 +12,11 @@ export class LotService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiUrl}/lots`;
 
-  getLots(projectId?: number): Observable<ApiListResponse<Lot>> {
-    const params: Record<string, string | number> = {};
+  getLots(projectId?: number, page = 1, perPage = 20): Observable<ApiListResponse<Lot>> {
+    const params: Record<string, string | number> = {
+      page,
+      per_page: perPage,
+    };
 
     if (projectId) {
       params['project_id'] = projectId;
@@ -22,15 +25,15 @@ export class LotService {
     return this.http.get<ApiListResponse<Lot>>(this.apiUrl, { params });
   }
 
-  getLotsByProject(projectId: number): Observable<ApiListResponse<Lot>> {
-    return this.getLots(projectId);
+  getLotsByProject(projectId: number, page = 1, perPage = 20): Observable<ApiListResponse<Lot>> {
+    return this.getLots(projectId, page, perPage);
   }
 
   createLot(data: Partial<Lot> | Record<string, unknown>): Observable<ApiResourceResponse<Lot>> {
     return this.http.post<ApiResourceResponse<Lot>>(this.apiUrl, data);
   }
 
-  getAllLots(): Observable<ApiListResponse<Lot>> {
-    return this.getLots();
+  getAllLots(page = 1, perPage = 20): Observable<ApiListResponse<Lot>> {
+    return this.getLots(undefined, page, perPage);
   }
 }

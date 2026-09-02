@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, FormArray, FormControl } from '@angular/forms';
 import { ProjectService } from '../../../core/services/project.service';
 import { BankAccountService } from '../../../core/services/bank-account.service';
-import { LotService } from '../../../core/services/lot.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AppRoles } from '../../../core/models/app-roles';
 import { ActivitySubjectType } from '../../../core/models/activity-entry.model';
@@ -25,7 +24,6 @@ export class ProjectsComponent implements OnInit {
   private projectService = inject(ProjectService);
   private bankAccountService = inject(BankAccountService);
   private cdr = inject(ChangeDetectorRef);
-  private lotService = inject(LotService);
   private authService = inject(AuthService);
   private toast = inject(ToastService);
   private host = inject(ElementRef<HTMLElement>);
@@ -66,7 +64,6 @@ export class ProjectsComponent implements OnInit {
     if (this.canCreate) {
       this.loadBankAccounts();
     }
-    this.loadLotsStats();
   }
 
   loadBankAccounts() {
@@ -108,6 +105,7 @@ export class ProjectsComponent implements OnInit {
           : Array.isArray((responseData as { data?: unknown })?.data)
             ? (responseData as { data: any[] }).data
             : [];
+        this.applyLotStatsFromProjects();
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -138,55 +136,18 @@ export class ProjectsComponent implements OnInit {
     bankAccountIds.updateValueAndValidity();
   }
 
- // --- LÓGICA DE KPIS ---
-  loadLotsStats() {
-    this.lotService.getAllLots().subscribe({
-      next: (response) => {
-        let allLots: any[] = [];
-        const data = Array.isArray(response)
-          ? response
-          : response?.data;
+  private applyLotStatsFromProjects(): void {
+    this.totalLots = 0;
+    this.totalAvailableLots = 0;
+    this.projectLotsStats = {};
 
-        if (Array.isArray(data)) {
-          allLots = data;
-        } else if (data && typeof data === 'object' && 'data' in data && Array.isArray((data as { data?: unknown }).data)) {
-          allLots = (data as { data: any[] }).data;
-        }
-
-        this.totalLots = allLots.length;
-        this.totalAvailableLots = 0; // Reiniciamos
-        this.projectLotsStats = {};  // Reiniciamos el diccionario
-
-        allLots.forEach((lot: any) => {
-          // Contabilidad para el KPI Global
-          const statusStr = typeof lot.status === 'object' ? (lot.status?.value || lot.status?.name) : lot.status;
-          const statusLimpio = String(statusStr).toLowerCase().trim();
-          const isAvailable = (statusLimpio === 'available' || statusLimpio === 'disponible');
-          
-          if (isAvailable) {
-            this.totalAvailableLots++;
-          }
-
-          // NUEVO: Contabilidad ESPECÍFICA por cada Proyecto
-          const pId = lot.project_id;
-          if (pId) {
-            if (!this.projectLotsStats[pId]) {
-              this.projectLotsStats[pId] = { total: 0, available: 0 };
-            }
-            this.projectLotsStats[pId].total++;
-            
-            if (isAvailable) {
-              this.projectLotsStats[pId].available++;
-            }
-          }
-        });
-
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Error cargando estadísticas de lotes', err);
-        this.toast.show('No se pudieron cargar las estadísticas de lotes.', 'error');
-        this.cdr.detectChanges();
+    this.projects.forEach((project) => {
+      const total = Number(project.total_lots_count ?? 0);
+      const available = Number(project.available_lots_count ?? 0);
+      this.totalLots += total;
+      this.totalAvailableLots += available;
+      if (project.id != null) {
+        this.projectLotsStats[project.id] = { total, available };
       }
     });
   }

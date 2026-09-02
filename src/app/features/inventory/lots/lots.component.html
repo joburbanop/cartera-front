@@ -223,10 +223,10 @@
     </div>
 
     <app-pagination
-      [totalItems]="lots.length"
+      [totalItems]="lotsTotal"
       [pageSize]="pageSize"
       [currentPage]="currentPage"
-      (pageChange)="currentPage = $event">
+      (pageChange)="onLotsPageChange($event)">
     </app-pagination>
 
   </div>

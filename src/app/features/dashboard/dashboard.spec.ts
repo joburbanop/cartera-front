@@ -42,11 +42,15 @@ describe('DashboardComponent', () => {
     const urls = requests.map((req) => req.request.url);
 
     expect(urls.some((url) => url.includes('/dashboard/clientes-totales'))).toBe(true);
-    expect(urls.some((url) => url.includes('/dashboard/recaudo-mensual'))).toBe(true);
-    expect(urls.some((url) => url.includes('/dashboard/cartera-vencida-resumen'))).toBe(true);
+    expect(urls.some((url) => url.includes('/dashboard/proyectos-activos'))).toBe(true);
     expect(urls.some((url) => url.includes('/dashboard/contratos-por-estado'))).toBe(true);
     expect(urls.some((url) => url.includes('/dashboard/lotes-por-estado'))).toBe(true);
+    expect(urls.some((url) => url.includes('/dashboard/recaudo-mensual'))).toBe(true);
+    expect(urls.some((url) => url.includes('/dashboard/cartera-vencida-resumen'))).toBe(true);
     expect(urls.some((url) => /\/customers(?:\?|$)/.test(url))).toBe(false);
+    expect(urls.some((url) => /\/lots(?:\?|$)/.test(url))).toBe(false);
+    expect(urls.some((url) => /\/contracts(?:\?|$)/.test(url))).toBe(false);
+    expect(urls.some((url) => /\/projects(?:\?|$)/.test(url))).toBe(false);
 
     const resumen = requests.find((req) => req.request.url.includes('/dashboard/clientes-totales'));
     resumen?.flush({ data: { total_clientes: 4 } });

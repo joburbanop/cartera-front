@@ -164,6 +164,13 @@
         [isLoading]="isLoadingActivity"
         emptyMessage="Sin movimientos registrados todavía">
       </app-bitacora>
+      <app-pagination
+        *ngIf="canViewBitacora"
+        [totalItems]="activityTotal"
+        [pageSize]="activityPageSize"
+        [currentPage]="activityPage"
+        (pageChange)="activityPage = $event; loadActivity()">
+      </app-pagination>
     </div>
   </ng-container>
 </div>

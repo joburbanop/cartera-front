@@ -78,6 +78,7 @@ describe('AmortizationComponent', () => {
       getPlan: () => of({ data: [] }),
       downloadPdf: () => of(new Blob()),
       generatePlan: () => of({}),
+      refinanceContract: () => of({}),
     } as Partial<AmortizationService> as AmortizationService;
 
     const contractServiceMock = {
@@ -323,6 +324,46 @@ describe('AmortizationComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Preventa');
     expect(fixture.nativeElement.textContent).toContain('Bitácora del contrato');
     expect(fixture.nativeElement.textContent).toContain('Bitácora del cliente');
+  });
+
+  it('activa Refinanciar para administrador y llama el endpoint al confirmar', () => {
+    const refinanceSpy = vi.spyOn(component['amortizationService'], 'refinanceContract').mockReturnValue(of({}));
+    const toastSpy = vi.spyOn(toastService, 'show');
+    component.contractId = 11;
+
+    component.openRefinanceModal();
+    expect(component.isRefinanceModalOpen).toBe(true);
+
+    component.confirmRefinance({
+      tipo: 'tiempo_gracia',
+      params: { months: 2 },
+    });
+
+    expect(refinanceSpy).toHaveBeenCalledWith(11, 'tiempo_gracia', { months: 2 });
+    expect(component.isRefinanceModalOpen).toBe(false);
+    expect(toastSpy).toHaveBeenCalledWith(
+      'Contrato refinanciado',
+      'success',
+      expect.stringContaining('aplicó'),
+    );
+  });
+
+  it('muestra Refinanciar como próximamente para socio_gerencia', () => {
+    const auth = TestBed.inject(AuthService);
+    vi.spyOn(auth, 'hasRole').mockImplementation((role) => role === AppRoles.SOCIO_GERENCIA);
+
+    const fixture = TestBed.createComponent(AmortizationComponent);
+    fixture.componentInstance.contractData = {
+      status: 'activo',
+      customer_id: 7,
+      transactions: [],
+      down_payment_pactada: 2000000,
+    };
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.canRefinance).toBe(false);
+    expect(fixture.nativeElement.querySelector('.btn-refinance')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Próximamente');
   });
 
   it('debe cortar la recursión si el plan sigue vacío después de intentar generarlo', () => {

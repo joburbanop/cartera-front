@@ -2,10 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { AppRoles } from '../../core/models/app-roles';
 import { AuthService } from '../../core/services/auth.service';
-import { ContractService } from '../../core/services/contract.service';
 import { DashboardService } from '../../core/services/dashboard.service';
-import { LotService } from '../../core/services/lot.service';
-import { ProjectService } from '../../core/services/project.service';
 import { ChartCardComponent, ChartCardDataset } from '../../shared/components/chart-card/chart-card.component';
 
 @Component({
@@ -17,9 +14,6 @@ import { ChartCardComponent, ChartCardDataset } from '../../shared/components/ch
 })
 export class DashboardComponent implements OnInit {
   private authService = inject(AuthService);
-  private projectService = inject(ProjectService);
-  private lotService = inject(LotService);
-  private contractService = inject(ContractService);
   private dashboardService = inject(DashboardService);
   private cdr = inject(ChangeDetectorRef);
 
@@ -73,9 +67,9 @@ export class DashboardComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadProjects();
-    this.loadLots();
-    this.loadContracts();
+    this.loadProyectosActivos();
+    this.loadContratosPorEstado();
+    this.loadLotesPorEstado();
     this.loadClientesTotales();
     this.loadCarteraEnMora();
     this.loadRecaudoReciente();
@@ -85,8 +79,6 @@ export class DashboardComponent implements OnInit {
     if (this.canViewCharts()) {
       this.loadRecaudoMensual();
       this.loadCarteraVencidaResumen();
-      this.loadContratosPorEstado();
-      this.loadLotesPorEstado();
     }
   }
 
@@ -120,68 +112,15 @@ export class DashboardComponent implements OnInit {
     return target.toLocaleDateString('es-CO');
   }
 
-  private loadProjects(): void {
-    this.projectService.getProjects().subscribe({
+  private loadProyectosActivos(): void {
+    this.dashboardService.getProyectosActivos().subscribe({
       next: (response) => {
-        const projects = this.unwrapList(response);
-        this.proyectosActivos = projects.filter((project) => {
-          const status = String(project?.status ?? 'active').toLowerCase();
-          return status === 'active' || status === 'activo';
-        }).length;
+        const payload = this.unwrapPayload(response) as Record<string, any>;
+        this.proyectosActivos = Number(payload['total_proyectos_activos'] ?? 0);
         this.cdr.detectChanges();
       },
       error: () => {
         this.proyectosActivos = 0;
-        this.cdr.detectChanges();
-      },
-    });
-  }
-
-  private loadLots(): void {
-    this.lotService.getAllLots().subscribe({
-      next: (response) => {
-        const lots = this.unwrapList(response);
-        this.totalLots = lots.length;
-        this.lotsByStatus = {
-          disponible: 0,
-          reservado: 0,
-          preventa: 0,
-          vendido: 0,
-        };
-
-        lots.forEach((lot) => {
-          const status = typeof lot.status === 'object' ? (lot.status?.value || lot.status?.name) : lot.status;
-          const normalized = String(status ?? '').toLowerCase().trim();
-          const key = normalized === 'available' ? 'disponible' : normalized;
-
-          if (key in this.lotsByStatus) {
-            this.lotsByStatus[key] += 1;
-          }
-        });
-
-        this.totalAvailableLots = this.lotsByStatus['disponible'];
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        this.totalLots = 0;
-        this.totalAvailableLots = 0;
-        this.lotsByStatus = { disponible: 0, reservado: 0, preventa: 0, vendido: 0 };
-        this.cdr.detectChanges();
-      },
-    });
-  }
-
-  private loadContracts(): void {
-    this.contractService.getContracts().subscribe({
-      next: (response) => {
-        const contracts = this.unwrapList(response);
-        this.contratosActivos = contracts.filter((contract) => {
-          return String(contract?.status ?? '').toLowerCase() === 'activo';
-        }).length;
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        this.contratosActivos = 0;
         this.cdr.detectChanges();
       },
     });
@@ -299,6 +238,7 @@ export class DashboardComponent implements OnInit {
     this.dashboardService.getContratosPorEstado().subscribe({
       next: (response) => {
         const payload = this.unwrapPayload(response) as Record<string, number>;
+        this.contratosActivos = Number(payload['activo'] ?? 0);
         this.contratosDatasets = [{
           data: [
             Number(payload['activo'] ?? 0),
@@ -311,6 +251,7 @@ export class DashboardComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: () => {
+        this.contratosActivos = 0;
         this.contratosDatasets = [{ data: [0, 0, 0, 0], backgroundColor: ['#047857', '#b45309', '#475569', '#b91c1c'] }];
         this.cdr.detectChanges();
       },
@@ -321,6 +262,14 @@ export class DashboardComponent implements OnInit {
     this.dashboardService.getLotesPorEstado().subscribe({
       next: (response) => {
         const payload = this.unwrapPayload(response) as Record<string, number>;
+        this.lotsByStatus = {
+          disponible: Number(payload['disponible'] ?? 0),
+          reservado: 0,
+          preventa: Number(payload['preventa'] ?? 0),
+          vendido: Number(payload['vendido'] ?? 0),
+        };
+        this.totalAvailableLots = this.lotsByStatus['disponible'];
+        this.totalLots = Object.values(payload).reduce((sum, value) => sum + Number(value ?? 0), 0);
         this.lotesDatasets = [{
           data: [
             Number(payload['disponible'] ?? 0),
@@ -334,6 +283,9 @@ export class DashboardComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: () => {
+        this.totalLots = 0;
+        this.totalAvailableLots = 0;
+        this.lotsByStatus = { disponible: 0, reservado: 0, preventa: 0, vendido: 0 };
         this.lotesDatasets = [{ data: [0, 0, 0, 0, 0], backgroundColor: ['#047857', '#b45309', '#475569', '#b91c1c', '#347769'] }];
         this.cdr.detectChanges();
       },

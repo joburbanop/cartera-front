@@ -32,4 +32,11 @@ export class AmortizationService {
       { due_date: dueDate },
     );
   }
+
+  refinanceContract(contractId: number, tipo: string, params: Record<string, unknown>): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${contractId}/refinance`, {
+      tipo,
+      ...params,
+    });
+  }
 }

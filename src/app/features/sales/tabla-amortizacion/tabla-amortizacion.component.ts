@@ -17,14 +17,17 @@ import { AmortizationTablePresenterComponent } from '../../../shared/components/
 import { ContractSummaryCardComponent } from './contract-summary-card/contract-summary-card.component';
 import { PaymentPromiseTabComponent } from './payment-promise-tab/payment-promise-tab.component';
 import { EditDueDateModalComponent } from './edit-due-date-modal/edit-due-date-modal.component';
+import { RefinanceModalComponent, RefinanceConfirmPayload } from './refinance-modal/refinance-modal.component';
 import { PaymentPromiseService } from '../../../core/services/payment-promise.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { PageTitleService } from '../../../core/services/page-title.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { BitacoraComponent } from '../../../shared/components/bitacora/bitacora.component';
+import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { PaymentPromise } from '../../../core/models/payment-promise.model';
 import { AmortizationInstallment } from '../../../core/models/amortization-installment.model';
 import { AppRoles } from '../../../core/models/app-roles';
+import { unwrapListItems, unwrapPaginator } from '../../../core/models/api-response';
 import { isPaidStatus, isVencida } from '../../../core/models/amortization-status';
 @Component({
   selector: 'app-tabla-amortizacion',
@@ -40,7 +43,9 @@ import { isPaidStatus, isVencida } from '../../../core/models/amortization-statu
     ContractSummaryCardComponent,
     PaymentPromiseTabComponent,
     EditDueDateModalComponent,
+    RefinanceModalComponent,
     BitacoraComponent,
+    PaginationComponent,
   ],
   templateUrl: './tabla-amortizacion.component.html',
   styleUrl: './tabla-amortizacion.component.scss',
@@ -66,6 +71,10 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     return this.authService.hasRole(AppRoles.ADMINISTRADOR);
   }
 
+  get canRefinance(): boolean {
+    return this.authService.hasRole(AppRoles.ADMINISTRADOR);
+  }
+
   contractId!: number;
   activeTab: 'amortizacion' | 'promesa' | 'bitacora-contrato' | 'bitacora-cliente' = 'amortizacion';
   contractData: any = null;
@@ -82,16 +91,26 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   transactions: any[] = [];
   isHistoryModalOpen = false;
   isLoadingHistory = false;
+  historyPage = 1;
+  historyTotal = 0;
+  readonly historyPageSize = 20;
   paymentPromises: PaymentPromise[] = [];
   activityEntries: ActivityEntry[] = [];
   isLoadingActivity = false;
+  activityPage = 1;
+  activityTotal = 0;
   customerActivityEntries: ActivityEntry[] = [];
   isLoadingCustomerActivity = false;
+  customerActivityPage = 1;
+  customerActivityTotal = 0;
+  readonly activityPageSize = 20;
   private amortizationGenerationAttempts = 0;
   private readonly maxAmortizationGenerationAttempts = 1;
   isEditDueDateModalOpen = false;
   isUpdatingDueDate = false;
   editingInstallment: AmortizationInstallment | null = null;
+  isRefinanceModalOpen = false;
+  isRefinancing = false;
 
   get canViewBitacora(): boolean {
     return this.authService.hasRole(AppRoles.SOCIO_GERENCIA);
@@ -176,9 +195,12 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     }
 
     this.isLoadingActivity = true;
-    this.activityService.getActivity('contract', this.contractId).subscribe({
+    this.activityService.getActivity('contract', this.contractId, this.activityPage, this.activityPageSize).subscribe({
       next: (response) => {
-        this.activityEntries = this.unwrapActivity(response);
+        const page = unwrapPaginator(response);
+        this.activityEntries = page.items as ActivityEntry[];
+        this.activityTotal = page.total;
+        this.activityPage = page.currentPage;
         this.isLoadingActivity = false;
         this.cdr.detectChanges();
       },
@@ -197,9 +219,12 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     }
 
     this.isLoadingCustomerActivity = true;
-    this.activityService.getActivity('customer', this.customerId).subscribe({
+    this.activityService.getActivity('customer', this.customerId, this.customerActivityPage, this.activityPageSize).subscribe({
       next: (response) => {
-        this.customerActivityEntries = this.unwrapActivity(response);
+        const page = unwrapPaginator(response);
+        this.customerActivityEntries = page.items as ActivityEntry[];
+        this.customerActivityTotal = page.total;
+        this.customerActivityPage = page.currentPage;
         this.isLoadingCustomerActivity = false;
         this.cdr.detectChanges();
       },
@@ -211,16 +236,18 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     });
   }
 
+  onActivityPageChange(page: number): void {
+    this.activityPage = page;
+    this.loadActivity();
+  }
+
+  onCustomerActivityPageChange(page: number): void {
+    this.customerActivityPage = page;
+    this.loadCustomerActivity();
+  }
+
   private unwrapActivity(response: unknown): ActivityEntry[] {
-    if (Array.isArray(response)) {
-      return response as ActivityEntry[];
-    }
-
-    const payload = response && typeof response === 'object' && 'data' in response
-      ? (response as { data: unknown }).data
-      : [];
-
-    return Array.isArray(payload) ? (payload as ActivityEntry[]) : [];
+    return unwrapListItems<ActivityEntry>(response);
   }
 
   cargarTablaAmortizacion(): void {
@@ -412,6 +439,58 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       });
   }
 
+  openRefinanceModal(): void {
+    if (!this.canRefinance) {
+      return;
+    }
+
+    this.isRefinanceModalOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  closeRefinanceModal(): void {
+    if (this.isRefinancing) {
+      return;
+    }
+
+    this.isRefinanceModalOpen = false;
+    this.cdr.detectChanges();
+  }
+
+  confirmRefinance(payload: RefinanceConfirmPayload): void {
+    if (!this.canRefinance || this.isRefinancing) {
+      return;
+    }
+
+    this.isRefinancing = true;
+
+    this.amortizationService
+      .refinanceContract(this.contractId, payload.tipo, payload.params)
+      .subscribe({
+        next: () => {
+          this.isRefinancing = false;
+          this.isRefinanceModalOpen = false;
+          this.toast.show(
+            'Contrato refinanciado',
+            'success',
+            'La refinanciación se aplicó correctamente.',
+          );
+          this.cargarTablaAmortizacion();
+          this.loadContractData();
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.isRefinancing = false;
+          this.toast.show(
+            'No se pudo refinanciar el contrato',
+            'error',
+            this.readFirstBackendError(err),
+          );
+          this.cdr.detectChanges();
+        },
+      });
+  }
+
   toggleSelectAll(event: any): void {
     this.selection.toggleSelectAll(event, this.amortizationPlan, (item: any) => this.isFeeSelectable(item));
   }
@@ -593,13 +672,23 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   abrirHistorialPagos(): void {
     this.isLoadingHistory = true;
     this.transactions = [];
+    this.historyPage = 1;
     this.isHistoryModalOpen = true;
     this.cdr.detectChanges();
+    this.loadHistoryPage(1);
+  }
 
-    this.recaudoService.getTransactionsByContract(this.contractId).subscribe({
+  loadHistoryPage(page: number): void {
+    this.isLoadingHistory = true;
+    this.historyPage = page;
+    this.cdr.detectChanges();
+
+    this.recaudoService.getTransactionsByContract(this.contractId, page, this.historyPageSize).subscribe({
       next: (response) => {
-        const payload = response?.data ?? response ?? [];
-        this.transactions = Array.isArray(payload) ? payload : [];
+        const pageData = unwrapPaginator(response);
+        this.transactions = pageData.items;
+        this.historyTotal = pageData.total;
+        this.historyPage = pageData.currentPage;
         this.isLoadingHistory = false;
         this.cdr.detectChanges();
       },

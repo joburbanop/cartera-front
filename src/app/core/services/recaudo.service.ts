@@ -32,8 +32,10 @@ export class RecaudoService {
     return this.registerPayment(contractId, formData, 'down_payment');
   }
 
-  getTransactionsByContract(contractId: number): Observable<ApiListResponse<Transaction>> {
-    return this.http.get<ApiListResponse<Transaction>>(`${this.apiUrl}/contracts/${contractId}/transactions`);
+  getTransactionsByContract(contractId: number, page = 1, perPage = 20): Observable<ApiListResponse<Transaction>> {
+    return this.http.get<ApiListResponse<Transaction>>(`${this.apiUrl}/contracts/${contractId}/transactions`, {
+      params: { page, per_page: perPage },
+    });
   }
 
   getAllTransactions(filters?: Record<string, string | number>): Observable<ApiListResponse<Transaction>> {

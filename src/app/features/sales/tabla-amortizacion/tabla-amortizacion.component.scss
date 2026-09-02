@@ -340,6 +340,32 @@
   }
 }
 
+.btn-refinance {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #347769;
+  color: #ffffff;
+  border: 1px solid #2f7262;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: currentColor;
+  }
+
+  &:hover,
+  &:focus {
+    background: #2f7262;
+  }
+}
+
 .badge-prox {
   margin-left: 0.15rem;
   font-size: 0.65rem;
