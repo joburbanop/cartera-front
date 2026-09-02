@@ -101,6 +101,7 @@ describe('AmortizationComponent', () => {
 
     const paymentPromiseServiceMock = {
       getPromisesByContract: () => of([]),
+      reorderPromises: () => of({ data: [] }),
     } as Partial<PaymentPromiseService> as PaymentPromiseService;
 
     const activityServiceMock = {
@@ -282,6 +283,47 @@ describe('AmortizationComponent', () => {
     component.openGeneralPaymentDrawer();
 
     expect(component.drawerSuggestedAmount).toBe(250000);
+  });
+
+  it('en plan personalizado precarga la próxima promesa y deja la amortización como referencia', () => {
+    component.contractData = {
+      ...component.contractData,
+      is_custom_plan: true,
+    };
+    component.paymentPromises = [
+      {
+        id: 21,
+        contract_id: 1,
+        payment_number: 1,
+        expected_date: isoWithOffset(3),
+        expected_amount: 180000,
+        remaining_amount: 180000,
+        description: 'Cuota pactada',
+        is_paid: false,
+        status: 'pendiente',
+      },
+    ];
+    component.amortizationPlan = [cuotaInicial, cuota1, cuota2, cuota3];
+
+    component.openGeneralPaymentDrawer();
+
+    expect(component.drawerSuggestedAmount).toBe(180000);
+    expect(component.drawerAmountHint).toBe('schedule');
+    expect(component.drawerAmortizationReferenceAmount).toBe(1000000);
+  });
+
+  it('oculta la pestaña de cronograma en contratos estándar', () => {
+    const fixture = TestBed.createComponent(AmortizationComponent);
+    fixture.componentInstance.contractData = {
+      status: 'activo',
+      is_custom_plan: false,
+      transactions: [],
+      down_payment_pactada: 2000000,
+    };
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.canShowPromiseTab).toBe(false);
+    expect(fixture.nativeElement.textContent).not.toContain('Cronograma Pactado en Promesa Comercial');
   });
 
   it('Debe omitir selected_installments e installment_numbers en flujo de pago general', () => {

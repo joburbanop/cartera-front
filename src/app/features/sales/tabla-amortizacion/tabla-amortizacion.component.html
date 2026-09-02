@@ -212,7 +212,12 @@
       </svg>
       Amortización Financiera
     </button>
-    <button (click)="activeTab = 'promesa'" [style.border-bottom]="activeTab === 'promesa' ? '3px solid #0284c7' : '3px solid transparent'" [style.color]="activeTab === 'promesa' ? '#0284c7' : '#64748b'" style="background: none; border: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding: 0.75rem 0.5rem; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: all 0.2s;">
+    <button
+      *ngIf="canShowPromiseTab"
+      (click)="activeTab = 'promesa'"
+      [style.border-bottom]="activeTab === 'promesa' ? '3px solid #0284c7' : '3px solid transparent'"
+      [style.color]="activeTab === 'promesa' ? '#0284c7' : '#64748b'"
+      style="background: none; border: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding: 0.75rem 0.5rem; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: all 0.2s;">
        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px; flex-shrink: 0;">
         <path d="M4 20V10M10 20V4M16 20v-7M22 20V13" />
       </svg>
@@ -324,15 +329,18 @@
   </div>
 
   <app-payment-promise-tab
-    *ngIf="activeTab === 'promesa'"
+    *ngIf="canShowPromiseTab && activeTab === 'promesa'"
     [paymentPromises]="paymentPromises"
     [currentView]="currentView"
     [canRegisterPayments]="canRegisterPayments"
+    [canReorder]="canRegisterPayments"
+    [isReordering]="isReorderingPromises"
     [initialFeePaid]="initialFeePaid"
     [activationThreshold]="activationThreshold"
     [initialFeeProgress]="initialFeeProgress"
     [initialFeeBalance]="initialFeeBalance"
-    (registerAbono)="openPreventaPayment()">
+    (registerAbono)="openPreventaPayment()"
+    (reorderPromises)="confirmPromiseReorder($event)">
   </app-payment-promise-tab>
 
   <app-bitacora
@@ -373,6 +381,8 @@
     [isOpen]="isDrawerOpen"
     [selectedFees]="selectedFees"
     [prefilledAmount]="drawerSuggestedAmount"
+    [amountHint]="drawerAmountHint"
+    [amortizationReferenceAmount]="drawerAmortizationReferenceAmount"
     [isProcessing]="isProcessingPayment"
     [bankAccounts]="contractData?.lot?.project?.bank_accounts || contractData?.project?.bank_accounts || []" 
     (closeDrawer)="closeDrawer()"

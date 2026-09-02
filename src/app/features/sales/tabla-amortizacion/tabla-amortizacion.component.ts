@@ -75,6 +75,15 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     return this.authService.hasRole(AppRoles.ADMINISTRADOR);
   }
 
+  get isCustomPlan(): boolean {
+    const value = this.contractData?.is_custom_plan;
+    return value === true || value === 1 || value === '1';
+  }
+
+  get canShowPromiseTab(): boolean {
+    return this.isCustomPlan;
+  }
+
   contractId!: number;
   activeTab: 'amortizacion' | 'promesa' | 'bitacora-contrato' | 'bitacora-cliente' = 'amortizacion';
   contractData: any = null;
@@ -88,6 +97,8 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   resetSelectionFlag = false;
   isGeneralPaymentFlow = false;
   drawerSuggestedAmount: number | null = null;
+  drawerAmountHint: 'schedule' | null = null;
+  drawerAmortizationReferenceAmount: number | null = null;
   transactions: any[] = [];
   isHistoryModalOpen = false;
   isLoadingHistory = false;
@@ -111,6 +122,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   editingInstallment: AmortizationInstallment | null = null;
   isRefinanceModalOpen = false;
   isRefinancing = false;
+  isReorderingPromises = false;
 
   get canViewBitacora(): boolean {
     return this.authService.hasRole(AppRoles.SOCIO_GERENCIA);
@@ -164,6 +176,9 @@ export class AmortizationComponent implements OnInit, OnDestroy {
         this.contractData = payload;
         this.pageTitle.set(this.buildContractTitle(this.contractData));
         this.setDefaultView();
+        if (!this.canShowPromiseTab && this.activeTab === 'promesa') {
+          this.activeTab = 'amortizacion';
+        }
         this.calculateFinancials();
         this.loadPaymentPromises();
         this.loadActivity();
@@ -575,7 +590,11 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   }
 
   get hasPendingPaymentsForGeneralFlow(): boolean {
-    return this.getRegularPendingInstallmentsSorted().length > 0;
+    if (this.getRegularPendingInstallmentsSorted().length > 0) {
+      return true;
+    }
+
+    return this.isCustomPlan && this.nextPendingPromise() !== null;
   }
 
   get generalPayButtonLabel(): string {
@@ -583,22 +602,93 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   }
 
   openGeneralPaymentDrawer(): void {
+    const amortizationSuggested = this.computeAmortizationSuggestedAmount();
+    if (amortizationSuggested <= 0 && !this.nextPendingPromise()) {
+      return;
+    }
+
+    const nextPromise = this.nextPendingPromise();
+    this.isGeneralPaymentFlow = true;
+    this.selectedFees = [];
+
+    if (this.isCustomPlan && nextPromise) {
+      this.drawerSuggestedAmount = Math.round(this.promiseRemainingAmount(nextPromise));
+      this.drawerAmountHint = 'schedule';
+      this.drawerAmortizationReferenceAmount = Math.round(amortizationSuggested);
+    } else {
+      this.drawerSuggestedAmount = Math.round(amortizationSuggested);
+      this.drawerAmountHint = null;
+      this.drawerAmortizationReferenceAmount = null;
+    }
+
+    this.isDrawerOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  private computeAmortizationSuggestedAmount(): number {
     const regularPendingInstallments = this.getRegularPendingInstallmentsSorted();
     if (regularPendingInstallments.length === 0) {
-      return;
+      return 0;
     }
 
     const overdueInstallments = regularPendingInstallments.filter((fee: any) => this.isVencida(fee?.due_date));
 
-    const suggestedAmount = overdueInstallments.length > 0
+    return overdueInstallments.length > 0
       ? overdueInstallments.reduce((sum: number, fee: any) => sum + this.financials.getFeeDebtValue(fee), 0)
       : this.financials.getFeeDebtValue(regularPendingInstallments[0]);
+  }
 
-    this.isGeneralPaymentFlow = true;
-    this.drawerSuggestedAmount = Math.round(suggestedAmount);
-    this.selectedFees = [];
-    this.isDrawerOpen = true;
-    this.cdr.detectChanges();
+  private nextPendingPromise(): PaymentPromise | null {
+    return [...(this.paymentPromises ?? [])]
+      .filter((promise) => {
+        const status = String(promise.status ?? '').toLowerCase();
+        if (status === 'pagada' || status === 'paid' || promise.is_paid) {
+          return false;
+        }
+
+        return this.promiseRemainingAmount(promise) > 0;
+      })
+      .sort((a, b) => {
+        const dateA = a.expected_date ? new Date(a.expected_date).getTime() : Number.POSITIVE_INFINITY;
+        const dateB = b.expected_date ? new Date(b.expected_date).getTime() : Number.POSITIVE_INFINITY;
+        return dateA - dateB;
+      })[0] ?? null;
+  }
+
+  private promiseRemainingAmount(promise: PaymentPromise): number {
+    const remaining = Number(promise.remaining_amount);
+    if (Number.isFinite(remaining) && remaining > 0) {
+      return remaining;
+    }
+
+    return Number(promise.expected_amount) || 0;
+  }
+
+  confirmPromiseReorder(payload: Array<{ id: number; expected_date: string }>): void {
+    if (!this.canRegisterPayments || this.isReorderingPromises) {
+      return;
+    }
+
+    this.isReorderingPromises = true;
+    this.paymentPromiseService.reorderPromises(this.contractId, payload).subscribe({
+      next: (response: any) => {
+        const items = response?.data ?? response ?? [];
+        this.paymentPromises = Array.isArray(items) ? items : [];
+        this.isReorderingPromises = false;
+        this.toast.show('Cronograma actualizado', 'success', 'El orden y las fechas se guardaron correctamente.');
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.isReorderingPromises = false;
+        this.loadPaymentPromises();
+        this.toast.show(
+          'No se pudo reordenar el cronograma',
+          'error',
+          this.readFirstBackendError(err),
+        );
+        this.cdr.detectChanges();
+      },
+    });
   }
 
   private getRegularPendingInstallmentsSorted(): any[] {
@@ -622,6 +712,8 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     this.isDrawerOpen = false;
     this.isGeneralPaymentFlow = false;
     this.drawerSuggestedAmount = null;
+    this.drawerAmountHint = null;
+    this.drawerAmortizationReferenceAmount = null;
     this.clearTableSelection();
   }
 
