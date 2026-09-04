@@ -113,6 +113,16 @@
       <div class="project-card__head">
         <h3>{{ p.name }}</h3>
         <div class="action-buttons">
+          <button
+            *ngIf="canViewBitacora"
+            class="action-btn bitacora-btn"
+            type="button"
+            title="Ver bitácora"
+            (click)="openBitacora(p)">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+          </button>
 
   <!-- Ver lotes -->
   <button
@@ -129,7 +139,7 @@
 
   <!-- Editar: solo activos -->
   <button
-    *ngIf="p.status === 'active'"
+    *ngIf="p.status === 'active' || p.status === 'completed'"
     class="action-btn edit-btn"
     title="Editar Proyecto"
     (click)="openEditModal(p)"
@@ -153,7 +163,7 @@
 
   <!-- Reactivar: solo archivados -->
   <button
-    *ngIf="p.status === 'inactive'"
+    *ngIf="p.status === 'inactive' || p.status === 'archived'"
     class="action-btn edit-btn"
     title="Reactivar Proyecto"
     (click)="activateProject(p)"
@@ -188,3 +198,11 @@
   </div>
 
 </div>
+
+<app-bitacora-modal
+  [isOpen]="isBitacoraOpen"
+  [title]="bitacoraTitle"
+  [subjectType]="bitacoraSubjectType"
+  [subjectId]="bitacoraSubjectId"
+  (closed)="closeBitacora()">
+</app-bitacora-modal>

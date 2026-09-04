@@ -3,12 +3,14 @@ import { of, throwError, Observable } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { AmortizationComponent } from './tabla-amortizacion.component';
+import { AppRoles } from '../../../core/models/app-roles';
 import { AmortizationFinancialsService } from '../../../core/services/amortization-financials.service';
 import { AmortizationService } from '../../../core/services/amortization.service';
 import { ContractService } from '../../../core/services/contract.service';
 import { FinancialService } from '../../../core/services/financial.service';
 import { RecaudoService } from '../../../core/services/recaudo.service';
 import { PaymentPromiseService } from '../../../core/services/payment-promise.service';
+import { ActivityService } from '../../../core/services/activity.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../shared/services/toast.service';
 
@@ -16,6 +18,11 @@ describe('AmortizationComponent', () => {
   let component: AmortizationComponent;
   let toastService: ToastService;
   let registerPaymentResult: Observable<unknown> = of({});
+  let lastRegisterPaymentArgs: {
+    contractId: number;
+    formData: FormData;
+    transactionType: string;
+  } | null = null;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -83,7 +90,10 @@ describe('AmortizationComponent', () => {
     } as Partial<FinancialService> as FinancialService;
 
     const recaudoServiceMock = {
-      registerPayment: () => registerPaymentResult,
+      registerPayment: (contractId: number, formData: FormData, transactionType: string) => {
+        lastRegisterPaymentArgs = { contractId, formData, transactionType };
+        return registerPaymentResult;
+      },
       getTransactionsByContract: () => of({ data: [] }),
       getAllTransactions: () => of({ data: [] }),
     } as Partial<RecaudoService> as RecaudoService;
@@ -91,6 +101,10 @@ describe('AmortizationComponent', () => {
     const paymentPromiseServiceMock = {
       getPromisesByContract: () => of([]),
     } as Partial<PaymentPromiseService> as PaymentPromiseService;
+
+    const activityServiceMock = {
+      getActivity: () => of({ data: [] }),
+    } as Partial<ActivityService> as ActivityService;
 
     const authServiceMock = {
       hasRole: () => true,
@@ -114,6 +128,7 @@ describe('AmortizationComponent', () => {
         { provide: FinancialService, useValue: financialServiceMock },
         { provide: RecaudoService, useValue: recaudoServiceMock },
         { provide: PaymentPromiseService, useValue: paymentPromiseServiceMock },
+        { provide: ActivityService, useValue: activityServiceMock },
         { provide: AuthService, useValue: authServiceMock },
       ],
     }).compileComponents();
@@ -121,8 +136,12 @@ describe('AmortizationComponent', () => {
     const fixture = TestBed.createComponent(AmortizationComponent);
     component = fixture.componentInstance;
     toastService = TestBed.inject(ToastService);
+    toastService.toasts().forEach((toast) => toastService.dismiss(toast.id));
+    (toastService as any).toastsState.set([]);
+    (toastService as any).timers.clear();
 
     registerPaymentResult = of({});
+    lastRegisterPaymentArgs = null;
 
     component.contractData = {
       status: 'activo',
@@ -191,6 +210,8 @@ describe('AmortizationComponent', () => {
     registerPaymentResult = of({});
     component.contractId = 1;
     component.selectedFees = [{ ...cuota3 }];
+    vi.spyOn(component, 'cargarTablaAmortizacion').mockImplementation(() => undefined);
+    vi.spyOn(component, 'loadContractData').mockImplementation(() => undefined);
 
     component.procesarPago({
       amount: 1000000,
@@ -225,5 +246,99 @@ describe('AmortizationComponent', () => {
     expect(toasts[0].type).toBe('error');
     expect(toasts[0].title).toBe('No se pudo registrar el pago');
     expect(toasts[0].description).toBe('El monto es insuficiente');
+  });
+
+  it('Debe sugerir la suma de cuotas vencidas en flujo de pago general', () => {
+    component.amortizationPlan = [cuotaInicial, cuota1, cuota2, cuota3];
+
+    component.openGeneralPaymentDrawer();
+
+    expect(component.isDrawerOpen).toBeTruthy();
+    expect(component.selectedFees).toEqual([]);
+    expect(component.drawerSuggestedAmount).toBe(1000000);
+  });
+
+  it('Debe sugerir la siguiente cuota pendiente si no hay vencidas', () => {
+    const cuotaFuturaA = {
+      ...cuota1,
+      id: 11,
+      installment_number: 11,
+      due_date: isoWithOffset(5),
+      quota_debt: 250000,
+      status: 'pending',
+    };
+    const cuotaFuturaB = {
+      ...cuota3,
+      id: 12,
+      installment_number: 12,
+      due_date: isoWithOffset(20),
+      quota_debt: 750000,
+      status: 'pending',
+    };
+
+    component.amortizationPlan = [cuotaInicial, cuotaFuturaB, cuotaFuturaA];
+
+    component.openGeneralPaymentDrawer();
+
+    expect(component.drawerSuggestedAmount).toBe(250000);
+  });
+
+  it('Debe omitir selected_installments e installment_numbers en flujo de pago general', () => {
+    component.contractId = 1;
+    component.amortizationPlan = [cuotaInicial, cuota1, cuota2, cuota3];
+
+    component.openGeneralPaymentDrawer();
+    component.procesarPago({
+      amount: component.drawerSuggestedAmount,
+      payment_method: 'cash',
+      transaction_date: '2026-08-30',
+      receipt: new Blob(),
+    });
+
+    expect(lastRegisterPaymentArgs).not.toBeNull();
+
+    const formData = lastRegisterPaymentArgs?.formData as FormData;
+    expect(formData.getAll('installment_numbers[]').length).toBe(0);
+    expect(formData.getAll('selected_installments[]').length).toBe(0);
+  });
+
+  it('oculta Pagar y muestra las pestañas de bitácora para socio_gerencia', () => {
+    const auth = TestBed.inject(AuthService);
+    vi.spyOn(auth, 'hasRole').mockImplementation((role) => role === AppRoles.SOCIO_GERENCIA);
+
+    const fixture = TestBed.createComponent(AmortizationComponent);
+    fixture.componentInstance.contractData = {
+      status: 'activo',
+      customer_id: 7,
+      transactions: [],
+      down_payment_pactada: 2000000,
+    };
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.canRegisterPayments).toBe(false);
+    expect(fixture.componentInstance.canViewBitacora).toBe(true);
+    expect(fixture.nativeElement.querySelector('.top-nav-action-btn--pay')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Ver Historial de Pagos');
+    expect(fixture.nativeElement.textContent).toContain('Venta');
+    expect(fixture.nativeElement.textContent).toContain('Preventa');
+    expect(fixture.nativeElement.textContent).toContain('Bitácora del contrato');
+    expect(fixture.nativeElement.textContent).toContain('Bitácora del cliente');
+  });
+
+  it('debe cortar la recursión si el plan sigue vacío después de intentar generarlo', () => {
+    const getPlanSpy = vi.spyOn(component['amortizationService'], 'getPlan').mockReturnValue(of({ data: [] }));
+    const generatePlanSpy = vi.spyOn(component['amortizationService'], 'generatePlan').mockReturnValue(of({}));
+    const toastSpy = vi.spyOn(toastService, 'show');
+
+    component.contractId = 42;
+    component.loadAmortizationPlan();
+
+    expect(getPlanSpy).toHaveBeenCalledTimes(2);
+    expect(generatePlanSpy).toHaveBeenCalledTimes(1);
+    expect(toastSpy).toHaveBeenCalledWith(
+      'No se pudo cargar la tabla de amortización',
+      'error',
+      expect.stringContaining('no está disponible')
+    );
   });
 });

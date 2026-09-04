@@ -26,9 +26,56 @@ export class LotService {
     return this.getLots(projectId);
   }
 
-  createLot(data: Partial<Lot> | Record<string, unknown>): Observable<ApiResourceResponse<Lot>> {
-    return this.http.post<ApiResourceResponse<Lot>>(this.apiUrl, data);
+  createLot(
+    data: Partial<Lot> | Record<string, unknown>
+  ): Observable<ApiResourceResponse<Lot>> {
+    return this.http.post<ApiResourceResponse<Lot>>(
+      this.apiUrl,
+      data
+    );
   }
+
+  updateLot(
+    lotId: number,
+    data: Partial<Lot> | Record<string, unknown>
+  ): Observable<ApiResourceResponse<Lot>> {
+    return this.http.put<ApiResourceResponse<Lot>>(
+      `${this.apiUrl}/${lotId}`,
+      data
+    );
+  }
+
+  archiveLot(
+    lotId: number
+  ): Observable<ApiResourceResponse<Lot>> {
+    return this.http.patch<ApiResourceResponse<Lot>>(
+      `${this.apiUrl}/${lotId}/archive`,
+      {}
+    );
+  }
+
+  activateLot(
+    lotId: number
+  ): Observable<ApiResourceResponse<Lot>> {
+    return this.http.patch<ApiResourceResponse<Lot>>(
+      `${this.apiUrl}/${lotId}/activate`,
+      {}
+    );
+  }
+  getArchivedLots(
+  projectId?: number
+): Observable<ApiListResponse<Lot>> {
+  const params: Record<string, string | number> = {};
+
+  if (projectId) {
+    params['project_id'] = projectId;
+  }
+
+  return this.http.get<ApiListResponse<Lot>>(
+    `${this.apiUrl}/archived`,
+    { params }
+  );
+}
 
   getAllLots(): Observable<ApiListResponse<Lot>> {
     return this.getLots();

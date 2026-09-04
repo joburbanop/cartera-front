@@ -25,4 +25,24 @@ export class DashboardService {
   getActividadReciente(): Observable<any> {
     return this.http.get(`${this.apiUrl}/actividad-reciente`);
   }
+
+  getClientesTotales(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/clientes-totales`);
+  }
+
+  getRecaudoMensual(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/recaudo-mensual`);
+  }
+
+  getCarteraVencidaResumen(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/cartera-vencida-resumen`);
+  }
+
+  getContratosPorEstado(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/contratos-por-estado`);
+  }
+
+  getLotesPorEstado(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/lotes-por-estado`);
+  }
 }

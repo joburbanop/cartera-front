@@ -1,0 +1,32 @@
+<div *ngIf="isOpen" class="modal-backdrop" (click)="close()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Editar fecha de vencimiento</h3>
+      <button type="button" class="btn-close" (click)="close()" [disabled]="isSaving" aria-label="Cerrar modal">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <p class="modal-helper" *ngIf="installment as fee">
+        Cuota #{{ fee.installment_number }}
+      </p>
+
+      <label for="new-due-date" class="modal-label">Nueva fecha</label>
+      <input
+        id="new-due-date"
+        class="modal-input"
+        type="date"
+        [(ngModel)]="dueDate"
+        [disabled]="isSaving"
+      />
+
+      <p class="modal-note">Este cambio no queda registrado en el historial de auditoria todavia.</p>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn-cancel" (click)="close()" [disabled]="isSaving">Cancelar</button>
+      <button type="button" class="btn-save" (click)="save()" [disabled]="isSaving || !dueDate">
+        {{ isSaving ? 'Guardando...' : 'Guardar' }}
+      </button>
+    </div>
+  </div>
+</div>

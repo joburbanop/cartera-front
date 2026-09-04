@@ -1,0 +1,227 @@
+:host {
+  display: block;
+}
+
+.bitacora-card {
+  padding: 1.35rem 1.5rem;
+}
+
+.bitacora-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+
+.bitacora-eyebrow {
+  margin: 0 0 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.bitacora-header h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.bitacora-state {
+  padding: 1rem 0;
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.bitacora-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bitacora-item {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 0.95rem;
+  position: relative;
+  padding-bottom: 1.35rem;
+
+  &:last-child {
+    padding-bottom: 0;
+  }
+}
+
+.bitacora-rail {
+  position: relative;
+  display: flex;
+  justify-content: center;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 44px;
+    bottom: -1.35rem;
+    left: 50%;
+    width: 2px;
+    transform: translateX(-50%);
+    background: #e2e8f0;
+  }
+}
+
+.bitacora-item:last-child .bitacora-rail::after {
+  display: none;
+}
+
+.bitacora-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #eef7f5;
+  color: #347769;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  &--pago {
+    background: #ecfdf5;
+    color: #047857;
+  }
+
+  &--fecha {
+    background: #fff7ed;
+    color: #b45309;
+  }
+
+  &--creacion {
+    background: #eef7f5;
+    color: #347769;
+  }
+
+  &--edicion {
+    background: #f8fafc;
+    color: #475569;
+  }
+}
+
+.bitacora-body {
+  min-width: 0;
+  padding: 0.15rem 0 0.1rem;
+}
+
+.bitacora-item-header {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.bitacora-who {
+  flex: 1;
+  min-width: 0;
+}
+
+.bitacora-user {
+  margin: 0;
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.bitacora-time {
+  margin: 0.15rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.65rem;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.bitacora-time__exact {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.bitacora-description {
+  margin: 0.65rem 0 0;
+  color: #1e293b;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.bitacora-details {
+  margin-top: 0.75rem;
+}
+
+.bitacora-details summary {
+  cursor: pointer;
+  color: #347769;
+  font-size: 0.82rem;
+  font-weight: 700;
+  list-style: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+}
+
+.changes-compare {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+.changes-block {
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px dashed #dbe3ec;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.changes-block h4 {
+  margin: 0 0 0.45rem;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.change-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) 1fr;
+  gap: 0.6rem;
+  padding: 0.2rem 0;
+}
+
+.change-key {
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.change-value {
+  color: #1e293b;
+  font-size: 0.84rem;
+  word-break: break-word;
+}
+
+@media (min-width: 720px) {
+  .changes-compare {
+    grid-template-columns: 1fr 1fr;
+  }
+}

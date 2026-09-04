@@ -24,8 +24,34 @@ export class CustomerService {
   getCustomerById(id: number): Observable<ApiResourceResponse<CustomerDetail>> {
     return this.http.get<ApiResourceResponse<CustomerDetail>>(`${this.apiUrl}/${id}`);
   }
+  getArchivedCustomers(): Observable<ApiListResponse<Customer>> {
+  return this.http.get<ApiListResponse<Customer>>(
+    `${this.apiUrl}/archived`
+  );
+}
 
   createCustomer(customer: CreateCustomerPayload | Partial<Customer>): Observable<ApiResourceResponse<Customer>> {
     return this.http.post<ApiResourceResponse<Customer>>(this.apiUrl, customer);
   }
+  archiveCustomer(id: number): Observable<ApiResourceResponse<null>> {
+  return this.http.delete<ApiResourceResponse<null>>(
+    `${this.apiUrl}/${id}`
+  );
+  }
+
+  activateCustomer(id: number): Observable<ApiResourceResponse<null>> {
+  return this.http.post<ApiResourceResponse<null>>(
+    `${this.apiUrl}/${id}/activate`,
+    {}
+  );
+  }
+ updateCustomer(
+  id: number,
+  customer: CreateCustomerPayload | Partial<Customer>
+): Observable<ApiResourceResponse<Customer>> {
+  return this.http.put<ApiResourceResponse<Customer>>(
+    `${this.apiUrl}/${id}`,
+    customer
+  );
+}
 }

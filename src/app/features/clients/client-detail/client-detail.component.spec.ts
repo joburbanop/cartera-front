@@ -3,6 +3,8 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { of } from 'rxjs';
 
 import { ClientDetailComponent } from './client-detail.component';
+import { ActivityService } from '../../../core/services/activity.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { CustomerService } from '../../../core/services/customer.service';
 
 describe('ClientDetailComponent', () => {
@@ -32,6 +34,18 @@ describe('ClientDetailComponent', () => {
                 contracts: [],
               },
             }),
+          },
+        },
+        {
+          provide: ActivityService,
+          useValue: {
+            getActivity: () => of({ data: [] }),
+          },
+        },
+        {
+          provide: AuthService,
+          useValue: {
+            hasRole: () => false,
           },
         },
       ],

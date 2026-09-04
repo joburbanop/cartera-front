@@ -52,12 +52,6 @@ export const routes: Routes = [
         loadComponent: () => import('./features/sales/tabla-amortizacion/tabla-amortizacion.component').then(m => m.AmortizationComponent)
       },
       {
-        path: 'historial-pagos',
-        canActivate: [roleGuard],
-        data: { roles: businessViewerRoles },
-        loadComponent: () => import('./features/sales/historial-pagos/historial-pagos.component').then(m => m.HistorialPagosComponent)
-      },
-      {
         path: 'clientes',
         canActivate: [roleGuard],
         data: { roles: administradorOnly },

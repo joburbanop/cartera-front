@@ -161,6 +161,17 @@ export class DrawerPagoComponent implements OnInit {
   }
   get selectedFees(): any[] { return this._selectedFees; }
 
+  private _prefilledAmount: number | null = null;
+  @Input() set prefilledAmount(value: number | null) {
+    this._prefilledAmount = this.normalizePrefilledAmount(value);
+    this.calculateDebt();
+
+    if (this.isOpen) {
+      this.updateFormAmount();
+    }
+  }
+  get prefilledAmount(): number | null { return this._prefilledAmount; }
+
   get currentPaymentAmount(): number {
     return Number(this.paymentForm.get('amount')?.value) || 0;
   }
@@ -169,9 +180,25 @@ export class DrawerPagoComponent implements OnInit {
     return this.financials.getFeeDebtValue(fee);
   }
 
+  private normalizePrefilledAmount(value: number | null): number | null {
+    if (value == null) {
+      return null;
+    }
+
+    const amount = Number(value);
+    if (!Number.isFinite(amount)) {
+      return null;
+    }
+
+    return Math.max(0, Math.round(amount));
+  }
+
   calculateDebt() {
     const deudaBruta = this._selectedFees.reduce((sum, fee) => sum + this.getFeeDebtValue(fee), 0);
-    this.totalSelectedAmount = Math.round(deudaBruta);
+    const suggestedFromSelection = Math.round(deudaBruta);
+    this.totalSelectedAmount = this._selectedFees.length > 0
+      ? suggestedFromSelection
+      : (this._prefilledAmount ?? 0);
     this.montoSugeridoTotal = this.totalSelectedAmount;
   }
 

@@ -1,7 +1,7 @@
 import { Project } from './project.model';
 
 export interface Lot {
-  id?: number;
+  id: number;
   project_id?: number;
   number?: string;
   name?: string;
@@ -13,4 +13,5 @@ export interface Lot {
   folio_matricula?: string | null;
   ficha_catastral?: string | null;
   project?: Project;
+  deleted_at?: string | null;
 }

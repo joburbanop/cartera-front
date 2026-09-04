@@ -2,7 +2,9 @@
 <div class="modal-backdrop" *ngIf="isModalOpen">
   <div class="modal-content">
     <button class="modal-close" (click)="closeModal()">✖</button>
-    <h3 style="margin: 0 0 1.5rem 0; color: #1e293b;">Registrar Lote</h3>
+    <h3 style="margin: 0 0 1.5rem 0; color: #1e293b;">
+  {{ isEditMode ? 'Editar Lote' : 'Registrar Lote' }}
+</h3>
     
     <div *ngIf="errorMessage" class="app-form-alert">
       {{ errorMessage }}
@@ -11,7 +13,8 @@
     <form [formGroup]="lotForm" (ngSubmit)="onSubmit()">
       
       <div class="app-form-row">
-        <div class="app-form-group" *ngIf="!hasProjectInRoute" style="grid-column: span 2;">
+        <div class="app-form-group" *ngIf="!hasProjectInRoute && !isEditMode"  style="grid-column: span 2;"
+>
           <label class="app-form-label">Proyecto</label>
           <select class="app-form-select" formControlName="project_id">
             <option value="">Seleccione un proyecto</option>
@@ -40,9 +43,22 @@
           <app-field-error [control]="lotForm.controls.list_price" label="El precio de lista"></app-field-error>
         </div>
       </div>
+      <div class="app-form-group">
+          <label class="app-form-label">Tipo de Lote</label>
+
+          <select class="app-form-select" formControlName="type">
+            <option value="residential">Residencial</option>
+            <!-- Agregaremos aquí los demás tipos según tu LotType -->
+          </select>
+
+          <app-field-error
+            [control]="lotForm.controls.type"
+            label="El tipo de lote">
+          </app-field-error>
+      </div>
 
       <div class="app-form-group">
-        <label class="app-form-label">Estado Inicial</label>
+       <label class="app-form-label"> {{ isEditMode ? 'Estado' : 'Estado Inicial' }} </label>
         <select class="app-form-select" formControlName="status">
           <option value="disponible">Disponible</option>
           <option value="reservado">Reservado / Preventa</option>
@@ -51,7 +67,11 @@
       </div>
 
       <button type="submit" [disabled]="isLoading" class="app-form-button">
-        {{ isLoading ? 'Guardando...' : 'Guardar Lote' }}
+          {{
+            isLoading
+              ? (isEditMode ? 'Actualizando...' : 'Guardando...')
+              : (isEditMode ? 'Actualizar Lote' : 'Guardar Lote')
+          }}
       </button>
     </form>
   </div>
@@ -67,6 +87,17 @@
     <div>
       <h1>Inventario General de Lotes</h1>
       <p>Listado completo de lotes registrados en el sistema.</p>
+    </div>
+    <div class="lot-view-tabs">
+
+      <button type="button" class="btn-primary btn-new-lot"  [class.active]="!showArchivedLots"(click)="showActive()">
+        Lotes
+      </button>
+
+      <button type="button" class="btn-primary btn-new-lot" [class.active]="showArchivedLots" (click)="showArchived()">
+        Lotes archivados
+      </button>
+
     </div>
     <button *ngIf="canCreate" class="btn-primary btn-new-lot" (click)="openModal()">+ Añadir Lote</button>
   </div>
@@ -131,7 +162,7 @@
       </div>
     </div>
 
-    <div class="table-shell">
+    <div class="table-shell" *ngIf="!showArchivedLots">
       <table class="custom-table">
         <thead>
           <tr>
@@ -200,11 +231,44 @@
 
             <td>
               <div class="action-buttons">
-                <button class="action-btn" title="Editar Lote">
+                <button
+                  *ngIf="canViewBitacora"
+                  class="action-btn bitacora-btn"
+                  type="button"
+                  title="Ver bitácora"
+                  (click)="openBitacora(lot)">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 18px; height:18px;">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                  </svg>
+                </button>
+               <button *ngIf="lot.status === 'disponible'"
+                  class="action-btn"type="button"title="Editar Lote"(click)="openEditModal(lot)">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 18px; height:18px;">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
                   </svg>
                 </button>
+                <!-- Archivar: solo lotes disponibles -->
+                <button
+                    *ngIf="isLotAvailable(lot)"
+                    class="action-btn delete-btn"
+                    type="button"
+                    title="Archivar Lote"
+                    (click)="archiveLot(lot)">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke-width="1.5"
+                      stroke="#dc2626"
+                      style="width: 18px; height: 18px;"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+                      />
+                    </svg>
+                  </button>
               </div>
             </td>
           </tr>
@@ -213,11 +277,135 @@
     </div>
 
     <app-pagination
+      *ngIf="!showArchivedLots"
       [totalItems]="lots.length"
       [pageSize]="pageSize"
       [currentPage]="currentPage"
       (pageChange)="currentPage = $event">
     </app-pagination>
+<div class="table-shell" *ngIf="showArchivedLots">
 
+  <table class="custom-table">
+    <thead>
+      <tr>
+        <th>Proyecto</th>
+        <th>Identificador</th>
+        <th>Dimensiones</th>
+        <th>Precio de Lista</th>
+        <th>Tipo</th>
+        <th>Archivado</th>
+        <th></th>
+      </tr>
+    </thead>
+
+    <tbody>
+
+      <tr *ngIf="archivedLots.length === 0" class="empty-row">
+        <td colspan="7">
+          <div class="empty-state">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"
+              />
+            </svg>
+
+            <p>No hay lotes archivados.</p>
+          </div>
+        </td>
+      </tr>
+
+      <tr *ngFor="let lot of archivedLots">
+
+        <td>
+          <span class="lot-project">
+            {{ lot.project?.name || 'Sin asignar' }}
+          </span>
+        </td>
+
+        <td>
+          <div class="lot-name">
+            Lote {{ lot.number }}
+          </div>
+
+          <div class="lot-detail">
+            ID: #{{ lot.id }}
+          </div>
+        </td>
+
+        <td>
+          <span class="lot-project">
+            {{ lot.area_m2 }} m²
+          </span>
+        </td>
+
+        <td>
+          <span class="lot-project">
+            $ {{ lot.list_price | number }}
+          </span>
+        </td>
+
+        <td>
+          <span class="badge-pill badge-pill--neutral">
+            Archivado
+          </span>
+        </td>
+
+        <td>
+          <span class="lot-detail">
+            {{ lot.deleted_at | date:'dd/MM/yyyy' }}
+          </span>
+        </td>
+
+        <td>
+          <div class="action-buttons">
+
+            <button
+              class="action-btn activate-btn"
+              type="button"
+              title="Reactivar Lote"
+              (click)="activateLot(lot)"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="#16a34a"
+                style="width: 18px; height: 18px;"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M16.023 9.348h4.992V4.356m-1.498 4.992a9 9 0 1 0 1.498 4.992"
+                />
+              </svg>
+            </button>
+
+          </div>
+        </td>
+
+      </tr>
+
+    </tbody>
+  </table>
+
+</div>
   </div>
 </div>
+
+<app-bitacora-modal
+  [isOpen]="isBitacoraOpen"
+  [title]="bitacoraTitle"
+  [subjectType]="bitacoraSubjectType"
+  [subjectId]="bitacoraSubjectId"
+  (closed)="closeBitacora()">
+</app-bitacora-modal>

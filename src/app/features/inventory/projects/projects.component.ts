@@ -6,15 +6,17 @@ import { BankAccountService } from '../../../core/services/bank-account.service'
 import { LotService } from '../../../core/services/lot.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AppRoles } from '../../../core/models/app-roles';
+import { ActivitySubjectType } from '../../../core/models/activity-entry.model';
 import { RouterModule } from '@angular/router';
 import { ToastService } from '../../../shared/services/toast.service';
 import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
+import { BitacoraModalComponent } from '../../../shared/components/bitacora-modal/bitacora-modal.component';
 import { markAllAsTouched, requiredArray, scrollToFirstInvalid } from '../../../shared/utils/form-utils';
 
 @Component({
   selector: 'app-projects',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, FieldErrorComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, FieldErrorComponent, BitacoraModalComponent],
   templateUrl: './projects.component.html',
   styleUrl: './projects.component.scss'
 })
@@ -32,6 +34,10 @@ export class ProjectsComponent implements OnInit {
     return this.authService.hasRole(AppRoles.ADMINISTRADOR);
   }
 
+  get canViewBitacora(): boolean {
+    return this.authService.hasRole(AppRoles.SOCIO_GERENCIA);
+  }
+
   projects: any[] = [];
   availableBankAccounts: any[] = []; 
   
@@ -43,6 +49,10 @@ export class ProjectsComponent implements OnInit {
   projectLotsStats: { [key: number]: { total: number, available: number } } = {}; 
   // Control del Modal
   isModalOpen = false;
+  isBitacoraOpen = false;
+  bitacoraTitle = 'Bitácora del proyecto';
+  bitacoraSubjectType: ActivitySubjectType = 'project';
+  bitacoraSubjectId: number | null = null;
 
   projectForm = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(150)]],
@@ -63,7 +73,17 @@ export class ProjectsComponent implements OnInit {
   loadBankAccounts() {
     this.bankAccountService.getAccounts().subscribe({
       next: (response) => {
-        this.availableBankAccounts = response.data?.data || response.data || [];
+        const responseData = Array.isArray(response)
+          ? response
+          : response && typeof response === 'object' && 'data' in response
+            ? response.data
+            : undefined;
+
+        this.availableBankAccounts = Array.isArray(responseData)
+          ? responseData
+          : Array.isArray((responseData as { data?: unknown })?.data)
+            ? (responseData as { data: any[] }).data
+            : [];
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -78,7 +98,17 @@ export class ProjectsComponent implements OnInit {
   loadProjects() {
     this.projectService.getProjects().subscribe({
       next: (response) => {
-        this.projects = response.data?.data || response.data || [];
+        const responseData = Array.isArray(response)
+          ? response
+          : response && typeof response === 'object' && 'data' in response
+            ? response.data
+            : undefined;
+
+        this.projects = Array.isArray(responseData)
+          ? responseData
+          : Array.isArray((responseData as { data?: unknown })?.data)
+            ? (responseData as { data: any[] }).data
+            : [];
         this.cdr.detectChanges();
         
       },
@@ -114,7 +144,16 @@ export class ProjectsComponent implements OnInit {
   loadLotsStats() {
     this.lotService.getAllLots().subscribe({
       next: (response) => {
-     const allLots = response.data ?? [];
+        let allLots: any[] = [];
+        const data = Array.isArray(response)
+          ? response
+          : response?.data;
+
+        if (Array.isArray(data)) {
+          allLots = data;
+        } else if (data && typeof data === 'object' && 'data' in data && Array.isArray((data as { data?: unknown }).data)) {
+          allLots = (data as { data: any[] }).data;
+        }
 
         this.totalLots = allLots.length;
         this.totalAvailableLots = 0; // Reiniciamos
@@ -149,6 +188,7 @@ export class ProjectsComponent implements OnInit {
       error: (err) => {
         console.error('Error cargando estadísticas de lotes', err);
         this.toast.show('No se pudieron cargar las estadísticas de lotes.', 'error');
+        this.cdr.detectChanges();
       }
     });
   }
@@ -241,6 +281,22 @@ activateProject(project: any): void {
     document.querySelectorAll('input[type=checkbox]').forEach((el: any) => el.checked = false);
   }
 
+  openBitacora(project: { id?: number; name?: string }): void {
+    if (!this.canViewBitacora || project.id == null) {
+      return;
+    }
+
+    this.bitacoraTitle = project.name ? `Bitácora de ${project.name}` : 'Bitácora del proyecto';
+    this.bitacoraSubjectType = 'project';
+    this.bitacoraSubjectId = Number(project.id);
+    this.isBitacoraOpen = true;
+  }
+
+  closeBitacora(): void {
+    this.isBitacoraOpen = false;
+    this.bitacoraSubjectId = null;
+  }
+
   onSubmit() {
     if (this.projectForm.invalid) {
       markAllAsTouched(this.projectForm);
@@ -258,7 +314,8 @@ activateProject(project: any): void {
         this.isLoading = false;
         // Al guardar con éxito, cerramos el modal y recargamos la tabla
         this.closeModal(); 
-        this.loadProjects(); 
+        this.loadProjects();
+        this.cdr.detectChanges();
       },
       error: (err) => {
         this.isLoading = false;

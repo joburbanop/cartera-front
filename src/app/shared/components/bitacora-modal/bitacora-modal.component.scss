@@ -1,0 +1,32 @@
+.bitacora-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1200;
+}
+
+.bitacora-modal-panel {
+  position: relative;
+  width: min(760px, 100%);
+  max-height: 80vh;
+  overflow: auto;
+  border-radius: 16px;
+}
+
+.bitacora-modal-close {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.9rem;
+  z-index: 1;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}

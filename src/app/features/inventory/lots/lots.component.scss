@@ -66,7 +66,20 @@
       background: #f3f4f6;
       color: #1e293b;
     }
+
+    &.bitacora-btn:hover {
+      background: #eef7f5;
+      color: #347769;
+    }
   }
+  .delete-btn {
+  color: #dc2626;
+}
+
+.delete-btn:hover {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
 }
 
 .modal-backdrop {

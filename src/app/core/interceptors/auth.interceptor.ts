@@ -21,9 +21,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     setHeaders: headers
   });
 
+  const shouldSkipAutoLogout = req.url.includes('/login') || req.url.includes('/logout');
+
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status === 401 && !authService.isLogoutRequest(req.url)) {
+      if (error.status === 401 && !shouldSkipAutoLogout && !authService.isLogoutRequest(req.url)) {
         authService.logout().subscribe(() => {
           void router.navigate(['/login']);
         });

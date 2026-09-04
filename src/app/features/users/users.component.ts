@@ -172,6 +172,7 @@ export class UsersComponent implements OnInit {
         this.isLoading = false;
         this.closeModal();
         this.loadUsers();
+        this.cdr.detectChanges();
       },
       error: (err) => {
         this.isLoading = false;

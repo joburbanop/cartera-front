@@ -134,7 +134,7 @@ getReceipt(receiptUrl: string): Observable<HttpResponse<Blob>>
 
 `registerPayment` añade `contract_id` al `FormData` si falta. El endpoint depende de `transactionType === 'down_payment'`.
 
-`getReceipt` hace GET de la URL absoluta del recibo (`responseType: 'blob'`, `observe: 'response'`). Lo usan `AmortizationComponent` e `HistorialPagosComponent` para abrir el blob; no reimplementar el GET en features.
+`getReceipt` hace GET de la URL absoluta del recibo (`responseType: 'blob'`, `observe: 'response'`). Lo usa `AmortizationComponent` para abrir el blob; no reimplementar el GET en features.
 
 ### `SearchService`
 

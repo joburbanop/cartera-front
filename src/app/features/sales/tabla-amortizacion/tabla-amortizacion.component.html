@@ -10,8 +10,31 @@
       Volver a Contratos
     </a>
 
-    <div style="display: flex; align-items: center; gap: 0.75rem;">
-      <button class="btn-outline" (click)="abrirHistorialPagos()">Ver Historial de Pagos</button>
+    <div class="top-nav-right">
+      <div class="top-nav-actions">
+        <button class="btn-outline top-nav-action-btn top-nav-action-btn--history" type="button" (click)="abrirHistorialPagos()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
+            <path d="M3 12a9 9 0 1 0 3-6.708" />
+            <path d="M3 4v5h5" />
+            <path d="M12 7v5l3 2" />
+          </svg>
+          Ver Historial de Pagos
+        </button>
+      <button
+        *ngIf="canRegisterPayments"
+        class="btn-success top-nav-action-btn top-nav-action-btn--pay"
+        type="button"
+        [disabled]="!hasPendingPaymentsForGeneralFlow"
+        (click)="openGeneralPaymentDrawer()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
+          <rect x="3" y="6" width="18" height="12" rx="2" />
+          <path d="M3 10h18" />
+          <path d="M15 14h3" />
+          <path d="M9 14c0-1.1.9-2 2-2h2" />
+        </svg>
+        {{ generalPayButtonLabel }}
+      </button>
+      </div>
       <div class="view-switch">
         <button [class.active]="currentView === 'venta'" (click)="currentView = 'venta'">Venta</button>
         <button [class.active]="currentView === 'preventa'" (click)="currentView = 'preventa'">Preventa</button>
@@ -68,32 +91,31 @@
 <!-- ========================================== -->
   <!-- BARRA DE OPERACIONES DEL CONTRATO          -->
   <!-- ========================================== -->
-  <div *ngIf="contractData" style="display: flex; align-items: center; justify-content: space-between; background-color: #ffffff; border: 1px solid #e2e8f0; padding: 1rem 1.5rem; border-radius: 8px; margin-top: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-    
-    <div style="display: flex; flex-direction: column;">
-      <span style="font-size: 0.9rem; color: #1e293b; font-weight: 500;">Modifica o cancela las condiciones de este contrato</span>
-    </div>
-    
-    <div style="display: flex; gap: 0.75rem;">
-      <!-- Botón Refinanciar -->
-      <button [routerLink]="['/contracts', contractData.id, 'refinanciar']" style="background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem;" onmouseover="this.style.backgroundColor='#dbeafe'" onmouseout="this.style.backgroundColor='#eff6ff'">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 16px; height: 16px;">
+  <div *ngIf="contractData" class="contract-ops-bar">
+    <span class="contract-ops-label">Modifica o cancela las condiciones de este contrato</span>
+
+    <div class="contract-ops-actions">
+      <button
+        class="btn-upcoming"
+        [routerLink]="['/contracts', contractData.id, 'refinanciar']"
+        title="Disponible próximamente">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
         </svg>
         Refinanciar
-         <span class="badge-prox">Próx.</span>
+        <span class="badge-prox">Próximamente</span>
       </button>
-      
-      <!-- Botón Desistimiento -->
-      <button [routerLink]="['/contracts', contractData.id, 'desistimiento']" style="background-color: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem;" onmouseover="this.style.backgroundColor='#fee2e2'" onmouseout="this.style.backgroundColor='#fef2f2'">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 16px; height: 16px;">
+
+      <button
+        class="btn-upcoming"
+        [routerLink]="['/contracts', contractData.id, 'desistimiento']"
+        title="Disponible próximamente">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
         Desistimiento
-         <span class="badge-prox">Próx.</span>
+        <span class="badge-prox">Próximamente</span>
       </button>
-      
-      
     </div>
   </div>
 
@@ -177,6 +199,31 @@
       </svg>
       Cronograma Pactado en Promesa Comercial
     </button>
+    <button
+      *ngIf="canViewBitacora"
+      type="button"
+      (click)="activeTab = 'bitacora-contrato'"
+      [style.border-bottom]="activeTab === 'bitacora-contrato' ? '3px solid #0284c7' : '3px solid transparent'"
+      [style.color]="activeTab === 'bitacora-contrato' ? '#0284c7' : '#64748b'"
+      style="background: none; border: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding: 0.75rem 0.5rem; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.4rem;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px; flex-shrink: 0;">
+        <path d="M12 6v6h4.5" />
+        <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+      </svg>
+      Bitácora del contrato
+    </button>
+    <button
+      *ngIf="canViewBitacora"
+      type="button"
+      (click)="activeTab = 'bitacora-cliente'"
+      [style.border-bottom]="activeTab === 'bitacora-cliente' ? '3px solid #0284c7' : '3px solid transparent'"
+      [style.color]="activeTab === 'bitacora-cliente' ? '#0284c7' : '#64748b'"
+      style="background: none; border: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding: 0.75rem 0.5rem; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.4rem;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px; flex-shrink: 0;">
+        <path d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+      </svg>
+      Bitácora del cliente
+    </button>
   </div>
 
   <div *ngIf="activeTab === 'amortizacion'">
@@ -250,6 +297,7 @@
         [currentView]="currentView"
         [resetSelection]="resetSelectionFlag"
         (selectionChanged)="onInstallmentSelectionChange($event)"
+        (editDueDate)="onEditDueDate($event)"
         (downloadPdf)="downloadPdf($event)"
         (paySelected)="openDrawer()">
       </app-amortization-table-presenter>
@@ -268,6 +316,22 @@
     (registerAbono)="openPreventaPayment()">
   </app-payment-promise-tab>
 
+  <app-bitacora
+    *ngIf="canViewBitacora && activeTab === 'bitacora-contrato'"
+    title="Bitácora del contrato"
+    [entries]="activityEntries"
+    [isLoading]="isLoadingActivity"
+    emptyMessage="Sin movimientos registrados todavía">
+  </app-bitacora>
+
+  <app-bitacora
+    *ngIf="canViewBitacora && activeTab === 'bitacora-cliente'"
+    title="Bitácora del cliente"
+    [entries]="customerActivityEntries"
+    [isLoading]="isLoadingCustomerActivity"
+    emptyMessage="Sin movimientos registrados todavía">
+  </app-bitacora>
+
 
   <!-- ========================================== -->
   <!-- COMPONENTE: DRAWER PAGO                    -->
@@ -275,11 +339,20 @@
   <app-drawer-pago 
     [isOpen]="isDrawerOpen"
     [selectedFees]="selectedFees"
+    [prefilledAmount]="drawerSuggestedAmount"
     [isProcessing]="isProcessingPayment"
     [bankAccounts]="contractData?.lot?.project?.bank_accounts || contractData?.project?.bank_accounts || []" 
     (closeDrawer)="closeDrawer()"
     (onClose)="closeDrawer()"
     (confirmPayment)="procesarPago($event)">
   </app-drawer-pago>
+
+  <app-edit-due-date-modal
+    [isOpen]="isEditDueDateModalOpen"
+    [installment]="editingInstallment"
+    [isSaving]="isUpdatingDueDate"
+    (closeModal)="closeEditDueDateModal()"
+    (saveDueDate)="saveInstallmentDueDate($event)">
+  </app-edit-due-date-modal>
 
 </div> <!-- FIN DEL CONTENEDOR PRINCIPAL (amortization-page) -->

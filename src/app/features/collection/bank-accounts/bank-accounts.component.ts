@@ -68,17 +68,25 @@ export class BankAccountsComponent implements OnInit {
   loadAccounts() {
     this.bankAccountService.getAccounts().subscribe({
       next: (response) => {
-        if (response.data && response.data.data) {
-           this.accounts = response.data.data;
-        } else if (response.data) {
-           this.accounts = response.data;
-        } else {
-           this.accounts = [];
+        const payload = Array.isArray(response)
+          ? response
+          : response?.data;
+
+        let accounts: any[] = [];
+        if (Array.isArray(payload)) {
+          accounts = payload;
+        } else if (payload && typeof payload === 'object' && 'data' in payload && Array.isArray((payload as { data?: unknown }).data)) {
+          accounts = (payload as { data: any[] }).data;
         }
+
+        this.accounts = accounts;
         this.calculateKPIs();
         this.cdr.detectChanges();
       },
-      error: (err) => console.error('Error cargando cuentas', err)
+      error: (err) => {
+        console.error('Error cargando cuentas', err);
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -104,6 +112,7 @@ export class BankAccountsComponent implements OnInit {
         this.accountForm.reset({ account_type: 'savings' });
         this.isModalOpen = false;
         this.loadAccounts();
+        this.cdr.detectChanges();
       },
       error: (err) => {
         this.isLoading = false;
@@ -114,6 +123,8 @@ export class BankAccountsComponent implements OnInit {
         } else {
           this.errorMessage = 'Hubo un error al registrar la cuenta de banco.';
         }
+
+        this.cdr.detectChanges();
       }
     });
   }
