@@ -19,8 +19,9 @@ export function lotStatusLabel(
     case 'disponible':
       return 'Disponible';
     case 'preventa':
-    case 'reservado':
       return 'Preventa';
+    case 'reservado':
+      return 'Separado';
     case 'vendido':
       return 'Vendido';
     case 'abogado':

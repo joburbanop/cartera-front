@@ -79,6 +79,9 @@ describe('AmortizationComponent', () => {
       downloadPdf: () => of(new Blob()),
       generatePlan: () => of({}),
       refinanceContract: () => of({}),
+      updateInstallmentDueDate: () => of({}),
+      previewInstallmentDueDate: () => of({ data: { preview: [], affected_count: 1 } }),
+      updateInstallmentPaymentDate: () => of({ data: { warning: null } }),
     } as Partial<AmortizationService> as AmortizationService;
 
     const contractServiceMock = {
@@ -257,6 +260,90 @@ describe('AmortizationComponent', () => {
 
     expect(component.isDrawerOpen).toBeTruthy();
     expect(component.selectedFees).toEqual([]);
+    expect(component.drawerSuggestedAmount).toBe(1000000);
+  });
+
+  it('en preventa el banner separa inicial y regulares sin lenguaje de cartera vencida', () => {
+    component.contractData = {
+      ...component.contractData,
+      status: 'preventa_inactiva',
+      lot: { status: 'preventa' },
+      down_payment_pactada: 2000000,
+      transactions: [],
+    };
+    component.amortizationPlan = [cuotaInicial, cuota1, cuota2, cuota3];
+
+    expect(component.isPreventaLot).toBe(true);
+    expect(component.pendingInitialAmount).toBe(2000000);
+    expect(component.overdueRegularAmount).toBe(1000000);
+    expect(component.overdueRegularCount).toBe(1);
+    expect(component.tieneCarteraVencida).toBe(true);
+  });
+
+  it('en preventa con inicial pendiente precarga solo la inicial y muestra el total vencido', () => {
+    component.contractData = {
+      ...component.contractData,
+      status: 'preventa_inactiva',
+      lot: { status: 'preventa' },
+      down_payment_pactada: 2000000,
+      transactions: [],
+    };
+    component.amortizationPlan = [cuotaInicial, cuota1, cuota2, cuota3];
+
+    component.openGeneralPaymentDrawer();
+
+    expect(component.drawerSuggestedAmount).toBe(2000000);
+    expect(component.drawerOverdueTotal).toBe(3000000);
+    expect(component.selectedFees).toEqual([]);
+  });
+
+  it('habilita Pagar en preventa si solo queda la inicial pendiente', () => {
+    component.contractData = {
+      ...component.contractData,
+      status: 'preventa_inactiva',
+      lot: { status: 'preventa' },
+      down_payment_pactada: 2000000,
+      transactions: [],
+    };
+    component.amortizationPlan = [cuotaInicial];
+
+    expect(component.hasPendingPaymentsForGeneralFlow).toBe(true);
+    expect((component as any).computeAmortizationSuggestedAmount()).toBe(2000000);
+  });
+
+  it('en preventa con inicial saldada precarga regulares vencidas', () => {
+    component.contractData = {
+      ...component.contractData,
+      status: 'preventa_inactiva',
+      lot: { status: 'preventa' },
+      down_payment_pactada: 2000000,
+      transactions: [{ transaction_type: 'down_payment', amount: 2000000 }],
+    };
+    component.amortizationPlan = [
+      { ...cuotaInicial, status: 'paid', quota_debt: 0 },
+      cuota1,
+      cuota2,
+      cuota3,
+    ];
+
+    component.openGeneralPaymentDrawer();
+
+    expect(component.drawerSuggestedAmount).toBe(1000000);
+    expect(component.drawerOverdueTotal).toBe(1000000);
+  });
+
+  it('en lote que no es preventa no cambia la precarga aunque la inicial tenga saldo', () => {
+    component.contractData = {
+      ...component.contractData,
+      status: 'activo',
+      lot: { status: 'vendido' },
+      down_payment_pactada: 2000000,
+      transactions: [],
+    };
+    component.amortizationPlan = [cuotaInicial, cuota1, cuota2, cuota3];
+
+    component.openGeneralPaymentDrawer();
+
     expect(component.drawerSuggestedAmount).toBe(1000000);
   });
 

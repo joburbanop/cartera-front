@@ -26,6 +26,9 @@
           <p *ngIf="amountHint === 'schedule' && amortizationReferenceAmount != null" style="margin: 0.2rem 0 0 0; font-size: 0.68rem; color: #94a3b8; font-weight: 500;">
             Según amortización real sería: $ {{ amortizationReferenceAmount | number:'1.0-0' }}
           </p>
+          <p *ngIf="overdueTotalAmount != null" style="margin: 0.35rem 0 0 0; font-size: 0.72rem; color: #64748b; font-weight: 600;">
+            {{ overdueTotalIsPreventa ? 'Total pendiente a la fecha' : 'Total vencido a la fecha' }}: $ {{ overdueTotalAmount | number:'1.0-0' }}
+          </p>
 
           <div class="mt-2 p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm" style="margin-top: 0.75rem; padding: 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem;">
             

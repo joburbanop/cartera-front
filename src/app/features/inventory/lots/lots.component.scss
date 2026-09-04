@@ -29,6 +29,46 @@
   /* Color y peso viven en .btn-primary global. */
 }
 
+.lots-filters {
+  margin: 0 0 1rem;
+}
+
+.lots-filters__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.lots-filters__fields.app-form-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.lots-filters .btn-outline {
+  background: transparent;
+  color: #347769;
+  border: 1px solid #347769;
+  border-radius: 10px;
+  padding: 0.45rem 0.9rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.lots-filters .btn-outline:hover {
+  background: #eef7f5;
+}
+
+@media (max-width: 900px) {
+  .lots-filters__fields.app-form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 .custom-table {
   .lot-name {
     font-weight: 700;

@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
 import { catchError, finalize, tap } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { SearchResults, SearchService } from '../../../core/services/search.service';
+import { SearchLotHit, SearchResults, SearchService } from '../../../core/services/search.service';
 
 @Component({
   selector: 'app-global-search',
@@ -32,7 +32,7 @@ export class GlobalSearchComponent implements OnInit {
       debounceTime(300),
       distinctUntilChanged(),
       tap((value) => {
-        if (value.trim().length < 2) {
+        if (value.trim().length < 1) {
           this.isOpen = false;
           this.isLoading = false;
           this.results = { clients: [], contracts: [], lots: [] };
@@ -41,7 +41,7 @@ export class GlobalSearchComponent implements OnInit {
       }),
       switchMap((value) => {
         const term = value.trim();
-        if (term.length < 2) {
+        if (term.length < 1) {
           return of(null);
         }
 
@@ -85,10 +85,22 @@ export class GlobalSearchComponent implements OnInit {
     this.close();
   }
 
-  goToLot(projectId: number | null): void {
-    void this.router.navigate(['/lots'], {
-      queryParams: projectId != null ? { projectId } : {},
-    });
+  goToLot(lot: SearchLotHit): void {
+    if (lot.contract_id) {
+      void this.router.navigate(['/amortization', lot.contract_id]);
+      this.close();
+      return;
+    }
+
+    const queryParams: Record<string, string | number> = {};
+    if (lot.project_id != null) {
+      queryParams['projectId'] = lot.project_id;
+    }
+    if (lot.number) {
+      queryParams['number'] = lot.number;
+    }
+
+    void this.router.navigate(['/lots'], { queryParams });
     this.close();
   }
 

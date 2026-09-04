@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ProjectService } from '../../../core/services/project.service';
-import { LotService } from '../../../core/services/lot.service';
+import { LotListFilters, LotService } from '../../../core/services/lot.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AppRoles } from '../../../core/models/app-roles';
 import { ActivitySubjectType } from '../../../core/models/activity-entry.model';
@@ -82,6 +82,28 @@ export class LotsComponent implements OnInit {
     status: ['disponible', Validators.required]
   });
 
+  filterForm = this.fb.group({
+    number: [''],
+    status: [''],
+    project_id: [''],
+    plan_type: [''],
+    cartera: [''],
+    customer: [''],
+  });
+
+  readonly lotStatusOptions = [
+    { value: 'disponible', label: 'Disponible' },
+    { value: 'preventa', label: 'Preventa' },
+    { value: 'separado', label: 'Separado' },
+    { value: 'vendido', label: 'Vendido' },
+    { value: 'abogado', label: 'Renegociación' },
+  ];
+
+  get lotsFoundLabel(): string {
+    const n = this.lotsTotal;
+    return n === 1 ? '1 lote encontrado' : `${n} lotes encontrados`;
+  }
+
   ngOnInit(): void {
     this.route.queryParams.subscribe(params => {
       const projectId = params['projectId'];
@@ -92,15 +114,22 @@ export class LotsComponent implements OnInit {
         this.selectedProjectId = selectedProjectId;
         this.lotForm.patchValue({ project_id: selectedProjectId.toString() });
         this.activeProject = this.projects.find(p => p.id === selectedProjectId) ?? null;
-        this.loadProjects();
-        this.loadLots(1);
-        return;
+      } else {
+        this.hasProjectInRoute = false;
+        this.selectedProjectId = null;
+        this.activeProject = null;
+        this.lotForm.patchValue({ project_id: '' });
       }
 
-      this.hasProjectInRoute = false;
-      this.selectedProjectId = null;
-      this.activeProject = null;
-      this.lotForm.patchValue({ project_id: '' });
+      this.filterForm.patchValue({
+        number: params['number'] ?? '',
+        status: params['status'] ?? '',
+        project_id: projectId ? String(projectId) : '',
+        plan_type: params['plan_type'] ?? '',
+        cartera: params['cartera'] ?? '',
+        customer: params['customer'] ?? '',
+      }, { emitEvent: false });
+
       this.loadProjects();
       this.loadLots(1);
     });
@@ -160,13 +189,63 @@ export class LotsComponent implements OnInit {
     this.loadLots(page);
   }
 
+  currentFilters(): LotListFilters {
+    const value = this.filterForm.getRawValue();
+    const filters: LotListFilters = {};
+    const number = (value.number ?? '').trim();
+    const status = (value.status ?? '').trim();
+    const planType = (value.plan_type ?? '').trim();
+    const cartera = (value.cartera ?? '').trim();
+    const customer = (value.customer ?? '').trim();
+
+    if (number) {
+      filters.number = number;
+    }
+    if (status) {
+      filters.status = status;
+    }
+    if (planType) {
+      filters.plan_type = planType;
+    }
+    if (cartera) {
+      filters.cartera = cartera;
+    }
+    if (customer) {
+      filters.customer = customer;
+    }
+
+    return filters;
+  }
+
+  applyFilters(): void {
+    const projectId = (this.filterForm.get('project_id')?.value ?? '').trim();
+    const filters = this.currentFilters();
+    const queryParams: Record<string, string> = { ...filters };
+    if (projectId) {
+      queryParams['projectId'] = projectId;
+    }
+
+    void this.router.navigate(['/lots'], { queryParams });
+  }
+
+  clearFilters(): void {
+    this.filterForm.reset({
+      number: '',
+      status: '',
+      project_id: '',
+      plan_type: '',
+      cartera: '',
+      customer: '',
+    }, { emitEvent: false });
+    this.currentPage = 1;
+    void this.router.navigate(['/lots'], { queryParams: {} });
+  }
+
   loadLots(page = this.currentPage) {
     this.currentPage = page;
-    const request$ = this.selectedProjectId
-      ? this.lotService.getLotsByProject(this.selectedProjectId, page, this.pageSize)
-      : this.lotService.getAllLots(page, this.pageSize);
-
-    request$.subscribe({
+    const projectIdRaw = (this.filterForm.get('project_id')?.value ?? '').trim();
+    const projectId = projectIdRaw ? Number(projectIdRaw) : (this.selectedProjectId ?? undefined);
+    this.lotService.getLots(projectId || undefined, page, this.pageSize, this.currentFilters()).subscribe({
       next: (response) => {
         const pageData = unwrapPaginator(response);
         this.lots = pageData.items;

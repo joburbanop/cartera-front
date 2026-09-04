@@ -18,6 +18,12 @@
   overflow: hidden;
 }
 
+.modal-card--wide {
+  width: min(640px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+}
+
 .modal-header {
   display: flex;
   align-items: center;
@@ -107,4 +113,114 @@
 .btn-close:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.mode-fieldset {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.mode-fieldset legend {
+  padding: 0 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.mode-option {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+.mode-option span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.mode-option strong {
+  font-size: 0.88rem;
+  color: #0f172a;
+}
+
+.mode-option small {
+  color: #64748b;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.modal-warning {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+}
+
+.modal-error {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+}
+
+.preview-box {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: #f8fafc;
+}
+
+.preview-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.preview-meta {
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
+  color: #475569;
+}
+
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.preview-table th,
+.preview-table td {
+  text-align: left;
+  padding: 0.35rem 0.4rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.preview-table th {
+  color: #64748b;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.confirm-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-size: 0.82rem;
+  color: #334155;
+  cursor: pointer;
 }

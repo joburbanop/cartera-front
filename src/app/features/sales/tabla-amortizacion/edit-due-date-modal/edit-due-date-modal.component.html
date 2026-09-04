@@ -1,31 +1,115 @@
 <div *ngIf="isOpen" class="modal-backdrop" (click)="close()">
-  <div class="modal-card" (click)="$event.stopPropagation()">
+  <div class="modal-card modal-card--wide" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h3>Editar fecha de vencimiento</h3>
+      <h3>Ajustar fecha de vencimiento</h3>
       <button type="button" class="btn-close" (click)="close()" [disabled]="isSaving" aria-label="Cerrar modal">✕</button>
     </div>
 
     <div class="modal-body">
-      <p class="modal-helper" *ngIf="installment as fee">
-        Cuota #{{ fee.installment_number }}
-      </p>
+      <p class="modal-helper">Cuota #{{ installmentNumber }}</p>
 
-      <label for="new-due-date" class="modal-label">Nueva fecha</label>
+      <fieldset class="mode-fieldset">
+        <legend>Cómo aplicar el cambio</legend>
+        <label class="mode-option">
+          <input type="radio" name="due-date-mode" value="single" [(ngModel)]="mode" [disabled]="isSaving" (ngModelChange)="onModeOrDateChange()" />
+          <span>
+            <strong>Cambiar solo esta cuota</strong>
+            <small>No mueve las demás. Debe quedar estrictamente entre la anterior y la siguiente.</small>
+          </span>
+        </label>
+        <label class="mode-option">
+          <input type="radio" name="due-date-mode" value="cascade" [(ngModel)]="mode" [disabled]="isSaving" (ngModelChange)="onModeOrDateChange()" />
+          <span>
+            <strong>Aplicar en cascada a las siguientes</strong>
+            <small>Esta cuota y todas las posteriores se recadencian mes a mes. Las anteriores no se tocan.</small>
+          </span>
+        </label>
+      </fieldset>
+
+      <fieldset class="mode-fieldset" *ngIf="mode === 'cascade'">
+        <legend>Cadencia de las cuotas siguientes</legend>
+        <label class="mode-option">
+          <input type="radio" name="due-date-cadence" value="same_day" [(ngModel)]="cadence" [disabled]="isSaving" (ngModelChange)="onModeOrDateChange()" />
+          <span>
+            <strong>Mismo día del mes</strong>
+            <small>Mantiene el día de esta cuota. 31/01 pasa a 28 o 29/02 y vuelve a 31/03.</small>
+          </span>
+        </label>
+        <label class="mode-option">
+          <input type="radio" name="due-date-cadence" value="month_end" [(ngModel)]="cadence" [disabled]="isSaving" (ngModelChange)="onModeOrDateChange()" />
+          <span>
+            <strong>Fin de mes</strong>
+            <small>Cada cuota vence el último día del mes. 30/04 → 31/05 → 30/06. Desde 28/02 sigue 31/03.</small>
+          </span>
+        </label>
+      </fieldset>
+
+      <label for="new-due-date" class="modal-label">Nueva fecha de esta cuota</label>
       <input
         id="new-due-date"
         class="modal-input"
         type="date"
         [(ngModel)]="dueDate"
+        [min]="dateMin || null"
+        [max]="dateMax || null"
         [disabled]="isSaving"
+        (ngModelChange)="onModeOrDateChange()"
       />
+      <p class="modal-note">{{ rangeHelper }}</p>
 
-      <p class="modal-note">Este cambio no queda registrado en el historial de auditoria todavia.</p>
+      <p class="modal-warning" *ngIf="isCustomPlan">
+        Este contrato tiene plan comercial personalizado: el recálculo también recadencia las fechas de la pestaña Promesa de pago.
+      </p>
+
+      <p class="modal-error" *ngIf="previewError">{{ previewError }}</p>
+
+      <div class="preview-box" *ngIf="preview && !previewError">
+        <p class="preview-title">
+          Previsualización
+          <span *ngIf="isLoadingPreview"> · actualizando…</span>
+        </p>
+        <p class="preview-meta">
+          Se actualizarán <strong>{{ preview.affected_count }}</strong> cuota(s)
+          <span *ngIf="preview.shifts_promises"> y {{ preview.promises_affected_count }} promesa(s)</span>.
+          <span *ngIf="preview.updates_contract_anchor"> También se actualiza el ancla del contrato.</span>
+          <span *ngIf="preview.mode === 'cascade' && preview.cadence === 'month_end'"> Cadencia: fin de mes.</span>
+          <span *ngIf="preview.mode === 'cascade' && preview.cadence !== 'month_end'"> Cadencia: mismo día del mes.</span>
+        </p>
+        <table class="preview-table">
+          <thead>
+            <tr>
+              <th>Cuota</th>
+              <th>Antes</th>
+              <th>Después</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of preview.preview">
+              <td>#{{ row.installment_number }}</td>
+              <td>{{ formatDisplayDate(row.due_date_before) }}</td>
+              <td>{{ formatDisplayDate(row.due_date_after) }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="modal-note" *ngIf="preview.affected_count > preview.preview.length">
+          Se muestran las primeras y las últimas filas. Montos y fechas de pago no cambian.
+        </p>
+      </div>
+
+      <label class="confirm-row">
+        <input type="checkbox" [(ngModel)]="confirmed" [disabled]="isSaving || !!previewError || !preview" />
+        <span>Confirmo que quiero persistir este cambio de fechas.</span>
+      </label>
     </div>
 
     <div class="modal-footer">
       <button type="button" class="btn-cancel" (click)="close()" [disabled]="isSaving">Cancelar</button>
-      <button type="button" class="btn-save" (click)="save()" [disabled]="isSaving || !dueDate">
-        {{ isSaving ? 'Guardando...' : 'Guardar' }}
+      <button
+        type="button"
+        class="btn-save"
+        (click)="save()"
+        [disabled]="isSaving || !dueDate || !confirmed || !!previewError || !preview">
+        {{ isSaving ? 'Guardando...' : 'Confirmar y aplicar' }}
       </button>
     </div>
   </div>

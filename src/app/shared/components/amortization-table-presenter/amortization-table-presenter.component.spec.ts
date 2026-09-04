@@ -17,7 +17,7 @@ describe('AmortizationTablePresenterComponent', () => {
     component.currentView = 'venta';
   });
 
-  it('muestra icono de editar solo para cuotas no pagadas y mayores a 0', () => {
+  it('muestra icono de vencimiento para cuotas mayores a 0, incluidas las pagadas', () => {
     component.selectable = true;
     component.installments = [
       {
@@ -57,8 +57,11 @@ describe('AmortizationTablePresenterComponent', () => {
 
     fixture.detectChanges();
 
-    const editButtons = fixture.debugElement.queryAll(By.css('.due-date-edit-btn'));
-    expect(editButtons.length).toBe(1);
+    const editButtons = fixture.debugElement.queryAll(By.css('[aria-label="Editar fecha de vencimiento"]'));
+    expect(editButtons.length).toBe(2);
+
+    const paymentButtons = fixture.debugElement.queryAll(By.css('[aria-label="Editar fecha de pago"]'));
+    expect(paymentButtons.length).toBe(3);
   });
 
   it('oculta icono de editar cuando selectable es false (socio_gerencia)', () => {
@@ -135,7 +138,7 @@ describe('AmortizationTablePresenterComponent', () => {
 
     fixture.detectChanges();
 
-    const editButton = fixture.debugElement.query(By.css('.due-date-edit-btn'));
+    const editButton = fixture.debugElement.query(By.css('[aria-label="Editar fecha de vencimiento"]'));
     editButton.nativeElement.click();
 
     expect(emittedInstallment).toEqual(component.installments[0]);

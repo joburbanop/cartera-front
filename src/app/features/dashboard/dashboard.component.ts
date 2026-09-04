@@ -28,9 +28,10 @@ export class DashboardComponent implements OnInit {
   cantidadPorVencer = 0;
   lotsByStatus: Record<string, number> = {
     disponible: 0,
-    reservado: 0,
     preventa: 0,
     vendido: 0,
+    abogado: 0,
+    separado: 0,
   };
   actividadReciente: Array<{
     tipo?: string;
@@ -43,11 +44,10 @@ export class DashboardComponent implements OnInit {
 
   readonly lotStatusPills = [
     { key: 'disponible', label: 'Disponible', modifier: 'badge-pill--success' },
-    { key: 'reservado', label: 'Reservado', modifier: 'badge-pill--warning' },
     { key: 'preventa', label: 'Preventa', modifier: 'badge-pill--warning' },
+    { key: 'separado', label: 'Separado', modifier: 'badge-pill--warning' },
     { key: 'vendido', label: 'Vendido', modifier: 'badge-pill--neutral' },
     { key: 'abogado', label: 'Renegociación', modifier: 'badge-pill--danger' },
-    { key: 'separado', label: 'Separado', modifier: 'badge-pill--neutral' },
   ];
 
   recaudoLabels: string[] = [];
@@ -266,7 +266,6 @@ export class DashboardComponent implements OnInit {
         const payload = this.unwrapPayload(response) as Record<string, number>;
         this.lotsByStatus = {
           disponible: Number(payload['disponible'] ?? 0),
-          reservado: 0,
           preventa: Number(payload['preventa'] ?? 0),
           vendido: Number(payload['vendido'] ?? 0),
           abogado: Number(payload['abogado'] ?? 0),
@@ -289,7 +288,7 @@ export class DashboardComponent implements OnInit {
       error: () => {
         this.totalLots = 0;
         this.totalAvailableLots = 0;
-        this.lotsByStatus = { disponible: 0, reservado: 0, preventa: 0, vendido: 0, abogado: 0, separado: 0 };
+        this.lotsByStatus = { disponible: 0, preventa: 0, vendido: 0, abogado: 0, separado: 0 };
         this.lotesDatasets = [{ data: [0, 0, 0, 0, 0], backgroundColor: ['#047857', '#b45309', '#475569', '#b91c1c', '#347769'] }];
         this.cdr.detectChanges();
       },

@@ -44,9 +44,7 @@
       <div class="app-form-group">
         <label class="app-form-label">Estado Inicial</label>
         <select class="app-form-select" formControlName="status">
-          <option value="disponible">Disponible</option>
-          <option value="reservado">Reservado / Preventa</option>
-          <option value="vendido">Vendido</option>
+          <option *ngFor="let option of lotStatusOptions" [value]="option.value">{{ option.label }}</option>
         </select>
       </div>
 
@@ -131,6 +129,55 @@
       </div>
     </div>
 
+    <div class="lots-filters">
+      <div class="lots-filters__meta">
+        <span>{{ lotsFoundLabel }}</span>
+        <button type="button" class="btn-outline" (click)="clearFilters()">Limpiar</button>
+      </div>
+      <form class="app-form-row lots-filters__fields" [formGroup]="filterForm" (ngSubmit)="applyFilters()">
+        <div class="app-form-group">
+          <label class="app-form-label">Número de lote</label>
+          <input class="app-form-input" type="text" formControlName="number" placeholder="Ej. 6, L-04" (change)="applyFilters()">
+        </div>
+        <div class="app-form-group">
+          <label class="app-form-label">Estado</label>
+          <select class="app-form-select" formControlName="status" (change)="applyFilters()">
+            <option value="">Todos</option>
+            <option *ngFor="let option of lotStatusOptions" [value]="option.value">{{ option.label }}</option>
+          </select>
+        </div>
+        <div class="app-form-group">
+          <label class="app-form-label">Proyecto</label>
+          <select class="app-form-select" formControlName="project_id" (change)="applyFilters()">
+            <option value="">Todos</option>
+            <option *ngFor="let project of projects" [value]="project.id">{{ project.name }}</option>
+          </select>
+        </div>
+        <div class="app-form-group">
+          <label class="app-form-label">Tipo de plan</label>
+          <select class="app-form-select" formControlName="plan_type" (change)="applyFilters()">
+            <option value="">Todos</option>
+            <option value="standard">Estándar</option>
+            <option value="special">Especial</option>
+            <option value="custom">Personalizado</option>
+            <option value="none">Sin plan</option>
+          </select>
+        </div>
+        <div class="app-form-group">
+          <label class="app-form-label">Cartera</label>
+          <select class="app-form-select" formControlName="cartera" (change)="applyFilters()">
+            <option value="">Todas</option>
+            <option value="al_dia">Al día</option>
+            <option value="mora">Con mora</option>
+          </select>
+        </div>
+        <div class="app-form-group">
+          <label class="app-form-label">Cliente</label>
+          <input class="app-form-input" type="text" formControlName="customer" placeholder="Nombre o cédula" (change)="applyFilters()">
+        </div>
+      </form>
+    </div>
+
     <div class="table-shell">
       <table class="custom-table">
         <thead>
@@ -178,7 +225,7 @@
               <span class="badge-pill"
                     [ngClass]="{
                       'badge-pill--success': lot.status === 'disponible',
-                      'badge-pill--warning': lot.status === 'preventa' || lot.status === 'reservado',
+                      'badge-pill--warning': lot.status === 'preventa' || lot.status === 'separado',
                       'badge-pill--neutral': lot.status === 'vendido',
                       'badge-pill--danger': lot.status === 'abogado'
                     }">

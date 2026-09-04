@@ -16,7 +16,8 @@ import { PaymentMethodNamePipe } from '../../../shared/pipes/payment-method-name
 import { AmortizationTablePresenterComponent } from '../../../shared/components/amortization-table-presenter/amortization-table-presenter.component';
 import { ContractSummaryCardComponent } from './contract-summary-card/contract-summary-card.component';
 import { PaymentPromiseTabComponent } from './payment-promise-tab/payment-promise-tab.component';
-import { EditDueDateModalComponent } from './edit-due-date-modal/edit-due-date-modal.component';
+import { EditDueDateModalComponent, DueDateAdjustMode, DueDateCadence } from './edit-due-date-modal/edit-due-date-modal.component';
+import { EditPaymentDateModalComponent } from './edit-payment-date-modal/edit-payment-date-modal.component';
 import { RefinanceModalComponent, RefinanceConfirmPayload } from './refinance-modal/refinance-modal.component';
 import { PaymentPromiseService } from '../../../core/services/payment-promise.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -43,6 +44,7 @@ import { isPaidStatus, isVencida } from '../../../core/models/amortization-statu
     ContractSummaryCardComponent,
     PaymentPromiseTabComponent,
     EditDueDateModalComponent,
+    EditPaymentDateModalComponent,
     RefinanceModalComponent,
     BitacoraComponent,
     PaginationComponent,
@@ -89,6 +91,12 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     return this.isCustomPlan;
   }
 
+  get hasContractTransactions(): boolean {
+    const fromHistory = Array.isArray(this.transactions) && this.transactions.length > 0;
+    const fromContract = Array.isArray(this.contractData?.transactions) && this.contractData.transactions.length > 0;
+    return fromHistory || fromContract;
+  }
+
   get amortizationTabLabel(): string {
     return this.isSpecialLot ? 'Seguimiento de Abonos' : 'Amortización Financiera';
   }
@@ -115,6 +123,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   isGeneralPaymentFlow = false;
   drawerSuggestedAmount: number | null = null;
   drawerAmountHint: 'schedule' | null = null;
+  drawerOverdueTotal: number | null = null;
   drawerAmortizationReferenceAmount: number | null = null;
   transactions: any[] = [];
   isHistoryModalOpen = false;
@@ -137,6 +146,9 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   isEditDueDateModalOpen = false;
   isUpdatingDueDate = false;
   editingInstallment: AmortizationInstallment | null = null;
+  isEditPaymentDateModalOpen = false;
+  isUpdatingPaymentDate = false;
+  editingPaymentInstallment: AmortizationInstallment | null = null;
   isRefinanceModalOpen = false;
   isRefinancing = false;
   isReorderingPromises = false;
@@ -421,7 +433,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!installment || Number(installment.installment_number) <= 0 || isPaidStatus(installment.status)) {
+    if (!installment || Number(installment.installment_number) <= 0) {
       return;
     }
 
@@ -440,7 +452,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  saveInstallmentDueDate(dueDate: string): void {
+  saveInstallmentDueDate(payload: { dueDate: string; mode: DueDateAdjustMode; cadence?: DueDateCadence }): void {
     if (!this.editingInstallment?.id) {
       return;
     }
@@ -448,7 +460,13 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     this.isUpdatingDueDate = true;
 
     this.amortizationService
-      .updateInstallmentDueDate(this.contractId, Number(this.editingInstallment.id), dueDate)
+      .updateInstallmentDueDate(
+        this.contractId,
+        Number(this.editingInstallment.id),
+        payload.dueDate,
+        payload.mode,
+        payload.cadence ?? 'same_day',
+      )
       .subscribe({
         next: () => {
           this.isUpdatingDueDate = false;
@@ -456,11 +474,14 @@ export class AmortizationComponent implements OnInit, OnDestroy {
           this.editingInstallment = null;
 
           this.toast.show(
-            'Fecha actualizada',
+            'Fechas actualizadas',
             'success',
-            'La fecha de vencimiento se actualizo correctamente.',
+            payload.mode === 'cascade'
+              ? 'El vencimiento se recadenció en cascada.'
+              : 'La fecha de vencimiento se actualizó correctamente.',
           );
 
+          this.loadContractData();
           this.cargarTablaAmortizacion();
           this.cdr.detectChanges();
         },
@@ -468,6 +489,64 @@ export class AmortizationComponent implements OnInit, OnDestroy {
           this.isUpdatingDueDate = false;
           this.toast.show(
             'No se pudo actualizar la fecha',
+            'error',
+            this.readFirstBackendError(err),
+          );
+          this.cdr.detectChanges();
+        },
+      });
+  }
+
+  onEditPaymentDate(installment: AmortizationInstallment): void {
+    if (!this.canRegisterPayments) {
+      return;
+    }
+
+    this.editingPaymentInstallment = installment;
+    this.isEditPaymentDateModalOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  closeEditPaymentDateModal(): void {
+    if (this.isUpdatingPaymentDate) {
+      return;
+    }
+
+    this.isEditPaymentDateModalOpen = false;
+    this.editingPaymentInstallment = null;
+    this.cdr.detectChanges();
+  }
+
+  saveInstallmentPaymentDate(paymentDate: string): void {
+    if (!this.editingPaymentInstallment?.id) {
+      return;
+    }
+
+    this.isUpdatingPaymentDate = true;
+
+    this.amortizationService
+      .updateInstallmentPaymentDate(this.contractId, Number(this.editingPaymentInstallment.id), paymentDate)
+      .subscribe({
+        next: (response) => {
+          this.isUpdatingPaymentDate = false;
+          this.isEditPaymentDateModalOpen = false;
+          this.editingPaymentInstallment = null;
+
+          const warning = response?.data?.warning;
+          this.toast.show(
+            'Fecha de pago actualizada',
+            'success',
+            warning || 'La fecha de pago se actualizó solo en esta cuota.',
+          );
+
+          this.cargarTablaAmortizacion();
+          this.loadActivity();
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.isUpdatingPaymentDate = false;
+          this.toast.show(
+            'No se pudo actualizar la fecha de pago',
             'error',
             this.readFirstBackendError(err),
           );
@@ -565,6 +644,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   openDrawer(): void {
     this.isGeneralPaymentFlow = false;
     this.drawerSuggestedAmount = null;
+    this.drawerOverdueTotal = null;
 
     // Filtrar las seleccionadas manualmente que aún sean elegibles
     const seleccionadasValidas = this.selectedFees.filter(
@@ -612,6 +692,10 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   }
 
   get hasPendingPaymentsForGeneralFlow(): boolean {
+    if (this.shouldPrioritizePendingInitial()) {
+      return true;
+    }
+
     if (this.getRegularPendingInstallmentsSorted().length > 0) {
       return true;
     }
@@ -632,8 +716,13 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     const nextPromise = this.nextPendingPromise();
     this.isGeneralPaymentFlow = true;
     this.selectedFees = [];
+    this.drawerOverdueTotal = Math.round(this.computeOverdueTotalToDate());
 
-    if (this.isCustomPlan && nextPromise) {
+    if (this.shouldPrioritizePendingInitial()) {
+      this.drawerSuggestedAmount = Math.round(this.initialFeeBalance);
+      this.drawerAmountHint = null;
+      this.drawerAmortizationReferenceAmount = null;
+    } else if (this.isCustomPlan && nextPromise) {
       this.drawerSuggestedAmount = Math.round(this.promiseRemainingAmount(nextPromise));
       this.drawerAmountHint = 'schedule';
       this.drawerAmortizationReferenceAmount = Math.round(amortizationSuggested);
@@ -647,7 +736,62 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  private lotStatusValue(): string {
+    const raw = this.contractData?.lot?.status as string | { value?: string; name?: string } | undefined;
+    if (!raw) {
+      return '';
+    }
+    if (typeof raw === 'string') {
+      return raw;
+    }
+    return String(raw.value ?? raw.name ?? '');
+  }
+
+  private shouldPrioritizePendingInitial(): boolean {
+    return this.lotStatusValue() === 'preventa' && this.initialFeeBalance > 0;
+  }
+
+  private overdueRegularInstallments(): any[] {
+    return this.getRegularPendingInstallmentsSorted()
+      .filter((fee: any) => this.isVencida(fee?.due_date));
+  }
+
+  private overdueRegularInstallmentsAmount(): number {
+    return this.overdueRegularInstallments()
+      .reduce((sum: number, fee: any) => sum + this.financials.getFeeDebtValue(fee), 0);
+  }
+
+  private computeOverdueTotalToDate(): number {
+    const overdueRegulars = this.overdueRegularInstallmentsAmount();
+
+    if (!this.shouldPrioritizePendingInitial()) {
+      return overdueRegulars;
+    }
+
+    return this.initialFeeBalance + overdueRegulars;
+  }
+
+  get isPreventaLot(): boolean {
+    return this.lotStatusValue() === 'preventa';
+  }
+
+  get pendingInitialAmount(): number {
+    return this.initialFeeBalance;
+  }
+
+  get overdueRegularAmount(): number {
+    return this.overdueRegularInstallmentsAmount();
+  }
+
+  get overdueRegularCount(): number {
+    return this.overdueRegularInstallments().length;
+  }
+
   private computeAmortizationSuggestedAmount(): number {
+    if (this.shouldPrioritizePendingInitial()) {
+      return this.initialFeeBalance;
+    }
+
     const regularPendingInstallments = this.getRegularPendingInstallmentsSorted();
     if (regularPendingInstallments.length === 0) {
       return 0;
@@ -736,6 +880,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     this.drawerSuggestedAmount = null;
     this.drawerAmountHint = null;
     this.drawerAmortizationReferenceAmount = null;
+    this.drawerOverdueTotal = null;
     this.clearTableSelection();
   }
 

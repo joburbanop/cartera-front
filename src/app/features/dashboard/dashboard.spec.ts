@@ -34,6 +34,8 @@ describe('DashboardComponent', () => {
     expect(component.lotesLabels).toContain('Renegociación');
     expect(component.lotesLabels).not.toContain('Abogado');
     expect(component.lotStatusPills.find((pill) => pill.key === 'abogado')?.label).toBe('Renegociación');
+    expect(component.lotStatusPills.some((pill) => pill.label === 'Reservado')).toBe(false);
+    expect(component.lotStatusPills.some((pill) => pill.key === 'reservado')).toBe(false);
   });
 
   it('con socio_gerencia no dispara llamadas a /customers y pide el resumen de dashboard', () => {

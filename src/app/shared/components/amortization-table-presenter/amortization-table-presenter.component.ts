@@ -31,6 +31,7 @@ export class AmortizationTablePresenterComponent {
   @Output() downloadPdf = new EventEmitter<'internal' | 'client'>();
   @Output() paySelected = new EventEmitter<void>();
   @Output() editDueDate = new EventEmitter<AmortizationInstallment>();
+  @Output() editPaymentDate = new EventEmitter<AmortizationInstallment>();
 
   selectedInstallments: any[] = [];
   pageSize = 10;
@@ -168,7 +169,11 @@ export class AmortizationTablePresenterComponent {
   }
 
   canEditDueDate(fee: any): boolean {
-    return this.selectable && !isPaidStatus(fee?.status) && Number(fee?.installment_number) > 0;
+    return this.selectable && Number(fee?.installment_number) > 0;
+  }
+
+  canEditPaymentDate(fee: any): boolean {
+    return this.selectable;
   }
 
   emitEditDueDate(fee: AmortizationInstallment, event: Event): void {
@@ -180,5 +185,16 @@ export class AmortizationTablePresenterComponent {
     }
 
     this.editDueDate.emit(fee);
+  }
+
+  emitEditPaymentDate(fee: AmortizationInstallment, event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!this.canEditPaymentDate(fee)) {
+      return;
+    }
+
+    this.editPaymentDate.emit(fee);
   }
 }

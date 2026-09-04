@@ -29,7 +29,7 @@ export class BitacoraComponent {
       return 'pago';
     }
 
-    if (properties['installment_number'] != null || description.includes('fecha de vencimiento')) {
+    if (properties['installment_number'] != null || description.includes('fecha de vencimiento') || description.includes('fecha de pago') || description.includes('vencimientos en cascada')) {
       return 'fecha';
     }
 
