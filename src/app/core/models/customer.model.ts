@@ -18,6 +18,7 @@ export interface Customer {
   lote?: string | null;
   cantidad_contratos?: number;
   estadoCartera?: 'al_dia' | 'vencida' | 'sin_contrato' | string;
+  pivot?: { role?: string };
 }
 
 export interface CreateCustomerPayload {

@@ -16,8 +16,10 @@ export function markAllAsTouched(form: FormGroup | FormArray): void {
 }
 
 export function scrollToFirstInvalid(formElement: HTMLElement): void {
-  const firstInvalid = formElement.querySelector('.ng-invalid') as HTMLElement | null;
-  firstInvalid?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const firstInvalid = formElement.querySelector(
+    'input.ng-invalid, select.ng-invalid, textarea.ng-invalid',
+  ) as HTMLElement | null;
+  firstInvalid?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
 }
 
 /** Vacío (array o valor nulo) se reporta como `required`, para reutilizar FieldErrorComponent. */

@@ -30,6 +30,12 @@ describe('DashboardComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('usa Renegociación como etiqueta visual del estado abogado', () => {
+    expect(component.lotesLabels).toContain('Renegociación');
+    expect(component.lotesLabels).not.toContain('Abogado');
+    expect(component.lotStatusPills.find((pill) => pill.key === 'abogado')?.label).toBe('Renegociación');
+  });
+
   it('con socio_gerencia no dispara llamadas a /customers y pide el resumen de dashboard', () => {
     const auth = TestBed.inject(AuthService);
     vi.spyOn(auth, 'hasRole').mockImplementation((role) => role === 'socio_gerencia');

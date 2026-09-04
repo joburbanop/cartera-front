@@ -161,7 +161,11 @@
               <span class="lot-project">{{ lot.project?.name || 'Sin asignar' }}</span>
             </td>
             <td>
-              <div class="lot-name">Lote {{ lot.number }}</div>
+              <a class="lot-name lot-name--link"
+                 [routerLink]="lotResumeCommands(lot)"
+                 [queryParams]="lotResumeQueryParams(lot)">
+                Lote {{ lot.number }}
+              </a>
               <div class="lot-detail">ID: #{{ lot.id }}</div>
             </td>
             <td>
@@ -175,16 +179,17 @@
                     [ngClass]="{
                       'badge-pill--success': lot.status === 'disponible',
                       'badge-pill--warning': lot.status === 'preventa' || lot.status === 'reservado',
-                      'badge-pill--neutral': lot.status === 'vendido'
+                      'badge-pill--neutral': lot.status === 'vendido',
+                      'badge-pill--danger': lot.status === 'abogado'
                     }">
-                {{ lot.status }}
+                {{ lot.status | lotStatusLabel }}
               </span>
             </td>
 
             <td>
               <a *ngIf="lot.status !== 'disponible'"
-                 [routerLink]="['/contracts']"
-                 [queryParams]="{ lotId: lot.id }"
+                 [routerLink]="lotResumeCommands(lot)"
+                 [queryParams]="lotResumeQueryParams(lot)"
                  title="Ir a Contratos"
                  style="display: inline-flex; align-items: center; gap: 0.25rem; color: #0284c7; font-size: 0.85rem; font-weight: 600; text-decoration: none; cursor: pointer;">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 16px; height: 16px;">

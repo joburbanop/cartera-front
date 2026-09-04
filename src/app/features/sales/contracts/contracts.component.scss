@@ -1,3 +1,89 @@
+.lot-resume-card {
+  padding: 1.15rem 1.35rem;
+  margin-bottom: 1.5rem;
+}
+
+.lot-resume-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.lot-resume-card__eyebrow {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lot-resume-card__title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 0.2rem;
+}
+
+.lot-resume-card__back {
+  background: white;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lot-resume-card__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.lot-resume-card__label {
+  display: block;
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+}
+
+.lot-resume-card__value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.kpi-card__progress {
+  min-width: 0;
+  flex: 1;
+}
+
+.progress-bar-bg {
+  width: 100%;
+  max-width: 180px;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 0.55rem;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: #347769;
+  border-radius: 999px;
+}
+
+@media (max-width: 720px) {
+  .lot-resume-card__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .header-link {
   color: #1d4ed8;
   font-weight: 700;

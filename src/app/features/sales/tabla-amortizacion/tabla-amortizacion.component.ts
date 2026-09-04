@@ -75,6 +75,11 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     return this.authService.hasRole(AppRoles.ADMINISTRADOR);
   }
 
+  get isSpecialLot(): boolean {
+    const value = this.contractData?.is_special_lot;
+    return value === true || value === 1 || value === '1';
+  }
+
   get isCustomPlan(): boolean {
     const value = this.contractData?.is_custom_plan;
     return value === true || value === 1 || value === '1';
@@ -82,6 +87,18 @@ export class AmortizationComponent implements OnInit, OnDestroy {
 
   get canShowPromiseTab(): boolean {
     return this.isCustomPlan;
+  }
+
+  get amortizationTabLabel(): string {
+    return this.isSpecialLot ? 'Seguimiento de Abonos' : 'Amortización Financiera';
+  }
+
+  get showAmortizationTabBar(): boolean {
+    if (!this.isSpecialLot) {
+      return true;
+    }
+
+    return this.canShowPromiseTab || this.canViewBitacora;
   }
 
   contractId!: number;
@@ -372,6 +389,11 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   }
 
   setDefaultView(): void {
+    if (this.isSpecialLot) {
+      this.currentView = 'preventa';
+      return;
+    }
+
     this.currentView = this.contractData?.status === 'preventa_inactiva' ? 'preventa' : 'venta';
   }
 
@@ -1039,8 +1061,14 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     const number = contractNumber
       ? String(contractNumber)
       : `#${contract?.id || this.contractId}`;
-    const customer = contract?.customer ?? {};
-    const customerName = customer.name || customer.nombre || contract?.customer_name || '';
+    const holders = contract?.customers?.length
+      ? contract.customers
+      : (contract?.customer ? [contract.customer] : []);
+    const customerName = holders
+      .map((holder: { name?: string; nombre?: string }) => holder.name || holder.nombre)
+      .filter(Boolean)
+      .sort((a: string, b: string) => a.localeCompare(b, 'es'))
+      .join(', ') || contract?.customer_name || '';
     return customerName ? `Contrato ${number} — ${customerName}` : `Contrato ${number}`;
   }
 

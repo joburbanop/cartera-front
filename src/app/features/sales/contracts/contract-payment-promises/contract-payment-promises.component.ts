@@ -5,11 +5,19 @@ import { CurrencyMaskDirective } from '../../../../shared/directives/currency-ma
 import { FieldErrorComponent } from '../../../../shared/components/field-error/field-error.component';
 
 export function createPaymentPromiseGroup(fb: FormBuilder): FormGroup {
-  return fb.group({
+  const group = fb.group({
     expected_date: ['', Validators.required],
-    expected_amount: [null, [Validators.required, Validators.min(1)]],
+    expected_amount: [null as number | null, [Validators.required, Validators.min(1)]],
     description: ['', Validators.required],
   });
+
+  group.reset({
+    expected_date: '',
+    expected_amount: null,
+    description: '',
+  });
+
+  return group;
 }
 
 @Component({
@@ -30,6 +38,7 @@ export class ContractPaymentPromisesComponent {
   @Input() diferenciaFinanciera = 0;
   @Input() hasFinancialDifference = false;
   @Input() valorFuturoDeuda = 0;
+  @Input() missingTermInstallmentsMessage = '';
   @Input() batchErrorMessage = '';
 
   @Input() showBatchAssistant = false;
@@ -52,6 +61,10 @@ export class ContractPaymentPromisesComponent {
 
   @Output() generateBatch = new EventEmitter<void>();
   @Output() errorMessageChange = new EventEmitter<string>();
+
+  trackByPromise(_index: number, control: FormGroup): FormGroup {
+    return control;
+  }
 
   addPaymentPromise(): void {
     this.paymentPromises.push(createPaymentPromiseGroup(this.fb));

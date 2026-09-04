@@ -46,6 +46,8 @@ export class DashboardComponent implements OnInit {
     { key: 'reservado', label: 'Reservado', modifier: 'badge-pill--warning' },
     { key: 'preventa', label: 'Preventa', modifier: 'badge-pill--warning' },
     { key: 'vendido', label: 'Vendido', modifier: 'badge-pill--neutral' },
+    { key: 'abogado', label: 'Renegociación', modifier: 'badge-pill--danger' },
+    { key: 'separado', label: 'Separado', modifier: 'badge-pill--neutral' },
   ];
 
   recaudoLabels: string[] = [];
@@ -54,7 +56,7 @@ export class DashboardComponent implements OnInit {
   carteraDatasets: ChartCardDataset[] = [{ data: [0, 0], backgroundColor: ['#047857', '#b91c1c'] }];
   contratosLabels = ['Activo', 'Preventa', 'Terminado', 'Rescindido'];
   contratosDatasets: ChartCardDataset[] = [{ data: [0, 0, 0, 0], backgroundColor: ['#047857', '#b45309', '#475569', '#b91c1c'] }];
-  lotesLabels = ['Disponible', 'Preventa', 'Vendido', 'Abogado', 'Separado'];
+  lotesLabels = ['Disponible', 'Preventa', 'Vendido', 'Renegociación', 'Separado'];
   lotesDatasets: ChartCardDataset[] = [{ data: [0, 0, 0, 0, 0], backgroundColor: ['#047857', '#b45309', '#475569', '#b91c1c', '#347769'] }];
 
   get userName(): string {
@@ -267,6 +269,8 @@ export class DashboardComponent implements OnInit {
           reservado: 0,
           preventa: Number(payload['preventa'] ?? 0),
           vendido: Number(payload['vendido'] ?? 0),
+          abogado: Number(payload['abogado'] ?? 0),
+          separado: Number(payload['separado'] ?? 0),
         };
         this.totalAvailableLots = this.lotsByStatus['disponible'];
         this.totalLots = Object.values(payload).reduce((sum, value) => sum + Number(value ?? 0), 0);
@@ -285,7 +289,7 @@ export class DashboardComponent implements OnInit {
       error: () => {
         this.totalLots = 0;
         this.totalAvailableLots = 0;
-        this.lotsByStatus = { disponible: 0, reservado: 0, preventa: 0, vendido: 0 };
+        this.lotsByStatus = { disponible: 0, reservado: 0, preventa: 0, vendido: 0, abogado: 0, separado: 0 };
         this.lotesDatasets = [{ data: [0, 0, 0, 0, 0], backgroundColor: ['#047857', '#b45309', '#475569', '#b91c1c', '#347769'] }];
         this.cdr.detectChanges();
       },

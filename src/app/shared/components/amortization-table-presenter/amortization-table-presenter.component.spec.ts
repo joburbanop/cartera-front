@@ -83,6 +83,35 @@ describe('AmortizationTablePresenterComponent', () => {
     expect(editButtons.length).toBe(0);
   });
 
+  it('muestra intereses y capital realmente pagados, no los del plan', () => {
+    component.installments = [
+      {
+        installment_number: 1,
+        due_date: '2099-03-05',
+        payment_date: '2026-08-21',
+        installment_value: 1714431.44,
+        extra_payment: 0,
+        interest_value: 1714431.44,
+        principal_value: 1714431.44,
+        interest_paid: 1400170.5,
+        principal_paid: 99829.5,
+        remaining_balance: 100,
+        status: 'partial',
+      },
+    ];
+
+    fixture.detectChanges();
+
+    const cells = fixture.debugElement.queryAll(By.css('tbody td'));
+    const interestCell = cells[6].nativeElement.textContent.replace(/\s+/g, ' ').trim();
+    const principalCell = cells[7].nativeElement.textContent.replace(/\s+/g, ' ').trim();
+
+    expect(interestCell).toContain('1,400,170.50');
+    expect(principalCell).toContain('99,829.50');
+    expect(interestCell).not.toContain('1,714,431.44');
+    expect(principalCell).not.toContain('1,714,431.44');
+  });
+
   it('emite editDueDate al hacer clic en el icono', () => {
     component.selectable = true;
     component.installments = [

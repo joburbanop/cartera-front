@@ -29,6 +29,10 @@ export class LotService {
     return this.getLots(projectId, page, perPage);
   }
 
+  getLot(id: number): Observable<ApiResourceResponse<Lot>> {
+    return this.http.get<ApiResourceResponse<Lot>>(`${this.apiUrl}/${id}`);
+  }
+
   createLot(data: Partial<Lot> | Record<string, unknown>): Observable<ApiResourceResponse<Lot>> {
     return this.http.post<ApiResourceResponse<Lot>>(this.apiUrl, data);
   }

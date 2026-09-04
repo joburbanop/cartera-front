@@ -36,6 +36,13 @@
   min-height: 96px;
 }
 
+input.ng-invalid.ng-touched,
+select.ng-invalid.ng-touched,
+textarea.ng-invalid.ng-touched {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+
 .app-form-button {
   width: 100%;
   padding: 0.8rem 1rem;

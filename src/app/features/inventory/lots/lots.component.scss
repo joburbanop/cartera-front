@@ -36,6 +36,16 @@
     font-size: 1rem;
   }
 
+  .lot-name--link {
+    color: #0284c7;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
   .lot-detail {
     font-size: 0.8rem;
     color: #64748b;

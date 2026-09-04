@@ -12,13 +12,14 @@ import { ToastService } from '../../../shared/services/toast.service';
 import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { BitacoraModalComponent } from '../../../shared/components/bitacora-modal/bitacora-modal.component';
+import { LotStatusLabelPipe } from '../../../shared/pipes/lot-status-label.pipe';
 import { markAllAsTouched, scrollToFirstInvalid } from '../../../shared/utils/form-utils';
 import { unwrapPaginator } from '../../../core/models/api-response';
 
 @Component({
   selector: 'app-lots',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, CurrencyMaskDirective, FieldErrorComponent, PaginationComponent, BitacoraModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, CurrencyMaskDirective, FieldErrorComponent, PaginationComponent, BitacoraModalComponent, LotStatusLabelPipe],
   templateUrl: './lots.component.html',
   styleUrl: './lots.component.scss'
 })
@@ -236,6 +237,32 @@ export class LotsComponent implements OnInit {
   closeBitacora(): void {
     this.isBitacoraOpen = false;
     this.bitacoraSubjectId = null;
+  }
+
+  lotContractsCount(lot: { contracts_count?: number; contracts?: { id?: number }[] }): number {
+    if (lot.contracts_count != null) {
+      return Number(lot.contracts_count);
+    }
+
+    return Array.isArray(lot.contracts) ? lot.contracts.length : 0;
+  }
+
+  singleContractId(lot: { contracts_count?: number; contracts?: { id?: number }[] }): number | null {
+    if (this.lotContractsCount(lot) !== 1) {
+      return null;
+    }
+
+    const id = Number(lot.contracts?.[0]?.id ?? 0);
+    return id > 0 ? id : null;
+  }
+
+  lotResumeCommands(lot: { id?: number; contracts_count?: number; contracts?: { id?: number }[] }): (string | number)[] {
+    const contractId = this.singleContractId(lot);
+    return contractId ? ['/amortization', contractId] : ['/contracts'];
+  }
+
+  lotResumeQueryParams(lot: { id?: number; contracts_count?: number; contracts?: { id?: number }[] }): Record<string, number> {
+    return this.singleContractId(lot) ? {} : { lotId: Number(lot.id) };
   }
 
   // --- GUARDADO ---

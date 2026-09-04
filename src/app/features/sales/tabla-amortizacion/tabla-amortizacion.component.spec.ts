@@ -408,6 +408,65 @@ describe('AmortizationComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Próximamente');
   });
 
+  it('en lote especial oculta Refinanciar, el toggle y el pagar de la barra', () => {
+    const auth = TestBed.inject(AuthService);
+    vi.spyOn(auth, 'hasRole').mockImplementation((role) => role === AppRoles.ADMINISTRADOR);
+
+    const fixture = TestBed.createComponent(AmortizationComponent);
+    const instance = fixture.componentInstance;
+    instance.contractData = {
+      is_special_lot: true,
+      status: 'preventa_inactiva',
+      sale_price: 90000000,
+      down_payment_pactada: 90000000,
+      transactions: [],
+      lot: { number: '59' },
+    };
+    instance.isLoading = false;
+    instance.setDefaultView();
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(instance.isSpecialLot).toBe(true);
+    expect(instance.currentView).toBe('preventa');
+    expect(instance.showAmortizationTabBar).toBe(false);
+    expect(text).not.toContain('Refinanciar');
+    expect(text).toContain('Desistimiento');
+    expect(fixture.nativeElement.querySelector('.view-switch')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.top-nav-action-btn--pay')).toBeNull();
+    expect(text).toContain('Seguimiento de Abonos');
+    expect(text).not.toContain('Amortización Financiera');
+    expect(text).toContain('Lote Especial · Preventa');
+    expect(text).toContain('+ Registrar abono');
+  });
+
+  it('en contrato normal mantiene Refinanciar, toggle Venta/Preventa y Amortización Financiera', () => {
+    const auth = TestBed.inject(AuthService);
+    vi.spyOn(auth, 'hasRole').mockImplementation((role) => role === AppRoles.ADMINISTRADOR);
+
+    const fixture = TestBed.createComponent(AmortizationComponent);
+    fixture.componentInstance.contractData = {
+      is_special_lot: false,
+      status: 'activo',
+      customer_id: 7,
+      transactions: [],
+      down_payment_pactada: 2000000,
+    };
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(fixture.componentInstance.isSpecialLot).toBe(false);
+    expect(text).toContain('Refinanciar');
+    expect(text).toContain('Venta');
+    expect(text).toContain('Preventa');
+    expect(text).toContain('Amortización Financiera');
+    expect(text).not.toContain('Seguimiento de Abonos');
+    expect(text).not.toContain('Lote Especial ·');
+    expect(fixture.nativeElement.querySelector('.view-switch')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.top-nav-action-btn--pay')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.btn-refinance')).toBeTruthy();
+  });
+
   it('debe cortar la recursión si el plan sigue vacío después de intentar generarlo', () => {
     const getPlanSpy = vi.spyOn(component['amortizationService'], 'getPlan').mockReturnValue(of({ data: [] }));
     const generatePlanSpy = vi.spyOn(component['amortizationService'], 'generatePlan').mockReturnValue(of({}));

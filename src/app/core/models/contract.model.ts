@@ -18,8 +18,11 @@ export interface Contract {
   first_installment_date?: string | null;
   regular_payment_start_date?: string | null;
   preventa_installments_count?: number;
+  is_custom_plan?: boolean | number | string;
+  is_special_lot?: boolean | number | string;
   status?: string;
   customer?: Customer;
+  customers?: Customer[];
   customer_name?: string;
   lot?: Lot;
   project?: Project;

@@ -1,6 +1,6 @@
 import { Component, ElementRef, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators, FormArray, FormGroup, FormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, Validators, FormArray, FormGroup, FormControl, FormsModule } from '@angular/forms';
 import { ContractService } from '../../../core/services/contract.service';
 import { ProjectService } from '../../../core/services/project.service';
 import { LotService } from '../../../core/services/lot.service';
@@ -17,11 +17,13 @@ import { PaginationComponent } from '../../../shared/components/pagination/pagin
 import { markAllAsTouched, scrollToFirstInvalid } from '../../../shared/utils/form-utils';
 import { QuickCustomerModalComponent } from './quick-customer-modal/quick-customer-modal.component';
 import { ContractPaymentPromisesComponent, createPaymentPromiseGroup } from './contract-payment-promises/contract-payment-promises.component';
+import { unwrapListItems } from '../../../core/models/api-response';
+import { LotStatusLabelPipe, lotStatusValue } from '../../../shared/pipes/lot-status-label.pipe';
 
 @Component({
   selector: 'app-contracts',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule, CurrencyMaskDirective, ContractStatusLabelPipe, FieldErrorComponent, QuickCustomerModalComponent, ContractPaymentPromisesComponent, PaginationComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule, CurrencyMaskDirective, ContractStatusLabelPipe, LotStatusLabelPipe, FieldErrorComponent, QuickCustomerModalComponent, ContractPaymentPromisesComponent, PaginationComponent],
   templateUrl: './contracts.component.html',
   styleUrl: './contracts.component.scss'
 })
@@ -78,6 +80,9 @@ export class ContractsComponent implements OnInit {
   // Variables para KPIs
   totalContracts = 0;
   totalPortfolioValue = 0;
+  totalCollected = 0;
+  outstandingBalance = 0;
+  paymentProgressPercent = 0;
 
 
   // Control del Modal
@@ -87,6 +92,7 @@ export class ContractsComponent implements OnInit {
   contractForm = this.fb.group({
     contract_number: ['', Validators.required],
     customer_id: ['', Validators.required],
+    co_titular_ids: this.fb.array<FormControl<string | number | null>>([]),
     project_id: ['', Validators.required],
     lot_id: ['', Validators.required],
     seller_name: [''],
@@ -99,12 +105,63 @@ export class ContractsComponent implements OnInit {
     first_installment_date: ['', Validators.required],
     preventa_stages: [7, [Validators.required, Validators.min(0)]],
     is_custom_plan: [false],
+    is_special_lot: [false],
     payment_promises: this.fb.array([]),
   });
 
   get paymentPromises(): FormArray<FormGroup> {
   return this.contractForm.get('payment_promises') as FormArray<FormGroup>;
 }
+
+  get extraTitularIds(): FormArray<FormControl<string | number | null>> {
+    return this.contractForm.get('co_titular_ids') as FormArray<FormControl<string | number | null>>;
+  }
+
+  addTitular(): void {
+    this.extraTitularIds.push(this.fb.control<string | number | null>(''));
+  }
+
+  removeTitular(index: number): void {
+    this.extraTitularIds.removeAt(index);
+  }
+
+  private clearExtraTitulares(): void {
+    while (this.extraTitularIds.length > 0) {
+      this.extraTitularIds.removeAt(0);
+    }
+  }
+
+  customersAvailableForHolder(slot: 'anchor' | number): Customer[] {
+    const anchorId = Number(this.contractForm.get('customer_id')?.value || 0);
+    const extraSelected = this.extraTitularIds.controls
+      .map((control, i) => (slot === i ? null : Number(control.value || 0)))
+      .filter((id): id is number => !!id);
+
+    return this.customers.filter((customer) => {
+      const id = Number(customer.id);
+      if (slot !== 'anchor' && id === anchorId) {
+        return false;
+      }
+      if (slot === 'anchor' && extraSelected.includes(id)) {
+        return false;
+      }
+      return !extraSelected.includes(id);
+    });
+  }
+
+  contractHoldersLabel(contract: { customer?: Customer; customers?: Customer[]; customer_id?: number }): string {
+    const holders = contract.customers?.length
+      ? contract.customers
+      : (contract.customer ? [contract.customer] : []);
+    const names = holders
+      .map((holder) => holder.name)
+      .filter((name): name is string => !!name)
+      .sort((a, b) => a.localeCompare(b, 'es'));
+    if (names.length === 0) {
+      return contract.customer_id ? `Cliente #${contract.customer_id}` : 'Sin titulares';
+    }
+    return names.join(', ');
+  }
 
   get totalCustomPromises(): number {
     return this.paymentPromises.controls.reduce((sum, control) => {
@@ -126,6 +183,30 @@ export class ContractsComponent implements OnInit {
 
   get isCustomPlan(): boolean {
     return this.contractForm.get('is_custom_plan')?.value === true;
+  }
+
+  get isSpecialLot(): boolean {
+    return this.contractForm.get('is_special_lot')?.value === true;
+  }
+
+  get isStandardPlan(): boolean {
+    return !this.isCustomPlan && !this.isSpecialLot;
+  }
+
+  selectPlanMode(mode: 'standard' | 'custom' | 'special'): void {
+    if (mode === 'special') {
+      this.contractForm.patchValue({
+        is_custom_plan: false,
+        is_special_lot: true,
+        start_date: this.contractForm.get('start_date')?.value || this.formatDateYYYYMMDD(new Date()),
+      });
+      this.clearPaymentPromises();
+      this.showBatchAssistant = false;
+    } else if (mode === 'custom') {
+      this.contractForm.patchValue({ is_custom_plan: true, is_special_lot: false });
+    } else {
+      this.contractForm.patchValue({ is_custom_plan: false, is_special_lot: false });
+    }
   }
 
   get tasaInteres(): number {
@@ -183,6 +264,29 @@ export class ContractsComponent implements OnInit {
     return this.paymentPromises.length > maxAllowed;
   }
 
+  get missingTermInstallments(): number {
+    const plazo = this.maxCuotasPermitidas;
+    if (!this.isCustomPlan || plazo <= 0) {
+      return 0;
+    }
+
+    return Math.max(0, plazo - this.paymentPromises.length);
+  }
+
+  get missingTermInstallmentsMessage(): string {
+    const faltan = this.missingTermInstallments;
+    if (faltan <= 0) {
+      return '';
+    }
+
+    const plazo = this.maxCuotasPermitidas;
+    const cuotaWord = faltan === 1 ? 'cuota' : 'cuotas';
+    const verbo = faltan === 1 ? 'Falta' : 'Faltan';
+    const mesWord = plazo === 1 ? 'mes' : 'meses';
+
+    return `${verbo} ${faltan} ${cuotaWord} para completar el plazo de ${plazo} ${mesWord}`;
+  }
+
   get costoTotalInmueble(): number {
     return this.valorFuturoDeuda + (Number(this.contractForm.get('down_payment_pactada')?.value ?? 0) || 0);
   }
@@ -201,28 +305,47 @@ export class ContractsComponent implements OnInit {
     return Math.abs(this.diferenciaFinanciera) > 1000;
   }
 
-  private updatePlanModeValidators(isCustom: boolean): void {
+  private updatePlanModeValidators(isCustom: boolean, isSpecial = false): void {
     const termMonthsControl = this.contractForm.get('term_months');
     const firstInstallmentDateControl = this.contractForm.get('first_installment_date');
     const preventaStagesControl = this.contractForm.get('preventa_stages');
+    const downPaymentControl = this.contractForm.get('down_payment_pactada');
+    const interestRateControl = this.contractForm.get('interest_rate');
+    const downPaymentDateControl = this.contractForm.get('down_payment_date');
 
-    if (!termMonthsControl || !firstInstallmentDateControl || !preventaStagesControl) {
+    if (!termMonthsControl || !firstInstallmentDateControl || !preventaStagesControl || !downPaymentControl || !interestRateControl || !downPaymentDateControl) {
       return;
     }
 
-    if (isCustom) {
+    if (isSpecial) {
+      termMonthsControl.clearValidators();
+      firstInstallmentDateControl.clearValidators();
+      preventaStagesControl.clearValidators();
+      downPaymentControl.clearValidators();
+      interestRateControl.clearValidators();
+      downPaymentDateControl.clearValidators();
+    } else if (isCustom) {
       termMonthsControl.setValidators([Validators.required, Validators.min(1)]);
       firstInstallmentDateControl.clearValidators();
       preventaStagesControl.clearValidators();
+      downPaymentControl.setValidators([Validators.required, Validators.min(0)]);
+      interestRateControl.setValidators([Validators.required, Validators.min(0)]);
+      downPaymentDateControl.setValidators([Validators.required]);
     } else {
       termMonthsControl.setValidators([Validators.required, Validators.min(1)]);
       firstInstallmentDateControl.setValidators([Validators.required]);
       preventaStagesControl.setValidators([Validators.required, Validators.min(0)]);
+      downPaymentControl.setValidators([Validators.required, Validators.min(0)]);
+      interestRateControl.setValidators([Validators.required, Validators.min(0)]);
+      downPaymentDateControl.setValidators([Validators.required]);
     }
 
     termMonthsControl.updateValueAndValidity({ emitEvent: false });
     firstInstallmentDateControl.updateValueAndValidity({ emitEvent: false });
     preventaStagesControl.updateValueAndValidity({ emitEvent: false });
+    downPaymentControl.updateValueAndValidity({ emitEvent: false });
+    interestRateControl.updateValueAndValidity({ emitEvent: false });
+    downPaymentDateControl.updateValueAndValidity({ emitEvent: false });
   }
 
   addPaymentPromise(): void {
@@ -323,10 +446,59 @@ export class ContractsComponent implements OnInit {
     this.showGeneratedPromises = true;
   }
 
+  get lotStatusKey(): string {
+    return lotStatusValue(this.selectedLot?.status);
+  }
+
   calculateKPIs() {
     this.totalContracts = this.contracts.length;
     this.totalPortfolioValue = this.contracts.reduce((sum, contract) => {
       return sum + Number(contract.sale_price || 0);
+    }, 0);
+
+    const kpiContract = this.pickKpiContract(this.contracts);
+    const collected = this.sumContractPayments(kpiContract);
+    const salePrice = Number(kpiContract?.sale_price || 0);
+    this.totalCollected = collected;
+    this.outstandingBalance = Math.max(0, salePrice - collected);
+    this.paymentProgressPercent = salePrice > 0
+      ? Math.min(100, (collected / salePrice) * 100)
+      : 0;
+  }
+
+  private pickKpiContract(contracts: any[]): any | null {
+    if (!contracts.length) {
+      return null;
+    }
+
+    const statusOf = (contract: any): string =>
+      String(contract?.status?.value ?? contract?.status ?? '').toLowerCase();
+
+    const byRecency = (left: any, right: any): number => {
+      const leftDate = Date.parse(String(left?.start_date || left?.created_at || 0));
+      const rightDate = Date.parse(String(right?.start_date || right?.created_at || 0));
+      if (rightDate !== leftDate) {
+        return rightDate - leftDate;
+      }
+      return Number(right?.id || 0) - Number(left?.id || 0);
+    };
+
+    const active = contracts.filter((contract) => statusOf(contract) === 'activo').sort(byRecency);
+    if (active.length > 0) {
+      return active[0];
+    }
+
+    return [...contracts].sort(byRecency)[0];
+  }
+
+  private sumContractPayments(contract: any | null): number {
+    if (!contract) {
+      return 0;
+    }
+
+    const transactions = Array.isArray(contract.transactions) ? contract.transactions : [];
+    return transactions.reduce((sum: number, transaction: { amount?: number | string }) => {
+      return sum + Number(transaction.amount || 0);
     }, 0);
   }
 
@@ -334,6 +506,10 @@ export class ContractsComponent implements OnInit {
     this.isModalOpen = true;
     this.errorMessage = '';
     this.successMessage = '';
+    if (!this.contractForm.get('start_date')?.value) {
+      this.contractForm.patchValue({ start_date: this.formatDateYYYYMMDD(new Date()) }, { emitEvent: false });
+    }
+    this.cdr.detectChanges();
   }
 
   closeModal() {
@@ -341,6 +517,7 @@ export class ContractsComponent implements OnInit {
     this.isModalOpen = false;
     this.contractForm.reset();
     this.clearPaymentPromises();
+    this.clearExtraTitulares();
     this.batchCount = 1;
     this.batchAmount = 0;
     this.batchStartDate = '';
@@ -355,6 +532,7 @@ export class ContractsComponent implements OnInit {
     this.route.queryParamMap.subscribe(params => {
       const lotId = params.get('lotId');
       this.selectedLotId = lotId ? Number(lotId) : null;
+      this.loadSelectedLot();
       this.loadContracts();
     });
 
@@ -363,7 +541,7 @@ export class ContractsComponent implements OnInit {
     this.contractForm.get('is_custom_plan')?.valueChanges.subscribe((isCustom: boolean | null) => {
       const isCustomMode = isCustom === true;
 
-      this.updatePlanModeValidators(isCustomMode);
+      this.updatePlanModeValidators(isCustomMode, this.isSpecialLot);
 
       if (isCustomMode && this.paymentPromises.length === 0) {
         this.addPaymentPromise();
@@ -381,7 +559,11 @@ export class ContractsComponent implements OnInit {
       this.lastIsCustomPlanValue = isCustomMode;
     });
 
-    this.updatePlanModeValidators(this.isCustomPlan);
+    this.updatePlanModeValidators(this.isCustomPlan, this.isSpecialLot);
+
+    this.contractForm.get('is_special_lot')?.valueChanges.subscribe(() => {
+      this.updatePlanModeValidators(this.isCustomPlan, this.isSpecialLot);
+    });
 
     if (this.canCreate) {
       this.loadCustomers();
@@ -435,7 +617,9 @@ export class ContractsComponent implements OnInit {
 
   private applyLotFilter(): void {
     if (!this.selectedLotId) {
-      this.selectedLot = null;
+      if (!this.selectedLot) {
+        this.selectedLot = null;
+      }
       return;
     }
 
@@ -445,25 +629,41 @@ export class ContractsComponent implements OnInit {
     });
 
     this.contracts = filtered;
-    this.selectedLot = filtered[0]?.lot ?? { id: this.selectedLotId };
+    const lotFromContract = filtered[0]?.lot;
+    if (lotFromContract) {
+      this.selectedLot = { ...this.selectedLot, ...lotFromContract };
+    } else if (!this.selectedLot) {
+      this.selectedLot = { id: this.selectedLotId };
+    }
+  }
+
+  private loadSelectedLot(): void {
+    if (!this.selectedLotId) {
+      this.selectedLot = null;
+      return;
+    }
+
+    this.lotService.getLot(this.selectedLotId).subscribe({
+      next: (response) => {
+        this.selectedLot = response?.data ?? response ?? { id: this.selectedLotId };
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.selectedLot = this.selectedLot ?? { id: this.selectedLotId };
+        this.cdr.detectChanges();
+      },
+    });
   }
 
   loadContracts() {
     this.currentPage = 1;
-    this.contractService.getContracts().subscribe({
-      next: (response) => {
-        const responseData = Array.isArray(response)
-          ? response
-          : response && typeof response === 'object' && 'data' in response
-            ? response.data
-            : undefined;
+    const params = this.selectedLotId
+      ? { lotId: this.selectedLotId, perPage: 100 }
+      : undefined;
 
-        const allContracts = Array.isArray(responseData)
-          ? responseData
-          : Array.isArray((responseData as { data?: unknown })?.data)
-            ? (responseData as { data: any[] }).data
-            : [];
-        this.contracts = [...allContracts];
+    this.contractService.getContracts(params).subscribe({
+      next: (response) => {
+        this.contracts = unwrapListItems(response);
 
         if (this.selectedLotId) {
           this.applyLotFilter();
@@ -582,7 +782,8 @@ export class ContractsComponent implements OnInit {
   }
 
   onSubmit() {
-    const isCustom = Boolean(this.contractForm.get('is_custom_plan')?.value);
+    const isCustom = Boolean(this.contractForm.get('is_custom_plan')?.value) && !this.isSpecialLot;
+    const isSpecial = this.isSpecialLot;
     const normalizedPromises = isCustom
       ? this.paymentPromises.value.map((promise: any, index: number) => ({
           payment_number: index + 1,
@@ -605,6 +806,7 @@ export class ContractsComponent implements OnInit {
         this.showGeneratedPromises = true;
       }
       markAllAsTouched(this.contractForm);
+      this.cdr.detectChanges();
       scrollToFirstInvalid(this.host.nativeElement);
       this.toast.show('Formulario incompleto', 'error', 'Revisa los campos marcados en rojo');
       return;
@@ -625,26 +827,35 @@ export class ContractsComponent implements OnInit {
     this.errorMessage = '';
 
     const formValue = this.contractForm.getRawValue();
-    const { project_id, down_payment_date, preventa_stages, payment_promises: _paymentPromises, ...rest } = formValue;
+    const { project_id, down_payment_date, preventa_stages, payment_promises: _paymentPromises, co_titular_ids, ...rest } = formValue;
+    const anchorCustomerId = Number(formValue.customer_id);
+    const extraTitularIds = (co_titular_ids || [])
+      .map((id) => Number(id))
+      .filter((id) => id > 0 && id !== anchorCustomerId);
 
-    const effectiveFirstInstallmentDate = isCustom
+    const effectiveFirstInstallmentDate = isCustom || isSpecial
       ? (down_payment_date || formValue.start_date)
       : formValue.first_installment_date;
 
-    const effectiveTermMonths = Number(formValue.term_months || 0);
-
-    const effectivePreventaStages = isCustom
-      ? 0
-      : Number(preventa_stages ?? 0);
+    const salePrice = Number(formValue.sale_price || 0);
+    const effectiveTermMonths = isSpecial ? 0 : Number(formValue.term_months || 0);
+    const effectivePreventaStages = isCustom || isSpecial ? 0 : Number(preventa_stages ?? 0);
+    const startDate = formValue.start_date;
 
     const payload = {
       ...rest,
+      customer_id: anchorCustomerId,
+      co_titular_ids: extraTitularIds,
+      sale_price: salePrice,
+      down_payment_pactada: isSpecial ? salePrice : formValue.down_payment_pactada,
       term_months: effectiveTermMonths,
-      initial_payment_date: down_payment_date,
-      regular_payment_start_date: effectiveFirstInstallmentDate,
-      first_installment_date: effectiveFirstInstallmentDate,
+      interest_rate: isSpecial ? 0 : formValue.interest_rate,
+      initial_payment_date: isSpecial ? startDate : down_payment_date,
+      regular_payment_start_date: isSpecial ? startDate : effectiveFirstInstallmentDate,
+      first_installment_date: isSpecial ? startDate : effectiveFirstInstallmentDate,
       preventa_installments_count: effectivePreventaStages,
       is_custom_plan: isCustom,
+      is_special_lot: isSpecial,
       promises: normalizedPromises,
     };
 
@@ -656,6 +867,7 @@ export class ContractsComponent implements OnInit {
         this.isProgrammaticPlanReset = true;
         this.contractForm.reset({ interest_rate: 1.00, project_id: '', preventa_stages: 7 });
         this.clearPaymentPromises();
+        this.clearExtraTitulares();
         this.lastIsCustomPlanValue = false;
         this.isProgrammaticPlanReset = false;
         this.availableLots = [];

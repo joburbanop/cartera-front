@@ -16,8 +16,20 @@ export class ContractService {
     return this.http.post<ApiResourceResponse<Contract>>(this.apiUrl, data);
   }
 
-  getContracts(): Observable<ApiListResponse<Contract>> {
-    return this.http.get<ApiListResponse<Contract>>(this.apiUrl);
+  getContracts(params?: { lotId?: number; page?: number; perPage?: number }): Observable<ApiListResponse<Contract>> {
+    const httpParams: Record<string, string | number> = {};
+
+    if (params?.lotId) {
+      httpParams['lot_id'] = params.lotId;
+    }
+    if (params?.page) {
+      httpParams['page'] = params.page;
+    }
+    if (params?.perPage) {
+      httpParams['per_page'] = params.perPage;
+    }
+
+    return this.http.get<ApiListResponse<Contract>>(this.apiUrl, { params: httpParams });
   }
 
   getContractById(id: number): Observable<ApiResourceResponse<Contract>> {
