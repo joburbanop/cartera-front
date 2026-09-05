@@ -151,19 +151,6 @@
   <!-- ========================================== -->
   <!-- WIDGET: CARTERA VENCIDA                   -->
   <!-- ========================================== -->
-  
-
-  <ng-template #noOverdueWidget>
-    <div style="margin-top: 1.5rem; background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 1px solid #a7f3d0; border-radius: 16px; padding: 1.25rem 1.4rem; box-shadow: 0 8px 20px rgba(6, 95, 70, 0.08);">
-      <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
-        <div>
-          <div style="font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: #065f46; font-weight: 800;">Amortización - Cartera Vencida 🚨</div>
-          <div style="font-size: 2.1rem; font-weight: 900; color: #047857; margin-top: 0.35rem;">$ 0</div>
-        </div>
-        <span style="background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 999px; padding: 0.45rem 0.8rem; font-weight: 800; letter-spacing: 0.04em;">AL DÍA</span>
-      </div>
-    </div>
-  </ng-template>
 
   <div *ngIf="tieneCarteraVencida" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3" style="margin-top: 1.5rem; border: 1px solid #fecaca; background: #fef2f2; border-radius: 12px; padding: 1rem 1.25rem; display: flex; align-items: flex-start; gap: 0.75rem;">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 24px; height: 24px; color: #dc2626; flex-shrink: 0;">
@@ -177,6 +164,9 @@
       </p>
       <p style="margin: 0.2rem 0 0; color: #b91c1c; font-size: 0.9rem; line-height: 1.45;">
         Cuotas regulares: <strong>$ {{ overdueRegularAmount | number }}</strong> ({{ overdueRegularCount }})
+      </p>
+      <p style="margin: 0.35rem 0 0; color: #b91c1c; font-size: 0.85rem; line-height: 1.45;">
+        Al completar la cuota inicial, el contrato pasa a Activo.
       </p>
     </div>
     <ng-template #carteraVencidaActiva>
