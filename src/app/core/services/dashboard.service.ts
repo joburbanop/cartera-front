@@ -45,4 +45,8 @@ export class DashboardService {
   getLotesPorEstado(): Observable<any> {
     return this.http.get(`${this.apiUrl}/lotes-por-estado`);
   }
+
+  getProyectosActivos(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/proyectos-activos`);
+  }
 }

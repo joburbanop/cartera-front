@@ -16,15 +16,19 @@ import { PaymentMethodNamePipe } from '../../../shared/pipes/payment-method-name
 import { AmortizationTablePresenterComponent } from '../../../shared/components/amortization-table-presenter/amortization-table-presenter.component';
 import { ContractSummaryCardComponent } from './contract-summary-card/contract-summary-card.component';
 import { PaymentPromiseTabComponent } from './payment-promise-tab/payment-promise-tab.component';
-import { EditDueDateModalComponent } from './edit-due-date-modal/edit-due-date-modal.component';
+import { EditDueDateModalComponent, DueDateAdjustMode, DueDateCadence } from './edit-due-date-modal/edit-due-date-modal.component';
+import { EditPaymentDateModalComponent } from './edit-payment-date-modal/edit-payment-date-modal.component';
+import { RefinanceModalComponent, RefinanceConfirmPayload } from './refinance-modal/refinance-modal.component';
 import { PaymentPromiseService } from '../../../core/services/payment-promise.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { PageTitleService } from '../../../core/services/page-title.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { BitacoraComponent } from '../../../shared/components/bitacora/bitacora.component';
+import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { PaymentPromise } from '../../../core/models/payment-promise.model';
 import { AmortizationInstallment } from '../../../core/models/amortization-installment.model';
 import { AppRoles } from '../../../core/models/app-roles';
+import { unwrapListItems, unwrapPaginator } from '../../../core/models/api-response';
 import { isPaidStatus, isVencida } from '../../../core/models/amortization-status';
 @Component({
   selector: 'app-tabla-amortizacion',
@@ -40,7 +44,10 @@ import { isPaidStatus, isVencida } from '../../../core/models/amortization-statu
     ContractSummaryCardComponent,
     PaymentPromiseTabComponent,
     EditDueDateModalComponent,
+    EditPaymentDateModalComponent,
+    RefinanceModalComponent,
     BitacoraComponent,
+    PaginationComponent,
   ],
   templateUrl: './tabla-amortizacion.component.html',
   styleUrl: './tabla-amortizacion.component.scss',
@@ -66,6 +73,42 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     return this.authService.hasRole(AppRoles.ADMINISTRADOR);
   }
 
+  get canRefinance(): boolean {
+    return this.authService.hasRole(AppRoles.ADMINISTRADOR);
+  }
+
+  get isSpecialLot(): boolean {
+    const value = this.contractData?.is_special_lot;
+    return value === true || value === 1 || value === '1';
+  }
+
+  get isCustomPlan(): boolean {
+    const value = this.contractData?.is_custom_plan;
+    return value === true || value === 1 || value === '1';
+  }
+
+  get canShowPromiseTab(): boolean {
+    return this.isCustomPlan;
+  }
+
+  get hasContractTransactions(): boolean {
+    const fromHistory = Array.isArray(this.transactions) && this.transactions.length > 0;
+    const fromContract = Array.isArray(this.contractData?.transactions) && this.contractData.transactions.length > 0;
+    return fromHistory || fromContract;
+  }
+
+  get amortizationTabLabel(): string {
+    return this.isSpecialLot ? 'Seguimiento de Abonos' : 'Amortización Financiera';
+  }
+
+  get showAmortizationTabBar(): boolean {
+    if (!this.isSpecialLot) {
+      return true;
+    }
+
+    return this.canShowPromiseTab || this.canViewBitacora;
+  }
+
   contractId!: number;
   activeTab: 'amortizacion' | 'promesa' | 'bitacora-contrato' | 'bitacora-cliente' = 'amortizacion';
   contractData: any = null;
@@ -79,19 +122,36 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   resetSelectionFlag = false;
   isGeneralPaymentFlow = false;
   drawerSuggestedAmount: number | null = null;
+  drawerAmountHint: 'schedule' | null = null;
+  drawerOverdueTotal: number | null = null;
+  drawerAmortizationReferenceAmount: number | null = null;
   transactions: any[] = [];
   isHistoryModalOpen = false;
   isLoadingHistory = false;
+  historyPage = 1;
+  historyTotal = 0;
+  readonly historyPageSize = 20;
   paymentPromises: PaymentPromise[] = [];
   activityEntries: ActivityEntry[] = [];
   isLoadingActivity = false;
+  activityPage = 1;
+  activityTotal = 0;
   customerActivityEntries: ActivityEntry[] = [];
   isLoadingCustomerActivity = false;
+  customerActivityPage = 1;
+  customerActivityTotal = 0;
+  readonly activityPageSize = 20;
   private amortizationGenerationAttempts = 0;
   private readonly maxAmortizationGenerationAttempts = 1;
   isEditDueDateModalOpen = false;
   isUpdatingDueDate = false;
   editingInstallment: AmortizationInstallment | null = null;
+  isEditPaymentDateModalOpen = false;
+  isUpdatingPaymentDate = false;
+  editingPaymentInstallment: AmortizationInstallment | null = null;
+  isRefinanceModalOpen = false;
+  isRefinancing = false;
+  isReorderingPromises = false;
 
   get canViewBitacora(): boolean {
     return this.authService.hasRole(AppRoles.SOCIO_GERENCIA);
@@ -145,6 +205,9 @@ export class AmortizationComponent implements OnInit, OnDestroy {
         this.contractData = payload;
         this.pageTitle.set(this.buildContractTitle(this.contractData));
         this.setDefaultView();
+        if (!this.canShowPromiseTab && this.activeTab === 'promesa') {
+          this.activeTab = 'amortizacion';
+        }
         this.calculateFinancials();
         this.loadPaymentPromises();
         this.loadActivity();
@@ -176,9 +239,12 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     }
 
     this.isLoadingActivity = true;
-    this.activityService.getActivity('contract', this.contractId).subscribe({
+    this.activityService.getActivity('contract', this.contractId, this.activityPage, this.activityPageSize).subscribe({
       next: (response) => {
-        this.activityEntries = this.unwrapActivity(response);
+        const page = unwrapPaginator(response);
+        this.activityEntries = page.items as ActivityEntry[];
+        this.activityTotal = page.total;
+        this.activityPage = page.currentPage;
         this.isLoadingActivity = false;
         this.cdr.detectChanges();
       },
@@ -197,9 +263,12 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     }
 
     this.isLoadingCustomerActivity = true;
-    this.activityService.getActivity('customer', this.customerId).subscribe({
+    this.activityService.getActivity('customer', this.customerId, this.customerActivityPage, this.activityPageSize).subscribe({
       next: (response) => {
-        this.customerActivityEntries = this.unwrapActivity(response);
+        const page = unwrapPaginator(response);
+        this.customerActivityEntries = page.items as ActivityEntry[];
+        this.customerActivityTotal = page.total;
+        this.customerActivityPage = page.currentPage;
         this.isLoadingCustomerActivity = false;
         this.cdr.detectChanges();
       },
@@ -211,16 +280,18 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     });
   }
 
+  onActivityPageChange(page: number): void {
+    this.activityPage = page;
+    this.loadActivity();
+  }
+
+  onCustomerActivityPageChange(page: number): void {
+    this.customerActivityPage = page;
+    this.loadCustomerActivity();
+  }
+
   private unwrapActivity(response: unknown): ActivityEntry[] {
-    if (Array.isArray(response)) {
-      return response as ActivityEntry[];
-    }
-
-    const payload = response && typeof response === 'object' && 'data' in response
-      ? (response as { data: unknown }).data
-      : [];
-
-    return Array.isArray(payload) ? (payload as ActivityEntry[]) : [];
+    return unwrapListItems<ActivityEntry>(response);
   }
 
   cargarTablaAmortizacion(): void {
@@ -330,6 +401,11 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   }
 
   setDefaultView(): void {
+    if (this.isSpecialLot) {
+      this.currentView = 'preventa';
+      return;
+    }
+
     this.currentView = this.contractData?.status === 'preventa_inactiva' ? 'preventa' : 'venta';
   }
 
@@ -357,7 +433,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!installment || Number(installment.installment_number) <= 0 || isPaidStatus(installment.status)) {
+    if (!installment || Number(installment.installment_number) <= 0) {
       return;
     }
 
@@ -376,7 +452,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  saveInstallmentDueDate(dueDate: string): void {
+  saveInstallmentDueDate(payload: { dueDate: string; mode: DueDateAdjustMode; cadence?: DueDateCadence }): void {
     if (!this.editingInstallment?.id) {
       return;
     }
@@ -384,7 +460,13 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     this.isUpdatingDueDate = true;
 
     this.amortizationService
-      .updateInstallmentDueDate(this.contractId, Number(this.editingInstallment.id), dueDate)
+      .updateInstallmentDueDate(
+        this.contractId,
+        Number(this.editingInstallment.id),
+        payload.dueDate,
+        payload.mode,
+        payload.cadence ?? 'same_day',
+      )
       .subscribe({
         next: () => {
           this.isUpdatingDueDate = false;
@@ -392,11 +474,14 @@ export class AmortizationComponent implements OnInit, OnDestroy {
           this.editingInstallment = null;
 
           this.toast.show(
-            'Fecha actualizada',
+            'Fechas actualizadas',
             'success',
-            'La fecha de vencimiento se actualizo correctamente.',
+            payload.mode === 'cascade'
+              ? 'El vencimiento se recadenció en cascada.'
+              : 'La fecha de vencimiento se actualizó correctamente.',
           );
 
+          this.loadContractData();
           this.cargarTablaAmortizacion();
           this.cdr.detectChanges();
         },
@@ -404,6 +489,116 @@ export class AmortizationComponent implements OnInit, OnDestroy {
           this.isUpdatingDueDate = false;
           this.toast.show(
             'No se pudo actualizar la fecha',
+            'error',
+            this.readFirstBackendError(err),
+          );
+          this.cdr.detectChanges();
+        },
+      });
+  }
+
+  onEditPaymentDate(installment: AmortizationInstallment): void {
+    if (!this.canRegisterPayments) {
+      return;
+    }
+
+    this.editingPaymentInstallment = installment;
+    this.isEditPaymentDateModalOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  closeEditPaymentDateModal(): void {
+    if (this.isUpdatingPaymentDate) {
+      return;
+    }
+
+    this.isEditPaymentDateModalOpen = false;
+    this.editingPaymentInstallment = null;
+    this.cdr.detectChanges();
+  }
+
+  saveInstallmentPaymentDate(paymentDate: string): void {
+    if (!this.editingPaymentInstallment?.id) {
+      return;
+    }
+
+    this.isUpdatingPaymentDate = true;
+
+    this.amortizationService
+      .updateInstallmentPaymentDate(this.contractId, Number(this.editingPaymentInstallment.id), paymentDate)
+      .subscribe({
+        next: (response) => {
+          this.isUpdatingPaymentDate = false;
+          this.isEditPaymentDateModalOpen = false;
+          this.editingPaymentInstallment = null;
+
+          const warning = response?.data?.warning;
+          this.toast.show(
+            'Fecha de pago actualizada',
+            'success',
+            warning || 'La fecha de pago se actualizó solo en esta cuota.',
+          );
+
+          this.cargarTablaAmortizacion();
+          this.loadActivity();
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.isUpdatingPaymentDate = false;
+          this.toast.show(
+            'No se pudo actualizar la fecha de pago',
+            'error',
+            this.readFirstBackendError(err),
+          );
+          this.cdr.detectChanges();
+        },
+      });
+  }
+
+  openRefinanceModal(): void {
+    if (!this.canRefinance) {
+      return;
+    }
+
+    this.isRefinanceModalOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  closeRefinanceModal(): void {
+    if (this.isRefinancing) {
+      return;
+    }
+
+    this.isRefinanceModalOpen = false;
+    this.cdr.detectChanges();
+  }
+
+  confirmRefinance(payload: RefinanceConfirmPayload): void {
+    if (!this.canRefinance || this.isRefinancing) {
+      return;
+    }
+
+    this.isRefinancing = true;
+
+    this.amortizationService
+      .refinanceContract(this.contractId, payload.tipo, payload.params)
+      .subscribe({
+        next: () => {
+          this.isRefinancing = false;
+          this.isRefinanceModalOpen = false;
+          this.toast.show(
+            'Contrato refinanciado',
+            'success',
+            'La refinanciación se aplicó correctamente.',
+          );
+          this.cargarTablaAmortizacion();
+          this.loadContractData();
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.isRefinancing = false;
+          this.toast.show(
+            'No se pudo refinanciar el contrato',
             'error',
             this.readFirstBackendError(err),
           );
@@ -449,6 +644,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   openDrawer(): void {
     this.isGeneralPaymentFlow = false;
     this.drawerSuggestedAmount = null;
+    this.drawerOverdueTotal = null;
 
     // Filtrar las seleccionadas manualmente que aún sean elegibles
     const seleccionadasValidas = this.selectedFees.filter(
@@ -496,7 +692,15 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   }
 
   get hasPendingPaymentsForGeneralFlow(): boolean {
-    return this.getRegularPendingInstallmentsSorted().length > 0;
+    if (this.shouldPrioritizePendingInitial()) {
+      return true;
+    }
+
+    if (this.getRegularPendingInstallmentsSorted().length > 0) {
+      return true;
+    }
+
+    return this.isCustomPlan && this.nextPendingPromise() !== null;
   }
 
   get generalPayButtonLabel(): string {
@@ -504,22 +708,153 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   }
 
   openGeneralPaymentDrawer(): void {
+    const amortizationSuggested = this.computeAmortizationSuggestedAmount();
+    if (amortizationSuggested <= 0 && !this.nextPendingPromise()) {
+      return;
+    }
+
+    const nextPromise = this.nextPendingPromise();
+    this.isGeneralPaymentFlow = true;
+    this.selectedFees = [];
+    this.drawerOverdueTotal = Math.round(this.computeOverdueTotalToDate());
+
+    if (this.shouldPrioritizePendingInitial()) {
+      this.drawerSuggestedAmount = Math.round(this.initialFeeBalance);
+      this.drawerAmountHint = null;
+      this.drawerAmortizationReferenceAmount = null;
+    } else if (this.isCustomPlan && nextPromise) {
+      this.drawerSuggestedAmount = Math.round(this.promiseRemainingAmount(nextPromise));
+      this.drawerAmountHint = 'schedule';
+      this.drawerAmortizationReferenceAmount = Math.round(amortizationSuggested);
+    } else {
+      this.drawerSuggestedAmount = Math.round(amortizationSuggested);
+      this.drawerAmountHint = null;
+      this.drawerAmortizationReferenceAmount = null;
+    }
+
+    this.isDrawerOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  private lotStatusValue(): string {
+    const raw = this.contractData?.lot?.status as string | { value?: string; name?: string } | undefined;
+    if (!raw) {
+      return '';
+    }
+    if (typeof raw === 'string') {
+      return raw;
+    }
+    return String(raw.value ?? raw.name ?? '');
+  }
+
+  private shouldPrioritizePendingInitial(): boolean {
+    return this.lotStatusValue() === 'preventa' && this.initialFeeBalance > 0;
+  }
+
+  private overdueRegularInstallments(): any[] {
+    return this.getRegularPendingInstallmentsSorted()
+      .filter((fee: any) => this.isVencida(fee?.due_date));
+  }
+
+  private overdueRegularInstallmentsAmount(): number {
+    return this.overdueRegularInstallments()
+      .reduce((sum: number, fee: any) => sum + this.financials.getFeeDebtValue(fee), 0);
+  }
+
+  private computeOverdueTotalToDate(): number {
+    const overdueRegulars = this.overdueRegularInstallmentsAmount();
+
+    if (!this.shouldPrioritizePendingInitial()) {
+      return overdueRegulars;
+    }
+
+    return this.initialFeeBalance + overdueRegulars;
+  }
+
+  get isPreventaLot(): boolean {
+    return this.lotStatusValue() === 'preventa';
+  }
+
+  get pendingInitialAmount(): number {
+    return this.initialFeeBalance;
+  }
+
+  get overdueRegularAmount(): number {
+    return this.overdueRegularInstallmentsAmount();
+  }
+
+  get overdueRegularCount(): number {
+    return this.overdueRegularInstallments().length;
+  }
+
+  private computeAmortizationSuggestedAmount(): number {
+    if (this.shouldPrioritizePendingInitial()) {
+      return this.initialFeeBalance;
+    }
+
     const regularPendingInstallments = this.getRegularPendingInstallmentsSorted();
     if (regularPendingInstallments.length === 0) {
-      return;
+      return 0;
     }
 
     const overdueInstallments = regularPendingInstallments.filter((fee: any) => this.isVencida(fee?.due_date));
 
-    const suggestedAmount = overdueInstallments.length > 0
+    return overdueInstallments.length > 0
       ? overdueInstallments.reduce((sum: number, fee: any) => sum + this.financials.getFeeDebtValue(fee), 0)
       : this.financials.getFeeDebtValue(regularPendingInstallments[0]);
+  }
 
-    this.isGeneralPaymentFlow = true;
-    this.drawerSuggestedAmount = Math.round(suggestedAmount);
-    this.selectedFees = [];
-    this.isDrawerOpen = true;
-    this.cdr.detectChanges();
+  private nextPendingPromise(): PaymentPromise | null {
+    return [...(this.paymentPromises ?? [])]
+      .filter((promise) => {
+        const status = String(promise.status ?? '').toLowerCase();
+        if (status === 'pagada' || status === 'paid' || promise.is_paid) {
+          return false;
+        }
+
+        return this.promiseRemainingAmount(promise) > 0;
+      })
+      .sort((a, b) => {
+        const dateA = a.expected_date ? new Date(a.expected_date).getTime() : Number.POSITIVE_INFINITY;
+        const dateB = b.expected_date ? new Date(b.expected_date).getTime() : Number.POSITIVE_INFINITY;
+        return dateA - dateB;
+      })[0] ?? null;
+  }
+
+  private promiseRemainingAmount(promise: PaymentPromise): number {
+    const remaining = Number(promise.remaining_amount);
+    if (Number.isFinite(remaining) && remaining > 0) {
+      return remaining;
+    }
+
+    return Number(promise.expected_amount) || 0;
+  }
+
+  confirmPromiseReorder(payload: Array<{ id: number; expected_date: string }>): void {
+    if (!this.canRegisterPayments || this.isReorderingPromises) {
+      return;
+    }
+
+    this.isReorderingPromises = true;
+    this.paymentPromiseService.reorderPromises(this.contractId, payload).subscribe({
+      next: (response: any) => {
+        const items = response?.data ?? response ?? [];
+        this.paymentPromises = Array.isArray(items) ? items : [];
+        this.isReorderingPromises = false;
+        this.toast.show('Cronograma actualizado', 'success', 'El orden y las fechas se guardaron correctamente.');
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.isReorderingPromises = false;
+        this.loadPaymentPromises();
+        this.toast.show(
+          'No se pudo reordenar el cronograma',
+          'error',
+          this.readFirstBackendError(err),
+        );
+        this.cdr.detectChanges();
+      },
+    });
   }
 
   private getRegularPendingInstallmentsSorted(): any[] {
@@ -543,6 +878,9 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     this.isDrawerOpen = false;
     this.isGeneralPaymentFlow = false;
     this.drawerSuggestedAmount = null;
+    this.drawerAmountHint = null;
+    this.drawerAmortizationReferenceAmount = null;
+    this.drawerOverdueTotal = null;
     this.clearTableSelection();
   }
 
@@ -593,13 +931,23 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   abrirHistorialPagos(): void {
     this.isLoadingHistory = true;
     this.transactions = [];
+    this.historyPage = 1;
     this.isHistoryModalOpen = true;
     this.cdr.detectChanges();
+    this.loadHistoryPage(1);
+  }
 
-    this.recaudoService.getTransactionsByContract(this.contractId).subscribe({
+  loadHistoryPage(page: number): void {
+    this.isLoadingHistory = true;
+    this.historyPage = page;
+    this.cdr.detectChanges();
+
+    this.recaudoService.getTransactionsByContract(this.contractId, page, this.historyPageSize).subscribe({
       next: (response) => {
-        const payload = response?.data ?? response ?? [];
-        this.transactions = Array.isArray(payload) ? payload : [];
+        const pageData = unwrapPaginator(response);
+        this.transactions = pageData.items;
+        this.historyTotal = pageData.total;
+        this.historyPage = pageData.currentPage;
         this.isLoadingHistory = false;
         this.cdr.detectChanges();
       },
@@ -858,8 +1206,14 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     const number = contractNumber
       ? String(contractNumber)
       : `#${contract?.id || this.contractId}`;
-    const customer = contract?.customer ?? {};
-    const customerName = customer.name || customer.nombre || contract?.customer_name || '';
+    const holders = contract?.customers?.length
+      ? contract.customers
+      : (contract?.customer ? [contract.customer] : []);
+    const customerName = holders
+      .map((holder: { name?: string; nombre?: string }) => holder.name || holder.nombre)
+      .filter(Boolean)
+      .sort((a: string, b: string) => a.localeCompare(b, 'es'))
+      .join(', ') || contract?.customer_name || '';
     return customerName ? `Contrato ${number} — ${customerName}` : `Contrato ${number}`;
   }
 

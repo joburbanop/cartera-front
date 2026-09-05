@@ -70,7 +70,7 @@
             </div>
 
             <div *ngIf="showGeneratedPromises" style="max-height: 360px; overflow-y: auto; padding: 0.85rem; background: #ffffff; display: flex; flex-direction: column; gap: 0.75rem;">
-              <div *ngFor="let promise of paymentPromises.controls; let i = index" [formGroup]="promise" style="padding: 1rem; border: 1px solid #e2e8f0; border-radius: 8px; background: white; display: grid; grid-template-columns: 1fr 1fr 1.5fr auto; gap: 0.75rem; align-items: start;">
+              <div *ngFor="let promise of paymentPromises.controls; let i = index; trackBy: trackByPromise" [formGroup]="promise" style="padding: 1rem; border: 1px solid #e2e8f0; border-radius: 8px; background: white; display: grid; grid-template-columns: 1fr 1fr 1.5fr auto; gap: 0.75rem; align-items: start;">
                 <div>
                   <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 0.25rem;">Fecha</label>
                   <input type="date" formControlName="expected_date" style="width: 100%; padding: 0.55rem; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
@@ -95,11 +95,20 @@
             </div>
           </div>
 
-          <div *ngIf="isCustomPlan" style="margin-top: 1.5rem; padding: 1rem; border-radius: 10px; border: 1px solid; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem;"
+          <div *ngIf="missingTermInstallmentsMessage"
+               style="margin-top: 0.85rem; padding: 0.75rem 0.9rem; border-radius: 8px; background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; font-size: 0.86rem; font-weight: 700;">
+            {{ missingTermInstallmentsMessage }}
+          </div>
+
+          <div *ngIf="isCustomPlan" style="margin-top: 1.5rem; padding: 1rem; border-radius: 10px; border: 1px solid; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem;"
                [ngStyle]="{'background': !hasFinancialDifference ? '#ecfdf5' : '#fef2f2', 'border-color': !hasFinancialDifference ? '#bbf7d0' : '#fecaca'}">
             <div style="padding: 0.9rem; border-radius: 8px; background: rgba(255,255,255,0.22);">
               <span style="display: block; font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">Saldo a financiar</span>
               <span style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">$ {{ saldoAFinanciar | number }}</span>
+            </div>
+            <div style="padding: 0.9rem; border-radius: 8px; background: rgba(255,255,255,0.22);">
+              <span style="display: block; font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">Valor futuro</span>
+              <span style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">$ {{ valorFuturoDeuda | number:'1.0-0' }}</span>
             </div>
             <div style="padding: 0.9rem; border-radius: 8px; background: rgba(255,255,255,0.22);">
               <span style="display: block; font-size: 0.76rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.35rem;">Distribuido</span>

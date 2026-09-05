@@ -134,7 +134,7 @@ export class AmortizationFinancialsService {
     return (plan ?? []).reduce((sum: number, fee) => {
       const status = this.getFeeStatus(fee, plan, contractData);
       if (status === 'paid' || status === 'partial') {
-        return sum + Number(fee.interest_value || 0);
+        return sum + Number(fee.interest_paid || 0);
       }
       return sum;
     }, 0);

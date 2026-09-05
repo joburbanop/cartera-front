@@ -1,411 +1,1215 @@
-<!-- OVERLAY DEL MODAL PARA NUEVO LOTE -->
-<div class="modal-backdrop" *ngIf="isModalOpen">
-  <div class="modal-content">
-    <button class="modal-close" (click)="closeModal()">✖</button>
-    <h3 style="margin: 0 0 1.5rem 0; color: #1e293b;">
-  {{ isEditMode ? 'Editar Lote' : 'Registrar Lote' }}
-</h3>
-    
-    <div *ngIf="errorMessage" class="app-form-alert">
-      {{ errorMessage }}
-    </div>
+<div class="lots-page">
 
-    <form [formGroup]="lotForm" (ngSubmit)="onSubmit()">
-      
-      <div class="app-form-row">
-        <div class="app-form-group" *ngIf="!hasProjectInRoute && !isEditMode"  style="grid-column: span 2;"
->
-          <label class="app-form-label">Proyecto</label>
-          <select class="app-form-select" formControlName="project_id">
-            <option value="">Seleccione un proyecto</option>
-            <option *ngFor="let project of projects" [value]="project.id">
-              {{ project.name }}
-            </option>
-          </select>
-          <app-field-error [control]="lotForm.controls.project_id" label="El proyecto"></app-field-error>
-        </div>
+  <!-- =====================================================
+       HEADER
+  ====================================================== -->
 
-        <div class="app-form-group" style="grid-column: span 2;">
-          <label class="app-form-label">Identificador del Lote</label>
-          <input class="app-form-input" type="text" formControlName="number" placeholder="Ej. Lote 12 - Mz B">
-          <app-field-error [control]="lotForm.controls.number" label="El identificador del lote"></app-field-error>
-        </div>
+  <div class="page-header">
 
-        <div class="app-form-group">
-          <label class="app-form-label">Área (m²)</label>
-          <input class="app-form-input" type="number" formControlName="area_m2" placeholder="120">
-          <app-field-error [control]="lotForm.controls.area_m2" label="El área"></app-field-error>
-        </div>
-
-        <div class="app-form-group">
-          <label class="app-form-label">Precio de Lista ($)</label>
-          <input class="app-form-input" type="text" formControlName="list_price" placeholder="85000000" appCurrencyMask>
-          <app-field-error [control]="lotForm.controls.list_price" label="El precio de lista"></app-field-error>
-        </div>
-      </div>
-      <div class="app-form-group">
-          <label class="app-form-label">Tipo de Lote</label>
-
-          <select class="app-form-select" formControlName="type">
-            <option value="residential">Residencial</option>
-            <!-- Agregaremos aquí los demás tipos según tu LotType -->
-          </select>
-
-          <app-field-error
-            [control]="lotForm.controls.type"
-            label="El tipo de lote">
-          </app-field-error>
-      </div>
-
-      <div class="app-form-group">
-       <label class="app-form-label"> {{ isEditMode ? 'Estado' : 'Estado Inicial' }} </label>
-        <select class="app-form-select" formControlName="status">
-          <option value="disponible">Disponible</option>
-          <option value="reservado">Reservado / Preventa</option>
-          <option value="vendido">Vendido</option>
-        </select>
-      </div>
-
-      <button type="submit" [disabled]="isLoading" class="app-form-button">
-          {{
-            isLoading
-              ? (isEditMode ? 'Actualizando...' : 'Guardando...')
-              : (isEditMode ? 'Actualizar Lote' : 'Guardar Lote')
-          }}
-      </button>
-    </form>
-  </div>
-</div>
-
-<!-- ============================================ -->
-<!-- DASHBOARD DEL PROYECTO SELECCIONADO -->
-<!-- ============================================ -->
-<div>
-
-  <!-- CABECERA GLOBAL -->
-  <div class="page-header" *ngIf="isGlobalView">
     <div>
-      <h1>Inventario General de Lotes</h1>
-      <p>Listado completo de lotes registrados en el sistema.</p>
-    </div>
-    <div class="lot-view-tabs">
+      <h1>Lotes</h1>
 
-      <button type="button" class="btn-primary btn-new-lot"  [class.active]="!showArchivedLots"(click)="showActive()">
-        Lotes
+      <p>
+        Gestión del inventario de lotes
+      </p>
+    </div>
+
+    @if (canCreate && !showArchivedLots) {
+      <button
+        type="button"
+        class="btn-primary"
+        (click)="openModal()"
+      >
+        + Registrar lote
+      </button>
+    }
+
+  </div>
+
+
+  <!-- =====================================================
+       TABS ACTIVOS / ARCHIVADOS
+  ====================================================== -->
+
+  @if (isGlobalView) {
+
+    <div class="view-tabs">
+
+      <button
+        type="button"
+        [class.active]="!showArchivedLots"
+        (click)="showActive()"
+      >
+        Lotes activos
       </button>
 
-      <button type="button" class="btn-primary btn-new-lot" [class.active]="showArchivedLots" (click)="showArchived()">
+      <button
+        type="button"
+        [class.active]="showArchivedLots"
+        (click)="showArchived()"
+      >
         Lotes archivados
       </button>
 
     </div>
-    <button *ngIf="canCreate" class="btn-primary btn-new-lot" (click)="openModal()">+ Añadir Lote</button>
-  </div>
 
-  <!-- BARRA DE NAVEGACIÓN SUPERIOR -->
-  <div class="top-navigation" *ngIf="!isGlobalView">
-    <a routerLink="/projects" class="back-link">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 16px; height: 16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" /></svg>
-      Volver a Proyectos
-    </a>
-  </div>
+  }
 
-  <!-- CONTENIDO DEL PROYECTO (Si hay ID) -->
-  <div>
-    
-    <div class="page-header" *ngIf="!isGlobalView">
-      <div>
-        <h1>{{ activeProject?.name || 'Proyecto' }}</h1>
-        <p>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 14px; height: 14px; color: #ef4444;"><path fill-rule="evenodd" d="m11.54 22.351.07.04.028.016a.76.76 0 0 0 .723 0l.028-.015.071-.041a16.975 16.975 0 0 0 1.144-.742 19.58 19.58 0 0 0 2.683-2.282c1.944-1.99 3.963-4.98 3.963-8.827a8.25 8.25 0 0 0-16.5 0c0 3.846 2.02 6.837 3.963 8.827a19.58 19.58 0 0 0 2.682 2.282 16.975 16.975 0 0 0 1.145.742ZM12 13.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" /></svg>
-          {{ activeProject?.location || 'Ubicación no disponible' }}
-        </p>
-      </div>
-      <button *ngIf="canCreate" class="btn-primary btn-new-lot" (click)="openModal()">+ Añadir Lote</button>
+
+  <!-- =====================================================
+       SELECTOR DE PROYECTO
+  ====================================================== -->
+
+  @if (!showArchivedLots) {
+
+    <div class="project-selector">
+
+      <label for="projectSelect">
+        Proyecto
+      </label>
+
+      <select
+        id="projectSelect"
+        [value]="selectedProjectId ?? ''"
+        (change)="onProjectSelect($event)"
+      >
+
+        <option value="">
+          Todos los proyectos
+        </option>
+
+        @for (project of projects; track project.id) {
+
+          <option
+            [value]="project.id"
+          >
+            {{ project.name || project.nombre }}
+          </option>
+
+        }
+
+      </select>
+
     </div>
 
-    <div class="kpi-grid" *ngIf="!isGlobalView">
+  }
+
+
+  <!-- =====================================================
+       KPIs
+  ====================================================== -->
+
+  @if (!showArchivedLots) {
+
+    <div class="kpi-grid">
+
       <div class="kpi-card">
-        <div class="kpi-card__icon" aria-hidden="true">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-          </svg>
-        </div>
-        <div>
-          <p class="kpi-card__value">{{ projectAvailableLots }}</p>
-          <p class="kpi-card__label">Lotes disponibles de {{ projectTotalLots }}</p>
-        </div>
+
+        <span class="kpi-label">
+          Total de lotes
+        </span>
+
+        <strong>
+          {{ projectTotalLots }}
+        </strong>
+
       </div>
+
+
       <div class="kpi-card">
-        <div class="kpi-card__icon" aria-hidden="true">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
-          </svg>
-        </div>
-        <div>
-          <p class="kpi-card__value" [ngStyle]="{'color': (projectAvailableLots === 0 && projectTotalLots > 0) ? '#16a34a' : '#1e293b'}">
-            {{ projectTotalLots > 0 ? (100 - (projectAvailableLots / projectTotalLots * 100) | number:'1.0-0') : 0 }}%
-          </p>
-          <p class="kpi-card__label">Avance de inventario</p>
-        </div>
+
+        <span class="kpi-label">
+          Lotes disponibles
+        </span>
+
+        <strong>
+          {{ projectAvailableLots }}
+        </strong>
+
       </div>
+
+
       <div class="kpi-card">
-        <div class="kpi-card__icon" aria-hidden="true">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
-          </svg>
-        </div>
-        <div>
-          <p class="kpi-card__value">$ {{ (projectTotalValue / 1000000) | number:'1.0-1' }}M</p>
-          <p class="kpi-card__label">Valor total del proyecto</p>
-        </div>
+
+        <span class="kpi-label">
+          Valor total
+        </span>
+
+        <strong>
+          {{ projectTotalValue | currency:'COP':'symbol':'1.0-0' }}
+        </strong>
+
       </div>
+
     </div>
 
-    <div class="table-shell" *ngIf="!showArchivedLots">
-      <table class="custom-table">
-        <thead>
-          <tr>
-            <th>Proyecto</th>
-            <th>Identificador</th>
-            <th>Dimensiones</th>
-            <th>Precio de Lista</th>
-            <th>Estado</th>
-            <th>Contrato</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngIf="lots.length === 0" class="empty-row">
-            <td colspan="7">
-              <div class="empty-state">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
-                </svg>
-                <p>No hay lotes registrados.</p>
-              </div>
-            </td>
-          </tr>
+  }
 
-          <tr *ngFor="let lot of pagedLots">
-            <td>
-              <span class="lot-project">{{ lot.project?.name || 'Sin asignar' }}</span>
-            </td>
-            <td>
-              <div class="lot-name">Lote {{ lot.number }}</div>
-              <div class="lot-detail">ID: #{{ lot.id }}</div>
-            </td>
-            <td>
-              <span class="lot-project">{{ lot.area_m2 }} m²</span>
-            </td>
-            <td>
-              <span class="lot-project">$ {{ lot.list_price | number }}</span>
-            </td>
-            <td>
-              <span class="badge-pill"
-                    [ngClass]="{
-                      'badge-pill--success': lot.status === 'disponible',
-                      'badge-pill--warning': lot.status === 'preventa' || lot.status === 'reservado',
-                      'badge-pill--neutral': lot.status === 'vendido'
-                    }">
-                {{ lot.status }}
-              </span>
-            </td>
 
-            <td>
-              <a *ngIf="lot.status !== 'disponible'"
-                 [routerLink]="['/contracts']"
-                 [queryParams]="{ lotId: lot.id }"
-                 title="Ir a Contratos"
-                 style="display: inline-flex; align-items: center; gap: 0.25rem; color: #0284c7; font-size: 0.85rem; font-weight: 600; text-decoration: none; cursor: pointer;">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 16px; height: 16px;">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                </svg>
-                Ver contrato
-              </a>
+  <!-- =====================================================
+       FILTROS
+  ====================================================== -->
 
-              <span *ngIf="lot.status === 'disponible'" style="color: #94a3b8; font-size: 0.85rem;">
-                Sin contrato
-              </span>
-            </td>
+  @if (!showArchivedLots) {
 
-            <td>
-              <div class="action-buttons">
-                <button
-                  *ngIf="canViewBitacora"
-                  class="action-btn bitacora-btn"
-                  type="button"
-                  title="Ver bitácora"
-                  (click)="openBitacora(lot)">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 18px; height:18px;">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                  </svg>
-                </button>
-               <button *ngIf="lot.status === 'disponible'"
-                  class="action-btn"type="button"title="Editar Lote"(click)="openEditModal(lot)">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 18px; height:18px;">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-                  </svg>
-                </button>
-                <!-- Archivar: solo lotes disponibles -->
-                <button
-                    *ngIf="isLotAvailable(lot)"
-                    class="action-btn delete-btn"
-                    type="button"
-                    title="Archivar Lote"
-                    (click)="archiveLot(lot)">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke-width="1.5"
-                      stroke="#dc2626"
-                      style="width: 18px; height: 18px;"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-                      />
-                    </svg>
-                  </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <form
+      class="filters"
+      [formGroup]="filterForm"
+      (ngSubmit)="applyFilters()"
+    >
 
-    <app-pagination
-      *ngIf="!showArchivedLots"
-      [totalItems]="lots.length"
-      [pageSize]="pageSize"
-      [currentPage]="currentPage"
-      (pageChange)="currentPage = $event">
-    </app-pagination>
-<div class="table-shell" *ngIf="showArchivedLots">
+      <!-- Número -->
 
-  <table class="custom-table">
-    <thead>
-      <tr>
-        <th>Proyecto</th>
-        <th>Identificador</th>
-        <th>Dimensiones</th>
-        <th>Precio de Lista</th>
-        <th>Tipo</th>
-        <th>Archivado</th>
-        <th></th>
-      </tr>
-    </thead>
+      <div class="filter-field">
 
-    <tbody>
+        <label for="filterNumber">
+          Lote
+        </label>
 
-      <tr *ngIf="archivedLots.length === 0" class="empty-row">
-        <td colspan="7">
-          <div class="empty-state">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              aria-hidden="true"
+        <input
+          id="filterNumber"
+          type="text"
+          formControlName="number"
+          placeholder="Número del lote"
+        />
+
+      </div>
+
+
+      <!-- Estado -->
+
+      <div class="filter-field">
+
+        <label for="filterStatus">
+          Estado
+        </label>
+
+        <select
+          id="filterStatus"
+          formControlName="status"
+        >
+
+          <option value="">
+            Todos
+          </option>
+
+          @for (status of lotStatusOptions; track status.value) {
+
+            <option
+              [value]="status.value"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"
+              {{ status.label }}
+            </option>
+
+          }
+
+        </select>
+
+      </div>
+
+
+      <!-- Proyecto -->
+
+      @if (isGlobalView) {
+
+        <div class="filter-field">
+
+          <label for="filterProject">
+            Proyecto
+          </label>
+
+          <select
+            id="filterProject"
+            formControlName="project_id"
+          >
+
+            <option value="">
+              Todos
+            </option>
+
+            @for (project of projects; track project.id) {
+
+              <option
+                [value]="project.id"
+              >
+                {{ project.name || project.nombre }}
+              </option>
+
+            }
+
+          </select>
+
+        </div>
+
+      }
+
+
+      <!-- Tipo de plan -->
+
+      <div class="filter-field">
+
+        <label for="filterPlanType">
+          Plan
+        </label>
+
+        <select
+          id="filterPlanType"
+          formControlName="plan_type"
+        >
+
+          <option value="">
+            Todos
+          </option>
+
+          <option value="none">
+            Sin contrato
+          </option>
+
+          <option value="standard">
+            Plan estándar
+          </option>
+
+          <option value="special">
+            Lote especial
+          </option>
+
+          <option value="custom">
+            Plan personalizado
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <!-- Cartera -->
+
+      <div class="filter-field">
+
+        <label for="filterCartera">
+          Cartera
+        </label>
+
+        <select
+          id="filterCartera"
+          formControlName="cartera"
+        >
+
+          <option value="">
+            Todas
+          </option>
+
+          <option value="al_dia">
+            Al día
+          </option>
+
+          <option value="mora">
+            En mora
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <!-- Cliente -->
+
+      <div class="filter-field">
+
+        <label for="filterCustomer">
+          Cliente
+        </label>
+
+        <input
+          id="filterCustomer"
+          type="text"
+          formControlName="customer"
+          placeholder="Nombre o documento"
+        />
+
+      </div>
+
+
+      <!-- Acciones -->
+
+      <div class="filter-actions">
+
+        <button
+          type="submit"
+          class="btn-primary"
+        >
+          Filtrar
+        </button>
+
+        <button
+          type="button"
+          class="btn-secondary"
+          (click)="clearFilters()"
+        >
+          Limpiar
+        </button>
+
+      </div>
+
+    </form>
+
+  }
+
+
+  <!-- =====================================================
+       MENSAJE DE ERROR
+  ====================================================== -->
+
+  @if (errorMessage) {
+
+    <div class="alert-error">
+
+      {{ errorMessage }}
+
+    </div>
+
+  }
+
+
+  <!-- =====================================================
+       CARGANDO
+  ====================================================== -->
+
+  @if (isLoading) {
+
+    <div class="loading">
+
+      Cargando...
+
+    </div>
+
+  }
+
+
+  <!-- =====================================================
+       LOTES ACTIVOS
+  ====================================================== -->
+
+  @if (!showArchivedLots) {
+
+    <div class="table-container">
+
+      <div class="table-header">
+
+        <h2>
+          Lotes activos
+        </h2>
+
+        <span>
+          {{ lotsFoundLabel }}
+        </span>
+
+      </div>
+
+
+      @if (pagedLots.length > 0) {
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th>
+                Lote
+              </th>
+
+              @if (isGlobalView) {
+
+                <th>
+                  Proyecto
+                </th>
+
+              }
+
+              <th>
+                Área
+              </th>
+
+              <th>
+                Precio
+              </th>
+
+              <th>
+                Precio m²
+              </th>
+
+              <th>
+                Estado
+              </th>
+
+              <th>
+                Tipo
+              </th>
+
+              <th>
+                Contrato
+              </th>
+
+              <th>
+                Acciones
+              </th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody>
+
+            @for (lot of pagedLots; track lot.id) {
+
+              <tr>
+
+                <!-- LOTE -->
+
+                <td>
+
+                  <a
+                    [routerLink]="lotResumeCommands(lot)"
+                    [queryParams]="lotResumeQueryParams(lot)"
+                    class="lot-link"
+                  >
+                    {{ lot.number }}
+                  </a>
+
+                </td>
+
+
+                <!-- PROYECTO -->
+
+                @if (isGlobalView) {
+
+                 <td>
+
+                    {{ lot.project?.name || '-' }}
+
+                  </td>
+
+                }
+
+
+                <!-- ÁREA -->
+
+                <td>
+
+                  {{ lot.area_m2 | number:'1.0-2' }} m²
+
+                </td>
+
+
+                <!-- PRECIO -->
+
+                <td>
+
+                  {{
+                    lot.list_price
+                      | currency:'COP':'symbol':'1.0-0'
+                  }}
+
+                </td>
+
+
+                <!-- PRECIO M2 -->
+
+                <td>
+
+                  {{
+                    lot.price_m2
+                      | currency:'COP':'symbol':'1.0-0'
+                  }}
+
+                </td>
+
+
+                <!-- ESTADO -->
+
+                <td>
+
+                  <span class="status-badge">
+
+                    {{ lot.status | lotStatusLabel }}
+
+                  </span>
+
+                </td>
+
+
+                <!-- TIPO -->
+
+                <td>
+
+                  {{ lot.type || '-' }}
+
+                </td>
+
+
+                <!-- CONTRATO -->
+
+                <td>
+
+                  @if (lotContractsCount(lot) === 0) {
+
+                    <span>
+                      Sin contrato
+                    </span>
+
+                  } @else if (lotContractsCount(lot) === 1) {
+
+                    <a
+                      [routerLink]="lotResumeCommands(lot)"
+                      class="contract-link"
+                    >
+                      Ver contrato
+                    </a>
+
+                  } @else {
+
+                    <a
+                      [routerLink]="lotResumeCommands(lot)"
+                      [queryParams]="lotResumeQueryParams(lot)"
+                      class="contract-link"
+                    >
+                      {{ lotContractsCount(lot) }} contratos
+                    </a>
+
+                  }
+
+                </td>
+
+
+                <!-- ACCIONES -->
+
+                <td>
+
+                  <div class="table-actions">
+
+                    @if (canCreate && isLotAvailable(lot)) {
+
+                      <button
+                        type="button"
+                        class="btn-icon"
+                        title="Editar lote"
+                        (click)="openEditModal(lot)"
+                      >
+                        Editar
+                      </button>
+
+                    }
+
+
+                    @if (canCreate && isLotAvailable(lot)) {
+
+                      <button
+                        type="button"
+                        class="btn-icon danger"
+                        title="Archivar lote"
+                        (click)="archiveLot(lot)"
+                      >
+                        Archivar
+                      </button>
+
+                    }
+
+
+                    @if (canViewBitacora) {
+
+                      <button
+                        type="button"
+                        class="btn-icon"
+                        title="Ver bitácora"
+                        (click)="openBitacora(lot)"
+                      >
+                        Bitácora
+                      </button>
+
+                    }
+
+                  </div>
+
+                </td>
+
+              </tr>
+
+            }
+
+          </tbody>
+
+        </table>
+
+
+        <!-- =================================================
+             PAGINACIÓN BACKEND
+        ================================================== -->
+
+        <app-pagination
+          [totalItems]="lotsTotal"
+          [pageSize]="pageSize"
+          [currentPage]="currentPage"
+          (pageChange)="onLotsPageChange($event)"
+        >
+        </app-pagination>
+
+
+      } @else {
+
+        <div class="empty-state">
+
+          <h3>
+            No se encontraron lotes
+          </h3>
+
+          <p>
+            No hay lotes que coincidan con los filtros seleccionados.
+          </p>
+
+        </div>
+
+      }
+
+    </div>
+
+  }
+
+
+  <!-- =====================================================
+       LOTES ARCHIVADOS
+  ====================================================== -->
+
+  @if (showArchivedLots) {
+
+    <div class="table-container">
+
+      <div class="table-header">
+
+        <h2>
+          Lotes archivados
+        </h2>
+
+        <span>
+          {{ archivedLots.length }}
+          {{
+            archivedLots.length === 1
+              ? 'lote archivado'
+              : 'lotes archivados'
+          }}
+        </span>
+
+      </div>
+
+
+      @if (archivedLots.length > 0) {
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th>
+                Lote
+              </th>
+
+              @if (isGlobalView) {
+
+                <th>
+                  Proyecto
+                </th>
+
+              }
+
+              <th>
+                Área
+              </th>
+
+              <th>
+                Precio
+              </th>
+
+              <th>
+                Tipo
+              </th>
+
+              <th>
+                Archivado
+              </th>
+
+              <th>
+                Acciones
+              </th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody>
+
+            @for (
+              lot of archivedLots;
+              track lot.id
+            ) {
+
+              <tr>
+
+                <!-- LOTE -->
+
+                <td>
+
+                  {{ lot.number }}
+
+                </td>
+
+
+                <!-- PROYECTO -->
+
+                @if (isGlobalView) {
+
+                  <td>
+                    {{ lot.project?.name || '-' }}
+                  </td>
+
+                }
+
+
+                <!-- ÁREA -->
+
+                <td>
+
+                  {{ lot.area_m2 | number:'1.0-2' }} m²
+
+                </td>
+
+
+                <!-- PRECIO -->
+
+                <td>
+
+                  {{
+                    lot.list_price
+                      | currency:'COP':'symbol':'1.0-0'
+                  }}
+
+                </td>
+
+
+                <!-- TIPO -->
+
+                <td>
+
+                  {{ lot.type || '-' }}
+
+                </td>
+
+
+                <!-- FECHA -->
+
+                <td>
+
+                  {{
+                    lot.deleted_at
+                      ? (lot.deleted_at | date:'dd/MM/yyyy HH:mm')
+                      : '-'
+                  }}
+
+                </td>
+
+
+                <!-- ACCIONES -->
+
+                <td>
+
+                  <div class="table-actions">
+
+                    @if (canCreate) {
+
+                      <button
+                        type="button"
+                        class="btn-icon"
+                        title="Reactivar lote"
+                        (click)="activateLot(lot)"
+                      >
+                        Reactivar
+                      </button>
+
+                    }
+
+                  </div>
+
+                </td>
+
+              </tr>
+
+            }
+
+          </tbody>
+
+        </table>
+
+
+      } @else {
+
+        <div class="empty-state">
+
+          <h3>
+            No hay lotes archivados
+          </h3>
+
+          <p>
+            No existen lotes archivados para mostrar.
+          </p>
+
+        </div>
+
+      }
+
+    </div>
+
+  }
+
+
+  <!-- =====================================================
+       MODAL CREAR / EDITAR
+  ====================================================== -->
+
+  @if (isModalOpen) {
+
+    <div
+      class="modal-backdrop"
+      (click)="closeModal()"
+    >
+
+      <div
+        class="modal"
+        (click)="$event.stopPropagation()"
+      >
+
+        <div class="modal-header">
+
+          <div>
+
+            <h2>
+              {{
+                isEditMode
+                  ? 'Editar lote'
+                  : 'Registrar lote'
+              }}
+            </h2>
+
+            <p>
+              {{
+                isEditMode
+                  ? 'Actualiza la información del lote.'
+                  : 'Ingresa la información del nuevo lote.'
+              }}
+            </p>
+
+          </div>
+
+
+          <button
+            type="button"
+            class="modal-close"
+            (click)="closeModal()"
+          >
+            ×
+          </button>
+
+        </div>
+
+
+        <!-- ERROR -->
+
+        @if (errorMessage) {
+
+          <div class="alert-error">
+
+            {{ errorMessage }}
+
+          </div>
+
+        }
+
+
+        <!-- FORMULARIO -->
+
+        <form
+          [formGroup]="lotForm"
+          (ngSubmit)="onSubmit()"
+        >
+
+          <div class="form-grid">
+
+
+            <!-- PROYECTO -->
+
+            @if (!hasProjectInRoute && !isEditMode) {
+
+              <div class="form-field">
+
+                <label for="lotProject">
+                  Proyecto *
+                </label>
+
+                <select
+                  id="lotProject"
+                  formControlName="project_id"
+                >
+
+                  <option value="">
+                    Selecciona un proyecto
+                  </option>
+
+                  @for (
+                    project of projects;
+                    track project.id
+                  ) {
+
+                    <option
+                      [value]="project.id"
+                    >
+                      {{
+                        project.name
+                        || project.nombre
+                      }}
+                    </option>
+
+                  }
+
+                </select>
+
+                <app-field-error
+                  [control]="lotForm.controls.project_id"
+                >
+                </app-field-error>
+
+              </div>
+
+            }
+
+
+            <!-- NÚMERO -->
+
+            <div class="form-field">
+
+              <label for="lotNumber">
+                Número del lote *
+              </label>
+
+              <input
+                id="lotNumber"
+                type="text"
+                formControlName="number"
+                placeholder="Ej. L-001"
               />
-            </svg>
 
-            <p>No hay lotes archivados.</p>
+              <app-field-error
+                [control]="lotForm.controls.number"
+              >
+              </app-field-error>
+
+            </div>
+
+
+            <!-- ÁREA -->
+
+            <div class="form-field">
+
+              <label for="lotArea">
+                Área m² *
+              </label>
+
+              <input
+                id="lotArea"
+                type="number"
+                formControlName="area_m2"
+                min="1"
+              />
+
+              <app-field-error
+                [control]="lotForm.controls.area_m2"
+              >
+              </app-field-error>
+
+            </div>
+
+
+            <!-- PRECIO -->
+
+            <div class="form-field">
+
+              <label for="lotPrice">
+                Precio de lista *
+              </label>
+
+              <input
+                id="lotPrice"
+                type="text"
+                formControlName="list_price"
+                appCurrencyMask
+              />
+
+              <app-field-error
+                [control]="lotForm.controls.list_price"
+              >
+              </app-field-error>
+
+            </div>
+
+
+            <!-- PRECIO M2 -->
+
+            <div class="form-field">
+
+              <label for="lotPriceM2">
+                Precio por m²
+              </label>
+
+              <input
+                id="lotPriceM2"
+                type="text"
+                formControlName="price_m2"
+                readonly
+              />
+
+            </div>
+
+
+            <!-- ESTADO -->
+
+            <div class="form-field">
+
+              <label for="lotStatus">
+                Estado *
+              </label>
+
+              <select
+                id="lotStatus"
+                formControlName="status"
+              >
+
+                @for (
+                  status of lotStatusOptions;
+                  track status.value
+                ) {
+
+                  <option
+                    [value]="status.value"
+                  >
+                    {{ status.label }}
+                  </option>
+
+                }
+
+              </select>
+
+              <app-field-error
+                [control]="lotForm.controls.status"
+              >
+              </app-field-error>
+
+            </div>
+
+
+            <!-- TIPO -->
+
+            <div class="form-field">
+
+              <label for="lotType">
+                Tipo de lote *
+              </label>
+
+              <select
+                id="lotType"
+                formControlName="type"
+              >
+
+                <option value="residential">
+                  Residencial
+                </option>
+
+                <option value="commercial">
+                  Comercial
+                </option>
+
+              </select>
+
+              <app-field-error
+                [control]="lotForm.controls.type"
+              >
+              </app-field-error>
+
+            </div>
+
           </div>
-        </td>
-      </tr>
 
-      <tr *ngFor="let lot of archivedLots">
 
-        <td>
-          <span class="lot-project">
-            {{ lot.project?.name || 'Sin asignar' }}
-          </span>
-        </td>
+          <!-- ACCIONES DEL FORM -->
 
-        <td>
-          <div class="lot-name">
-            Lote {{ lot.number }}
-          </div>
-
-          <div class="lot-detail">
-            ID: #{{ lot.id }}
-          </div>
-        </td>
-
-        <td>
-          <span class="lot-project">
-            {{ lot.area_m2 }} m²
-          </span>
-        </td>
-
-        <td>
-          <span class="lot-project">
-            $ {{ lot.list_price | number }}
-          </span>
-        </td>
-
-        <td>
-          <span class="badge-pill badge-pill--neutral">
-            Archivado
-          </span>
-        </td>
-
-        <td>
-          <span class="lot-detail">
-            {{ lot.deleted_at | date:'dd/MM/yyyy' }}
-          </span>
-        </td>
-
-        <td>
-          <div class="action-buttons">
+          <div class="modal-actions">
 
             <button
-              class="action-btn activate-btn"
               type="button"
-              title="Reactivar Lote"
-              (click)="activateLot(lot)"
+              class="btn-secondary"
+              [disabled]="isLoading"
+              (click)="closeModal()"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="#16a34a"
-                style="width: 18px; height: 18px;"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M16.023 9.348h4.992V4.356m-1.498 4.992a9 9 0 1 0 1.498 4.992"
-                />
-              </svg>
+              Cancelar
+            </button>
+
+
+            <button
+              type="submit"
+              class="btn-primary"
+              [disabled]="isLoading"
+            >
+
+              @if (isLoading) {
+
+                Guardando...
+
+              } @else {
+
+                {{
+                  isEditMode
+                    ? 'Guardar cambios'
+                    : 'Registrar lote'
+                }}
+
+              }
+
             </button>
 
           </div>
-        </td>
 
-      </tr>
+        </form>
 
-    </tbody>
-  </table>
+      </div>
+
+    </div>
+
+  }
+
+
+  <!-- =====================================================
+       BITÁCORA
+  ====================================================== -->
+
+  @if (isBitacoraOpen && bitacoraSubjectId) {
+
+    <app-bitacora-modal
+      [title]="bitacoraTitle"
+      [subjectType]="bitacoraSubjectType"
+      [subjectId]="bitacoraSubjectId"
+      (close)="closeBitacora()"
+    >
+    </app-bitacora-modal>
+
+  }
 
 </div>
-  </div>
-</div>
-
-<app-bitacora-modal
-  [isOpen]="isBitacoraOpen"
-  [title]="bitacoraTitle"
-  [subjectType]="bitacoraSubjectType"
-  [subjectId]="bitacoraSubjectId"
-  (closed)="closeBitacora()">
-</app-bitacora-modal>

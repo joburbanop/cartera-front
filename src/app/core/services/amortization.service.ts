@@ -26,10 +26,47 @@ export class AmortizationService {
     });
   }
 
-  updateInstallmentDueDate(contractId: number, installmentId: number, dueDate: string): Observable<any> {
+  updateInstallmentDueDate(
+    contractId: number,
+    installmentId: number,
+    dueDate: string,
+    mode: 'single' | 'cascade',
+    cadence: 'same_day' | 'month_end' = 'same_day',
+  ): Observable<any> {
     return this.http.patch(
       `${this.apiUrl}/${contractId}/installments/${installmentId}/due-date`,
-      { due_date: dueDate },
+      { due_date: dueDate, mode, cadence, confirm: true },
     );
+  }
+
+  previewInstallmentDueDate(
+    contractId: number,
+    installmentId: number,
+    dueDate: string,
+    mode: 'single' | 'cascade',
+    cadence: 'same_day' | 'month_end' = 'same_day',
+  ): Observable<any> {
+    return this.http.post(
+      `${this.apiUrl}/${contractId}/installments/${installmentId}/due-date/preview`,
+      { due_date: dueDate, mode, cadence },
+    );
+  }
+
+  updateInstallmentPaymentDate(
+    contractId: number,
+    installmentId: number,
+    paymentDate: string,
+  ): Observable<any> {
+    return this.http.patch(
+      `${this.apiUrl}/${contractId}/installments/${installmentId}/payment-date`,
+      { payment_date: paymentDate },
+    );
+  }
+
+  refinanceContract(contractId: number, tipo: string, params: Record<string, unknown>): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${contractId}/refinance`, {
+      tipo,
+      ...params,
+    });
   }
 }

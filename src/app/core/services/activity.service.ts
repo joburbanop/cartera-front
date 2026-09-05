@@ -12,10 +12,12 @@ export class ActivityService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiUrl}/activity`;
 
-  getActivity(subjectType: ActivitySubjectType, subjectId: number): Observable<ApiResourceResponse<ActivityEntry[]>> {
+  getActivity(subjectType: ActivitySubjectType, subjectId: number, page = 1, perPage = 20): Observable<ApiResourceResponse<ActivityEntry[]>> {
     const params = new HttpParams()
       .set('subject_type', subjectType)
-      .set('subject_id', String(subjectId));
+      .set('subject_id', String(subjectId))
+      .set('page', String(page))
+      .set('per_page', String(perPage));
 
     return this.http.get<ApiResourceResponse<ActivityEntry[]>>(this.apiUrl, { params });
   }

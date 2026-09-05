@@ -12,6 +12,8 @@ export interface Lot {
   type?: string;
   folio_matricula?: string | null;
   ficha_catastral?: string | null;
+  contracts_count?: number;
+  contracts?: { id?: number }[];
   project?: Project;
   deleted_at?: string | null;
 }

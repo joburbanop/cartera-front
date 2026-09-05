@@ -1,3 +1,11 @@
+.special-lot-section-title {
+  margin: 2rem 0 1rem;
+  color: #0f172a;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
 /* ENVOLTURA PRINCIPAL PARA FORZAR QUE TODO VAYA HACIA ABAJO */
 .amortization-page {
   display: flex;
@@ -337,6 +345,32 @@
     background: #f8fafc;
     color: #475569;
     border-color: #e2e8f0;
+  }
+}
+
+.btn-refinance {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #347769;
+  color: #ffffff;
+  border: 1px solid #2f7262;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: currentColor;
+  }
+
+  &:hover,
+  &:focus {
+    background: #2f7262;
   }
 }
 

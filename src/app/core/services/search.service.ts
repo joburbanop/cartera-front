@@ -21,6 +21,7 @@ export interface SearchLotHit {
   number: string;
   project_name: string | null;
   project_id: number | null;
+  contract_id: number | null;
 }
 
 export interface SearchResults {

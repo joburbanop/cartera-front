@@ -6,14 +6,16 @@ import { AppRoles } from '../../../core/models/app-roles';
 import { ActivityService } from '../../../core/services/activity.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { CustomerDetail, CustomerService } from '../../../core/services/customer.service';
+import { unwrapPaginator } from '../../../core/models/api-response';
 import { Contract } from '../../../core/models/contract.model';
 import { BitacoraComponent } from '../../../shared/components/bitacora/bitacora.component';
+import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { ContractStatusLabelPipe } from '../../../shared/pipes/contract-status-label.pipe';
 
 @Component({
   selector: 'app-client-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, ContractStatusLabelPipe, BitacoraComponent],
+  imports: [CommonModule, RouterModule, ContractStatusLabelPipe, BitacoraComponent, PaginationComponent],
   templateUrl: './client-detail.component.html',
   styleUrl: './client-detail.component.scss',
 })
@@ -29,6 +31,9 @@ export class ClientDetailComponent implements OnInit {
   errorMessage = '';
   activityEntries: ActivityEntry[] = [];
   isLoadingActivity = false;
+  activityPage = 1;
+  activityTotal = 0;
+  readonly activityPageSize = 20;
 
   get canViewBitacora(): boolean {
     return this.authService.hasRole(AppRoles.SOCIO_GERENCIA);
@@ -67,22 +72,19 @@ export class ClientDetailComponent implements OnInit {
     });
   }
 
-  private loadActivity(): void {
+  loadActivity(): void {
     if (!this.canViewBitacora || !this.customer?.id) {
       this.activityEntries = [];
       return;
     }
 
     this.isLoadingActivity = true;
-    this.activityService.getActivity('customer', Number(this.customer.id)).subscribe({
+    this.activityService.getActivity('customer', Number(this.customer.id), this.activityPage, this.activityPageSize).subscribe({
       next: (response) => {
-        const payload = Array.isArray(response)
-          ? response
-          : response && typeof response === 'object' && 'data' in response
-            ? response.data
-            : [];
-
-        this.activityEntries = (payload ?? []) as ActivityEntry[];
+        const page = unwrapPaginator(response);
+        this.activityEntries = page.items as ActivityEntry[];
+        this.activityTotal = page.total;
+        this.activityPage = page.currentPage;
         this.isLoadingActivity = false;
         this.cdr.detectChanges();
       },

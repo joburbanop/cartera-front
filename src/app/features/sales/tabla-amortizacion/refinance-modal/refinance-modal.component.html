@@ -1,0 +1,131 @@
+<div *ngIf="isOpen" class="modal-backdrop" (click)="close()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Refinanciar contrato</h3>
+      <button type="button" class="btn-close" (click)="close()" [disabled]="isSaving" aria-label="Cerrar modal">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <p class="modal-helper">Elige la estrategia y completa los datos pactados.</p>
+
+      <div class="option-list" role="radiogroup" aria-label="Estrategia de refinanciación">
+        <label class="option-card" *ngFor="let option of options" [class.option-card--active]="tipo === option.tipo">
+          <input
+            type="radio"
+            name="refinance-tipo"
+            [value]="option.tipo"
+            [(ngModel)]="tipo"
+            [disabled]="isSaving"
+          />
+          <span>
+            <strong>{{ option.title }}</strong>
+            <small>{{ option.description }}</small>
+          </span>
+        </label>
+      </div>
+
+      <ng-container [ngSwitch]="tipo">
+        <div *ngSwitchCase="'acuerdo_pago'" class="fields">
+          <label class="modal-label" for="extra-amount">Abono fijo mensual</label>
+          <input
+            id="extra-amount"
+            class="modal-input"
+            type="text"
+            inputmode="numeric"
+            appCurrencyMask
+            [(ngModel)]="extraAmount"
+            [disabled]="isSaving"
+            name="extraAmount"
+          />
+
+          <label class="modal-label" for="acuerdo-months">Meses</label>
+          <input
+            id="acuerdo-months"
+            class="modal-input"
+            type="number"
+            min="1"
+            [(ngModel)]="months"
+            [disabled]="isSaving"
+            name="acuerdoMonths"
+          />
+        </div>
+
+        <div *ngSwitchCase="'tiempo_gracia'" class="fields">
+          <label class="modal-label" for="gracia-months">Meses de prórroga</label>
+          <input
+            id="gracia-months"
+            class="modal-input"
+            type="number"
+            min="1"
+            [(ngModel)]="months"
+            [disabled]="isSaving"
+            name="graciaMonths"
+          />
+        </div>
+
+        <div *ngSwitchCase="'refinanciar_saldo'" class="fields">
+          <label class="modal-label" for="new-term">Nuevo plazo (meses)</label>
+          <input
+            id="new-term"
+            class="modal-input"
+            type="number"
+            min="1"
+            [(ngModel)]="newTermMonths"
+            [disabled]="isSaving"
+            name="newTermMonths"
+          />
+
+          <label class="modal-label" for="new-rate">Nueva tasa mensual (%)</label>
+          <input
+            id="new-rate"
+            class="modal-input"
+            type="number"
+            min="0"
+            step="0.01"
+            [(ngModel)]="newInterestRate"
+            [disabled]="isSaving"
+            name="newInterestRate"
+          />
+        </div>
+
+        <div *ngSwitchCase="'exoneracion_intereses'" class="fields">
+          <label class="modal-label" for="reduction-percent">Porcentaje de reducción</label>
+          <input
+            id="reduction-percent"
+            class="modal-input"
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            [(ngModel)]="reductionPercent"
+            [disabled]="isSaving"
+            name="reductionPercent"
+          />
+
+          <p class="modal-label">Cuotas futuras</p>
+          <div class="installment-list" *ngIf="futureInstallments.length; else noFuture">
+            <label class="installment-row" *ngFor="let fee of futureInstallments">
+              <input
+                type="checkbox"
+                [checked]="isSelected(installmentId(fee))"
+                [disabled]="isSaving || !fee.id"
+                (change)="toggleInstallment(installmentId(fee), $any($event.target).checked)"
+              />
+              <span>Cuota #{{ fee.installment_number }} — interés {{ fee.interest_value }}</span>
+            </label>
+          </div>
+          <ng-template #noFuture>
+            <p class="modal-note">No hay cuotas futuras pendientes para exonerar.</p>
+          </ng-template>
+        </div>
+      </ng-container>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn-cancel" (click)="close()" [disabled]="isSaving">Cancelar</button>
+      <button type="button" class="btn-save" (click)="confirm()" [disabled]="!canSubmit">
+        {{ isSaving ? 'Aplicando...' : 'Confirmar refinanciación' }}
+      </button>
+    </div>
+  </div>
+</div>

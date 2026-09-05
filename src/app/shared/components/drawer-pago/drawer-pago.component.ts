@@ -172,6 +172,11 @@ export class DrawerPagoComponent implements OnInit {
   }
   get prefilledAmount(): number | null { return this._prefilledAmount; }
 
+  @Input() amountHint: 'schedule' | null = null;
+  @Input() amortizationReferenceAmount: number | null = null;
+  @Input() overdueTotalAmount: number | null = null;
+  @Input() overdueTotalIsPreventa = false;
+
   get currentPaymentAmount(): number {
     return Number(this.paymentForm.get('amount')?.value) || 0;
   }

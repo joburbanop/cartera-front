@@ -48,9 +48,9 @@
           type="button"
           class="search-hit"
           *ngFor="let lot of results.lots"
-          (click)="goToLot(lot.project_id)"
+          (click)="goToLot(lot)"
         >
-          <span class="hit-title">{{ lot.number }}</span>
+          <span class="hit-title">Lote {{ lot.number }}</span>
           <span class="hit-meta">{{ lot.project_name }}</span>
         </button>
       </section>

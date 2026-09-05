@@ -1,6 +1,7 @@
-import { Component, Input } from '@angular/core';
+import { ChangeDetectorRef, Component, Input, OnChanges, OnDestroy, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AbstractControl } from '@angular/forms';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-field-error',
@@ -9,9 +10,22 @@ import { AbstractControl } from '@angular/forms';
   templateUrl: './field-error.component.html',
   styleUrl: './field-error.component.scss',
 })
-export class FieldErrorComponent {
+export class FieldErrorComponent implements OnChanges, OnDestroy {
+  private cdr = inject(ChangeDetectorRef);
+  private eventsSub?: Subscription;
+
   @Input() control: AbstractControl | null = null;
   @Input() label = 'Este campo';
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['control']) {
+      this.bindControlEvents();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.eventsSub?.unsubscribe();
+  }
 
   get visible(): boolean {
     const control = this.control;
@@ -45,5 +59,15 @@ export class FieldErrorComponent {
     }
 
     return `${this.label} es inválido`;
+  }
+
+  private bindControlEvents(): void {
+    this.eventsSub?.unsubscribe();
+    const control = this.control;
+    if (!control) {
+      return;
+    }
+
+    this.eventsSub = control.events.subscribe(() => this.cdr.markForCheck());
   }
 }

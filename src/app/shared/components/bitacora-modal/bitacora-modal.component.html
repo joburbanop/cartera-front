@@ -7,5 +7,11 @@
       [isLoading]="isLoading"
       emptyMessage="Sin movimientos registrados todavía">
     </app-bitacora>
+    <app-pagination
+      [totalItems]="totalItems"
+      [pageSize]="pageSize"
+      [currentPage]="currentPage"
+      (pageChange)="onPageChange($event)">
+    </app-pagination>
   </div>
 </div>

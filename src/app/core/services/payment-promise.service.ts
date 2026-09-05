@@ -15,4 +15,14 @@ export class PaymentPromiseService {
   getPromisesByContract(contractId: number): Observable<ApiListResponse<PaymentPromise>> {
     return this.http.get<ApiListResponse<PaymentPromise>>(`${this.apiUrl}/${contractId}/payment-promises`);
   }
+
+  reorderPromises(
+    contractId: number,
+    promises: Array<{ id: number; expected_date: string }>,
+  ): Observable<ApiListResponse<PaymentPromise>> {
+    return this.http.patch<ApiListResponse<PaymentPromise>>(
+      `${this.apiUrl}/${contractId}/payment-promises/reorder`,
+      { promises },
+    );
+  }
 }

@@ -31,13 +31,17 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
           </svg>
         </span>
-        Datos del Cliente
+        Titulares del contrato
       </h4>
 
-      <div class="data-row">
-        <span class="label">Nombre del Cliente</span>
-        <span class="value">{{ contractData?.customer?.name || contractData?.customer?.first_name || '--' }}</span>
-      </div>
+      <ng-container *ngIf="holders.length; else noHolders">
+        <ul class="holders-list">
+          <li *ngFor="let holder of holders">{{ holder.name || holder.first_name || '--' }}</li>
+        </ul>
+      </ng-container>
+      <ng-template #noHolders>
+        <p class="holders-empty">Sin titulares</p>
+      </ng-template>
       <div class="data-row">
         <span class="label">Asesor</span>
         <span class="value">{{ contractData?.seller_name || 'Sin asignar' }}</span>
@@ -61,14 +65,23 @@
         <span class="label">Precio Base</span>
         <span class="value">$ {{ contractData?.sale_price | number }}</span>
       </div>
-      <div class="data-row">
+      <div class="data-row" *ngIf="!isSpecialLot">
         <span class="label">Plazo y Tasa</span>
         <span class="value">{{ contractData?.term_months }} meses al {{ contractData?.interest_rate }}%</span>
       </div>
       <div class="data-row">
         <span class="label">Estado</span>
-        <span class="value">
-          <span class="badge-pill"
+        <span class="value" style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem;">
+          <span *ngIf="isSpecialLot" class="badge-pill"
+                [ngClass]="{
+                  'badge-pill--warning': contractData?.status === 'preventa_inactiva',
+                  'badge-pill--success': contractData?.status === 'activo',
+                  'badge-pill--neutral': contractData?.status === 'terminado',
+                  'badge-pill--danger': contractData?.status === 'rescindido'
+                }">
+            Lote Especial · {{ contractData?.status | contractStatusLabel }}
+          </span>
+          <span *ngIf="!isSpecialLot" class="badge-pill"
                 [ngClass]="{
                   'badge-pill--warning': contractData?.status === 'preventa_inactiva',
                   'badge-pill--success': contractData?.status === 'activo',

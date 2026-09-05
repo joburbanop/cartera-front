@@ -78,6 +78,10 @@ describe('AmortizationComponent', () => {
       getPlan: () => of({ data: [] }),
       downloadPdf: () => of(new Blob()),
       generatePlan: () => of({}),
+      refinanceContract: () => of({}),
+      updateInstallmentDueDate: () => of({}),
+      previewInstallmentDueDate: () => of({ data: { preview: [], affected_count: 1 } }),
+      updateInstallmentPaymentDate: () => of({ data: { warning: null } }),
     } as Partial<AmortizationService> as AmortizationService;
 
     const contractServiceMock = {
@@ -100,6 +104,7 @@ describe('AmortizationComponent', () => {
 
     const paymentPromiseServiceMock = {
       getPromisesByContract: () => of([]),
+      reorderPromises: () => of({ data: [] }),
     } as Partial<PaymentPromiseService> as PaymentPromiseService;
 
     const activityServiceMock = {
@@ -258,6 +263,90 @@ describe('AmortizationComponent', () => {
     expect(component.drawerSuggestedAmount).toBe(1000000);
   });
 
+  it('en preventa el banner separa inicial y regulares sin lenguaje de cartera vencida', () => {
+    component.contractData = {
+      ...component.contractData,
+      status: 'preventa_inactiva',
+      lot: { status: 'preventa' },
+      down_payment_pactada: 2000000,
+      transactions: [],
+    };
+    component.amortizationPlan = [cuotaInicial, cuota1, cuota2, cuota3];
+
+    expect(component.isPreventaLot).toBe(true);
+    expect(component.pendingInitialAmount).toBe(2000000);
+    expect(component.overdueRegularAmount).toBe(1000000);
+    expect(component.overdueRegularCount).toBe(1);
+    expect(component.tieneCarteraVencida).toBe(true);
+  });
+
+  it('en preventa con inicial pendiente precarga solo la inicial y muestra el total vencido', () => {
+    component.contractData = {
+      ...component.contractData,
+      status: 'preventa_inactiva',
+      lot: { status: 'preventa' },
+      down_payment_pactada: 2000000,
+      transactions: [],
+    };
+    component.amortizationPlan = [cuotaInicial, cuota1, cuota2, cuota3];
+
+    component.openGeneralPaymentDrawer();
+
+    expect(component.drawerSuggestedAmount).toBe(2000000);
+    expect(component.drawerOverdueTotal).toBe(3000000);
+    expect(component.selectedFees).toEqual([]);
+  });
+
+  it('habilita Pagar en preventa si solo queda la inicial pendiente', () => {
+    component.contractData = {
+      ...component.contractData,
+      status: 'preventa_inactiva',
+      lot: { status: 'preventa' },
+      down_payment_pactada: 2000000,
+      transactions: [],
+    };
+    component.amortizationPlan = [cuotaInicial];
+
+    expect(component.hasPendingPaymentsForGeneralFlow).toBe(true);
+    expect((component as any).computeAmortizationSuggestedAmount()).toBe(2000000);
+  });
+
+  it('en preventa con inicial saldada precarga regulares vencidas', () => {
+    component.contractData = {
+      ...component.contractData,
+      status: 'preventa_inactiva',
+      lot: { status: 'preventa' },
+      down_payment_pactada: 2000000,
+      transactions: [{ transaction_type: 'down_payment', amount: 2000000 }],
+    };
+    component.amortizationPlan = [
+      { ...cuotaInicial, status: 'paid', quota_debt: 0 },
+      cuota1,
+      cuota2,
+      cuota3,
+    ];
+
+    component.openGeneralPaymentDrawer();
+
+    expect(component.drawerSuggestedAmount).toBe(1000000);
+    expect(component.drawerOverdueTotal).toBe(1000000);
+  });
+
+  it('en lote que no es preventa no cambia la precarga aunque la inicial tenga saldo', () => {
+    component.contractData = {
+      ...component.contractData,
+      status: 'activo',
+      lot: { status: 'vendido' },
+      down_payment_pactada: 2000000,
+      transactions: [],
+    };
+    component.amortizationPlan = [cuotaInicial, cuota1, cuota2, cuota3];
+
+    component.openGeneralPaymentDrawer();
+
+    expect(component.drawerSuggestedAmount).toBe(1000000);
+  });
+
   it('Debe sugerir la siguiente cuota pendiente si no hay vencidas', () => {
     const cuotaFuturaA = {
       ...cuota1,
@@ -281,6 +370,47 @@ describe('AmortizationComponent', () => {
     component.openGeneralPaymentDrawer();
 
     expect(component.drawerSuggestedAmount).toBe(250000);
+  });
+
+  it('en plan personalizado precarga la próxima promesa y deja la amortización como referencia', () => {
+    component.contractData = {
+      ...component.contractData,
+      is_custom_plan: true,
+    };
+    component.paymentPromises = [
+      {
+        id: 21,
+        contract_id: 1,
+        payment_number: 1,
+        expected_date: isoWithOffset(3),
+        expected_amount: 180000,
+        remaining_amount: 180000,
+        description: 'Cuota pactada',
+        is_paid: false,
+        status: 'pendiente',
+      },
+    ];
+    component.amortizationPlan = [cuotaInicial, cuota1, cuota2, cuota3];
+
+    component.openGeneralPaymentDrawer();
+
+    expect(component.drawerSuggestedAmount).toBe(180000);
+    expect(component.drawerAmountHint).toBe('schedule');
+    expect(component.drawerAmortizationReferenceAmount).toBe(1000000);
+  });
+
+  it('oculta la pestaña de cronograma en contratos estándar', () => {
+    const fixture = TestBed.createComponent(AmortizationComponent);
+    fixture.componentInstance.contractData = {
+      status: 'activo',
+      is_custom_plan: false,
+      transactions: [],
+      down_payment_pactada: 2000000,
+    };
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.canShowPromiseTab).toBe(false);
+    expect(fixture.nativeElement.textContent).not.toContain('Cronograma Pactado en Promesa Comercial');
   });
 
   it('Debe omitir selected_installments e installment_numbers en flujo de pago general', () => {
@@ -323,6 +453,105 @@ describe('AmortizationComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Preventa');
     expect(fixture.nativeElement.textContent).toContain('Bitácora del contrato');
     expect(fixture.nativeElement.textContent).toContain('Bitácora del cliente');
+  });
+
+  it('activa Refinanciar para administrador y llama el endpoint al confirmar', () => {
+    const refinanceSpy = vi.spyOn(component['amortizationService'], 'refinanceContract').mockReturnValue(of({}));
+    const toastSpy = vi.spyOn(toastService, 'show');
+    component.contractId = 11;
+
+    component.openRefinanceModal();
+    expect(component.isRefinanceModalOpen).toBe(true);
+
+    component.confirmRefinance({
+      tipo: 'tiempo_gracia',
+      params: { months: 2 },
+    });
+
+    expect(refinanceSpy).toHaveBeenCalledWith(11, 'tiempo_gracia', { months: 2 });
+    expect(component.isRefinanceModalOpen).toBe(false);
+    expect(toastSpy).toHaveBeenCalledWith(
+      'Contrato refinanciado',
+      'success',
+      expect.stringContaining('aplicó'),
+    );
+  });
+
+  it('muestra Refinanciar como próximamente para socio_gerencia', () => {
+    const auth = TestBed.inject(AuthService);
+    vi.spyOn(auth, 'hasRole').mockImplementation((role) => role === AppRoles.SOCIO_GERENCIA);
+
+    const fixture = TestBed.createComponent(AmortizationComponent);
+    fixture.componentInstance.contractData = {
+      status: 'activo',
+      customer_id: 7,
+      transactions: [],
+      down_payment_pactada: 2000000,
+    };
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.canRefinance).toBe(false);
+    expect(fixture.nativeElement.querySelector('.btn-refinance')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Próximamente');
+  });
+
+  it('en lote especial oculta Refinanciar, el toggle y el pagar de la barra', () => {
+    const auth = TestBed.inject(AuthService);
+    vi.spyOn(auth, 'hasRole').mockImplementation((role) => role === AppRoles.ADMINISTRADOR);
+
+    const fixture = TestBed.createComponent(AmortizationComponent);
+    const instance = fixture.componentInstance;
+    instance.contractData = {
+      is_special_lot: true,
+      status: 'preventa_inactiva',
+      sale_price: 90000000,
+      down_payment_pactada: 90000000,
+      transactions: [],
+      lot: { number: '59' },
+    };
+    instance.isLoading = false;
+    instance.setDefaultView();
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(instance.isSpecialLot).toBe(true);
+    expect(instance.currentView).toBe('preventa');
+    expect(instance.showAmortizationTabBar).toBe(false);
+    expect(text).not.toContain('Refinanciar');
+    expect(text).toContain('Desistimiento');
+    expect(fixture.nativeElement.querySelector('.view-switch')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.top-nav-action-btn--pay')).toBeNull();
+    expect(text).toContain('Seguimiento de Abonos');
+    expect(text).not.toContain('Amortización Financiera');
+    expect(text).toContain('Lote Especial · Preventa');
+    expect(text).toContain('+ Registrar abono');
+  });
+
+  it('en contrato normal mantiene Refinanciar, toggle Venta/Preventa y Amortización Financiera', () => {
+    const auth = TestBed.inject(AuthService);
+    vi.spyOn(auth, 'hasRole').mockImplementation((role) => role === AppRoles.ADMINISTRADOR);
+
+    const fixture = TestBed.createComponent(AmortizationComponent);
+    fixture.componentInstance.contractData = {
+      is_special_lot: false,
+      status: 'activo',
+      customer_id: 7,
+      transactions: [],
+      down_payment_pactada: 2000000,
+    };
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(fixture.componentInstance.isSpecialLot).toBe(false);
+    expect(text).toContain('Refinanciar');
+    expect(text).toContain('Venta');
+    expect(text).toContain('Preventa');
+    expect(text).toContain('Amortización Financiera');
+    expect(text).not.toContain('Seguimiento de Abonos');
+    expect(text).not.toContain('Lote Especial ·');
+    expect(fixture.nativeElement.querySelector('.view-switch')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.top-nav-action-btn--pay')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.btn-refinance')).toBeTruthy();
   });
 
   it('debe cortar la recursión si el plan sigue vacío después de intentar generarlo', () => {

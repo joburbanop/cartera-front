@@ -30,6 +30,14 @@ describe('DashboardComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('usa Renegociación como etiqueta visual del estado abogado', () => {
+    expect(component.lotesLabels).toContain('Renegociación');
+    expect(component.lotesLabels).not.toContain('Abogado');
+    expect(component.lotStatusPills.find((pill) => pill.key === 'abogado')?.label).toBe('Renegociación');
+    expect(component.lotStatusPills.some((pill) => pill.label === 'Reservado')).toBe(false);
+    expect(component.lotStatusPills.some((pill) => pill.key === 'reservado')).toBe(false);
+  });
+
   it('con socio_gerencia no dispara llamadas a /customers y pide el resumen de dashboard', () => {
     const auth = TestBed.inject(AuthService);
     vi.spyOn(auth, 'hasRole').mockImplementation((role) => role === 'socio_gerencia');
@@ -42,11 +50,15 @@ describe('DashboardComponent', () => {
     const urls = requests.map((req) => req.request.url);
 
     expect(urls.some((url) => url.includes('/dashboard/clientes-totales'))).toBe(true);
-    expect(urls.some((url) => url.includes('/dashboard/recaudo-mensual'))).toBe(true);
-    expect(urls.some((url) => url.includes('/dashboard/cartera-vencida-resumen'))).toBe(true);
+    expect(urls.some((url) => url.includes('/dashboard/proyectos-activos'))).toBe(true);
     expect(urls.some((url) => url.includes('/dashboard/contratos-por-estado'))).toBe(true);
     expect(urls.some((url) => url.includes('/dashboard/lotes-por-estado'))).toBe(true);
+    expect(urls.some((url) => url.includes('/dashboard/recaudo-mensual'))).toBe(true);
+    expect(urls.some((url) => url.includes('/dashboard/cartera-vencida-resumen'))).toBe(true);
     expect(urls.some((url) => /\/customers(?:\?|$)/.test(url))).toBe(false);
+    expect(urls.some((url) => /\/lots(?:\?|$)/.test(url))).toBe(false);
+    expect(urls.some((url) => /\/contracts(?:\?|$)/.test(url))).toBe(false);
+    expect(urls.some((url) => /\/projects(?:\?|$)/.test(url))).toBe(false);
 
     const resumen = requests.find((req) => req.request.url.includes('/dashboard/clientes-totales'));
     resumen?.flush({ data: { total_clientes: 4 } });
