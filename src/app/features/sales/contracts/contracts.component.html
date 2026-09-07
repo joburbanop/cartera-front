@@ -313,7 +313,7 @@
         </svg>
       </div>
       <div>
-        <p class="kpi-card__value">{{ contracts.length }}</p>
+        <p class="kpi-card__value">{{ totalContracts }}</p>
         <p class="kpi-card__label">Total contratos</p>
       </div>
     </div>
@@ -365,7 +365,7 @@
           </td>
         </tr>
 
-        <tr *ngFor="let c of pagedContracts">
+        <tr *ngFor="let c of contracts">
           <td>
             <div class="main-text lot-link">Lote {{ c.lot?.number || c.lot_id }}</div>
             <div class="sub-text">Radicado: {{ c.contract_number }}</div>
@@ -410,11 +410,11 @@
   </div>
 
   <app-pagination
-    [totalItems]="contracts.length"
-    [pageSize]="pageSize"
-    [currentPage]="currentPage"
-    (pageChange)="currentPage = $event">
-  </app-pagination>
+  [totalItems]="totalContracts"
+  [pageSize]="pageSize"
+  [currentPage]="currentPage"
+  (pageChange)="loadContracts($event)">
+</app-pagination>
 
   <div *ngIf="selectedLotId" style="display: flex; justify-content: center; margin-top: 1.5rem;">
     <button

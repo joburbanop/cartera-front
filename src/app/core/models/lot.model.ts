@@ -1,7 +1,7 @@
 import { Project } from './project.model';
 
 export interface Lot {
-  id?: number;
+  id: number;
   project_id?: number;
   number?: string;
   name?: string;
@@ -15,4 +15,5 @@ export interface Lot {
   contracts_count?: number;
   contracts?: { id?: number }[];
   project?: Project;
+  deleted_at?: string | null;
 }

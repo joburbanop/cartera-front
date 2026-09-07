@@ -20,7 +20,12 @@ export class LotService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiUrl}/lots`;
 
-  getLots(projectId?: number, page = 1, perPage = 20, filters: LotListFilters = {}): Observable<ApiListResponse<Lot>> {
+  getLots(
+    projectId?: number,
+    page = 1,
+    perPage = 20,
+    filters: LotListFilters = {}
+  ): Observable<ApiListResponse<Lot>> {
     const params: Record<string, string | number> = {
       page,
       per_page: perPage,
@@ -33,35 +38,113 @@ export class LotService {
     if (filters.number) {
       params['number'] = filters.number;
     }
+
     if (filters.status) {
       params['status'] = filters.status;
     }
+
     if (filters.plan_type) {
       params['plan_type'] = filters.plan_type;
     }
+
     if (filters.cartera) {
       params['cartera'] = filters.cartera;
     }
+
     if (filters.customer) {
       params['customer'] = filters.customer;
     }
 
-    return this.http.get<ApiListResponse<Lot>>(this.apiUrl, { params });
+    return this.http.get<ApiListResponse<Lot>>(
+      this.apiUrl,
+      { params }
+    );
   }
 
-  getLotsByProject(projectId: number, page = 1, perPage = 20, filters: LotListFilters = {}): Observable<ApiListResponse<Lot>> {
-    return this.getLots(projectId, page, perPage, filters);
+  getLotsByProject(
+    projectId: number,
+    page = 1,
+    perPage = 20,
+    filters: LotListFilters = {}
+  ): Observable<ApiListResponse<Lot>> {
+    return this.getLots(
+      projectId,
+      page,
+      perPage,
+      filters
+    );
   }
 
-  getLot(id: number): Observable<ApiResourceResponse<Lot>> {
-    return this.http.get<ApiResourceResponse<Lot>>(`${this.apiUrl}/${id}`);
+  getLot(
+    id: number
+  ): Observable<ApiResourceResponse<Lot>> {
+    return this.http.get<ApiResourceResponse<Lot>>(
+      `${this.apiUrl}/${id}`
+    );
   }
 
-  createLot(data: Partial<Lot> | Record<string, unknown>): Observable<ApiResourceResponse<Lot>> {
-    return this.http.post<ApiResourceResponse<Lot>>(this.apiUrl, data);
+  createLot(
+    data: Partial<Lot> | Record<string, unknown>
+  ): Observable<ApiResourceResponse<Lot>> {
+    return this.http.post<ApiResourceResponse<Lot>>(
+      this.apiUrl,
+      data
+    );
   }
 
-  getAllLots(page = 1, perPage = 20, filters: LotListFilters = {}): Observable<ApiListResponse<Lot>> {
-    return this.getLots(undefined, page, perPage, filters);
+  updateLot(
+    lotId: number,
+    data: Partial<Lot> | Record<string, unknown>
+  ): Observable<ApiResourceResponse<Lot>> {
+    return this.http.put<ApiResourceResponse<Lot>>(
+      `${this.apiUrl}/${lotId}`,
+      data
+    );
+  }
+
+  archiveLot(
+    lotId: number
+  ): Observable<ApiResourceResponse<Lot>> {
+    return this.http.patch<ApiResourceResponse<Lot>>(
+      `${this.apiUrl}/${lotId}/archive`,
+      {}
+    );
+  }
+
+  activateLot(
+    lotId: number
+  ): Observable<ApiResourceResponse<Lot>> {
+    return this.http.patch<ApiResourceResponse<Lot>>(
+      `${this.apiUrl}/${lotId}/activate`,
+      {}
+    );
+  }
+
+  getArchivedLots(
+    projectId?: number
+  ): Observable<ApiListResponse<Lot>> {
+    const params: Record<string, string | number> = {};
+
+    if (projectId) {
+      params['project_id'] = projectId;
+    }
+
+    return this.http.get<ApiListResponse<Lot>>(
+      `${this.apiUrl}/archived`,
+      { params }
+    );
+  }
+
+  getAllLots(
+    page = 1,
+    perPage = 20,
+    filters: LotListFilters = {}
+  ): Observable<ApiListResponse<Lot>> {
+    return this.getLots(
+      undefined,
+      page,
+      perPage,
+      filters
+    );
   }
 }

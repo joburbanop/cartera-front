@@ -17,7 +17,7 @@ import { PaginationComponent } from '../../../shared/components/pagination/pagin
 import { markAllAsTouched, scrollToFirstInvalid } from '../../../shared/utils/form-utils';
 import { QuickCustomerModalComponent } from './quick-customer-modal/quick-customer-modal.component';
 import { ContractPaymentPromisesComponent, createPaymentPromiseGroup } from './contract-payment-promises/contract-payment-promises.component';
-import { unwrapListItems } from '../../../core/models/api-response';
+import { unwrapPaginator } from '../../../core/models/api-response';
 import { LotStatusLabelPipe, lotStatusValue } from '../../../shared/pipes/lot-status-label.pipe';
 
 @Component({
@@ -53,10 +53,7 @@ export class ContractsComponent implements OnInit {
   pageSize = 10;
   currentPage = 1;
 
-  get pagedContracts(): any[] {
-    const start = (this.currentPage - 1) * this.pageSize;
-    return this.contracts.slice(start, start + this.pageSize);
-  }
+  
   
   isLoading = false;
   successMessage = '';
@@ -450,21 +447,21 @@ export class ContractsComponent implements OnInit {
     return lotStatusValue(this.selectedLot?.status);
   }
 
-  calculateKPIs() {
-    this.totalContracts = this.contracts.length;
-    this.totalPortfolioValue = this.contracts.reduce((sum, contract) => {
-      return sum + Number(contract.sale_price || 0);
-    }, 0);
+ calculateKPIs() {
+  this.totalPortfolioValue = this.contracts.reduce((sum, contract) => {
+    return sum + Number(contract.sale_price || 0);
+  }, 0);
 
-    const kpiContract = this.pickKpiContract(this.contracts);
-    const collected = this.sumContractPayments(kpiContract);
-    const salePrice = Number(kpiContract?.sale_price || 0);
-    this.totalCollected = collected;
-    this.outstandingBalance = Math.max(0, salePrice - collected);
-    this.paymentProgressPercent = salePrice > 0
-      ? Math.min(100, (collected / salePrice) * 100)
-      : 0;
-  }
+  const kpiContract = this.pickKpiContract(this.contracts);
+  const collected = this.sumContractPayments(kpiContract);
+  const salePrice = Number(kpiContract?.sale_price || 0);
+
+  this.totalCollected = collected;
+  this.outstandingBalance = Math.max(0, salePrice - collected);
+  this.paymentProgressPercent = salePrice > 0
+    ? Math.min(100, (collected / salePrice) * 100)
+    : 0;
+}
 
   private pickKpiContract(contracts: any[]): any | null {
     if (!contracts.length) {
@@ -655,31 +652,39 @@ export class ContractsComponent implements OnInit {
     });
   }
 
-  loadContracts() {
-    this.currentPage = 1;
-    const params = this.selectedLotId
-      ? { lotId: this.selectedLotId, perPage: 100 }
-      : undefined;
+loadContracts(page = 1) {
+  this.currentPage = page;
 
-    this.contractService.getContracts(params).subscribe({
-      next: (response) => {
-        this.contracts = unwrapListItems(response);
+  const params = {
+    ...(this.selectedLotId ? { lotId: this.selectedLotId } : {}),
+    page: this.currentPage,
+    perPage: this.pageSize
+  };
 
-        if (this.selectedLotId) {
-          this.applyLotFilter();
-        }
+  this.contractService.getContracts(params).subscribe({
+    next: (response) => {
+      const paginator = unwrapPaginator(response);
 
-        this.calculateKPIs();
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Error cargando contratos', err);
-        this.contracts = [];
-        this.errorMessage = 'No se pudieron cargar los contratos. Intente nuevamente.';
-        this.cdr.detectChanges();
+      this.contracts = paginator.items as any[];
+      this.currentPage = paginator.currentPage;
+      this.totalContracts = paginator.total;
+
+      if (this.selectedLotId) {
+        this.applyLotFilter();
       }
-    });
-  }
+
+      this.calculateKPIs();
+      this.cdr.detectChanges();
+    },
+    error: (err) => {
+      console.error('Error cargando contratos', err);
+      this.contracts = [];
+      this.totalContracts = 0;
+      this.errorMessage = 'No se pudieron cargar los contratos. Intente nuevamente.';
+      this.cdr.detectChanges();
+    }
+  });
+}
 
   calculatePreview(values: any) {
     const salePrice = Number(values.sale_price) || 0;
