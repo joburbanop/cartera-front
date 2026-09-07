@@ -24,6 +24,8 @@ import { LotService } from '../../../core/services/lot.service';
 
 import { AuthService } from '../../../core/services/auth.service';
 
+import { DashboardService } from '../../../core/services/dashboard.service';
+
 import { AppRoles } from '../../../core/models/app-roles';
 
 import {
@@ -80,6 +82,8 @@ export class ProjectsComponent implements OnInit {
 
   private authService = inject(AuthService);
 
+  private dashboardService = inject(DashboardService);
+
   private toast = inject(ToastService);
 
   private host = inject(
@@ -134,6 +138,8 @@ export class ProjectsComponent implements OnInit {
   totalLots = 0;
 
   totalAvailableLots = 0;
+
+  totalVencido = '0';
 
 
   // =========================================================
@@ -220,7 +226,35 @@ export class ProjectsComponent implements OnInit {
     // Conservamos la lógica de tu rama
     // para construir las estadísticas de lotes.
     this.loadLotsStats();
+    this.loadCarteraEnMora();
 
+  }
+
+  private loadCarteraEnMora(): void {
+    this.dashboardService.getCarteraEnMora().subscribe({
+      next: (response) => {
+        const payload = this.unwrapDashboardPayload(response);
+        this.totalVencido = String(payload['total_vencido'] ?? '0');
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.totalVencido = '0';
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  private unwrapDashboardPayload(response: unknown): Record<string, unknown> {
+    if (response && typeof response === 'object' && 'data' in response) {
+      const data = (response as { data?: unknown }).data;
+      if (data && typeof data === 'object') {
+        return data as Record<string, unknown>;
+      }
+    }
+
+    return response && typeof response === 'object'
+      ? response as Record<string, unknown>
+      : {};
   }
 
 

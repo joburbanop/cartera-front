@@ -4,26 +4,31 @@
       <h1>Clientes</h1>
       <p>Base de compradores y titulares de lotes</p>
     </div>
-    <div class="header-actions">
-  <button
-     class="btn-primary"
-    type="button"
-    (click)="toggleArchivados()">
-
-    {{ mostrarArchivados ? '← Clientes activos' : 'Clientes archivados' }}
-  </button>
-
-  <button
-    *ngIf="canCreate && !mostrarArchivados"
-    class="btn-primary"
-    type="button"
-    (click)="abrirModalNuevoCliente()">
-    + Nuevo cliente
-  </button>
-</div>
+    <button
+      *ngIf="canCreate && !mostrarArchivados"
+      class="btn-primary"
+      type="button"
+      (click)="abrirModalNuevoCliente()">
+      + Nuevo cliente
+    </button>
   </div>
 
-  <div class="kpi-grid">
+  <div class="view-tabs">
+    <button
+      type="button"
+      [class.active]="!mostrarArchivados"
+      (click)="showActive()">
+      Clientes activos
+    </button>
+    <button
+      type="button"
+      [class.active]="mostrarArchivados"
+      (click)="showArchived()">
+      Clientes archivados
+    </button>
+  </div>
+
+  <div *ngIf="!mostrarArchivados" class="kpi-grid">
     <div class="kpi-card">
       <div class="kpi-card__icon" aria-hidden="true">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
@@ -71,7 +76,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngIf="clientesFiltrados.length === 0" class="empty-row">
+        <tr *ngIf="clientesEnVistaCount === 0" class="empty-row">
           <td colspan="5">
             <div class="empty-state">
 
@@ -92,9 +97,7 @@
                 {{
                   mostrarArchivados
                     ? 'No hay clientes archivados'
-                    : (searchTerm
-                        ? 'No se encontraron clientes con ese criterio'
-                        : 'No hay clientes registrados')
+                    : 'No hay clientes registrados'
                 }}
               </p>
 
@@ -219,7 +222,7 @@
   </div>
 
   <app-pagination
-    [totalItems]="clientesFiltrados.length"
+    [totalItems]="clientesEnVistaCount"
     [pageSize]="pageSize"
     [currentPage]="currentPage"
     (pageChange)="currentPage = $event">
@@ -256,72 +259,68 @@
         {{ errorMessage }}
       </div>
 
-      <div class="form-grid">
-        <!-- Nombre -->
-        <div class="form-group">
-          <label>Nombre completo *</label>
-          <input 
-            type="text" 
+      <div class="app-form-grid">
+        <div class="app-form-group app-form-span-2">
+          <label class="app-form-label">Nombre completo *</label>
+          <input
+            type="text"
             formControlName="name"
             placeholder="Juan Pérez García">
           <app-field-error [control]="customerForm.controls.name" label="El nombre"></app-field-error>
         </div>
 
-        <!-- Tipo y número de documento -->
-        <div class="form-group form-group-inline">
-          <div class="form-group-small">
-            <label>Tipo *</label>
-            <select formControlName="document_type">
-              <option value="CC">CC</option>
-              <option value="CE">CE</option>
-              <option value="NIT">NIT</option>
-              <option value="TI">TI</option>
-            </select>
-          </div>
-          <div class="form-group-large">
-            <label>Documento *</label>
-            <input 
-              type="text" 
-              formControlName="document"
-              placeholder="1234567890">
-            <app-field-error [control]="customerForm.controls.document" label="El documento"></app-field-error>
+        <div class="app-form-group app-form-span-2">
+          <div class="app-form-row--doc">
+            <div class="app-form-group">
+              <label class="app-form-label">Tipo *</label>
+              <select formControlName="document_type">
+                <option value="CC">CC</option>
+                <option value="CE">CE</option>
+                <option value="NIT">NIT</option>
+                <option value="TI">TI</option>
+              </select>
+            </div>
+            <div class="app-form-group">
+              <label class="app-form-label">Documento *</label>
+              <input
+                type="text"
+                formControlName="document"
+                placeholder="1234567890">
+              <app-field-error [control]="customerForm.controls.document" label="El documento"></app-field-error>
+            </div>
           </div>
         </div>
 
-        <!-- Teléfono -->
-        <div class="form-group">
-          <label>Teléfono *</label>
-          <input 
-            type="tel" 
+        <div class="app-form-group">
+          <label class="app-form-label">Teléfono *</label>
+          <input
+            type="tel"
             formControlName="phone"
             placeholder="321 456 7890">
           <app-field-error [control]="customerForm.controls.phone" label="El teléfono"></app-field-error>
         </div>
 
-        <!-- Email -->
-        <div class="form-group">
-          <label>Email</label>
-          <input 
-            type="email" 
+        <div class="app-form-group">
+          <label class="app-form-label">Email</label>
+          <input
+            type="email"
             formControlName="email"
             placeholder="cliente@ejemplo.com">
           <app-field-error [control]="customerForm.controls.email" label="El correo"></app-field-error>
         </div>
 
-        <!-- Dirección -->
-        <div class="form-group">
-          <label>Dirección</label>
-          <input 
-            type="text" 
+        <div class="app-form-group">
+          <label class="app-form-label">Dirección</label>
+          <input
+            type="text"
             formControlName="address"
             placeholder="Calle 123 # 45-67">
         </div>
 
-        <!-- Ciudad -->
-        <div class="form-group">
-          <label>Ciudad</label>
-          <input 
-            type="text" 
+        <div class="app-form-group">
+          <label class="app-form-label">Ciudad</label>
+          <input
+            type="text"
             formControlName="city"
             placeholder="Bogotá">
         </div>

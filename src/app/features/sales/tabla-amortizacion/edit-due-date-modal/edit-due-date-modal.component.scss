@@ -68,10 +68,7 @@
 
 .modal-input {
   width: 100%;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 0.65rem 0.75rem;
-  font-size: 0.95rem;
+  box-sizing: border-box;
 }
 
 .modal-note {

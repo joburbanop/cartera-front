@@ -428,27 +428,11 @@
               }
 
               <th>
-                Área
-              </th>
-
-              <th>
                 Precio
               </th>
 
               <th>
-                Precio m²
-              </th>
-
-              <th>
                 Estado
-              </th>
-
-              <th>
-                Tipo
-              </th>
-
-              <th>
-                Contrato
               </th>
 
               <th>
@@ -494,15 +478,6 @@
                 }
 
 
-                <!-- ÁREA -->
-
-                <td>
-
-                  {{ lot.area_m2 | number:'1.0-2' }} m²
-
-                </td>
-
-
                 <!-- PRECIO -->
 
                 <td>
@@ -515,70 +490,18 @@
                 </td>
 
 
-                <!-- PRECIO M2 -->
-
-                <td>
-
-                  {{
-                    lot.price_m2
-                      | currency:'COP':'symbol':'1.0-0'
-                  }}
-
-                </td>
-
-
                 <!-- ESTADO -->
 
                 <td>
 
-                  <span class="status-badge">
+                  <span
+                    class="badge-pill"
+                    [ngClass]="lot.status | lotStatusBadge"
+                  >
 
                     {{ lot.status | lotStatusLabel }}
 
                   </span>
-
-                </td>
-
-
-                <!-- TIPO -->
-
-                <td>
-
-                  {{ lot.type || '-' }}
-
-                </td>
-
-
-                <!-- CONTRATO -->
-
-                <td>
-
-                  @if (lotContractsCount(lot) === 0) {
-
-                    <span>
-                      Sin contrato
-                    </span>
-
-                  } @else if (lotContractsCount(lot) === 1) {
-
-                    <a
-                      [routerLink]="lotResumeCommands(lot)"
-                      class="contract-link"
-                    >
-                      Ver contrato
-                    </a>
-
-                  } @else {
-
-                    <a
-                      [routerLink]="lotResumeCommands(lot)"
-                      [queryParams]="lotResumeQueryParams(lot)"
-                      class="contract-link"
-                    >
-                      {{ lotContractsCount(lot) }} contratos
-                    </a>
-
-                  }
 
                 </td>
 
@@ -593,26 +516,44 @@
 
                       <button
                         type="button"
-                        class="btn-icon"
+                        class="action-btn"
                         title="Editar lote"
+                        aria-label="Editar lote"
                         (click)="openEditModal(lot)"
                       >
-                        Editar
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 18px; height: 18px;">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                        </svg>
+                      </button>
+
+                      <button
+                        type="button"
+                        class="action-btn delete-btn"
+                        title="Archivar lote"
+                        aria-label="Archivar lote"
+                        (click)="archiveLot(lot)"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 18px; height: 18px;">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397" />
+                        </svg>
                       </button>
 
                     }
 
 
-                    @if (canCreate && isLotAvailable(lot)) {
+                    @if (hasLotContractActions(lot)) {
 
-                      <button
-                        type="button"
-                        class="btn-icon danger"
-                        title="Archivar lote"
-                        (click)="archiveLot(lot)"
+                      <a
+                        [routerLink]="lotResumeCommands(lot)"
+                        [queryParams]="lotResumeQueryParams(lot)"
+                        class="action-btn"
+                        [title]="lotContractActionTitle(lot)"
+                        [attr.aria-label]="lotContractActionTitle(lot)"
                       >
-                        Archivar
-                      </button>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 18px; height: 18px;">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                        </svg>
+                      </a>
 
                     }
 
@@ -621,11 +562,13 @@
 
                       <button
                         type="button"
-                        class="btn-icon"
+                        class="action-btn"
                         title="Ver bitácora"
                         (click)="openBitacora(lot)"
                       >
-                        Bitácora
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 18px; height: 18px;">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        </svg>
                       </button>
 
                     }
@@ -724,15 +667,7 @@
               }
 
               <th>
-                Área
-              </th>
-
-              <th>
                 Precio
-              </th>
-
-              <th>
-                Tipo
               </th>
 
               <th>
@@ -777,15 +712,6 @@
                 }
 
 
-                <!-- ÁREA -->
-
-                <td>
-
-                  {{ lot.area_m2 | number:'1.0-2' }} m²
-
-                </td>
-
-
                 <!-- PRECIO -->
 
                 <td>
@@ -794,15 +720,6 @@
                     lot.list_price
                       | currency:'COP':'symbol':'1.0-0'
                   }}
-
-                </td>
-
-
-                <!-- TIPO -->
-
-                <td>
-
-                  {{ lot.type || '-' }}
 
                 </td>
 
@@ -830,11 +747,13 @@
 
                       <button
                         type="button"
-                        class="btn-icon"
+                        class="action-btn"
                         title="Reactivar lote"
                         (click)="activateLot(lot)"
                       >
-                        Reactivar
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 18px; height: 18px;">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6" />
+                        </svg>
                       </button>
 
                     }
@@ -939,6 +858,7 @@
         <!-- FORMULARIO -->
 
         <form
+          class="modal-body"
           [formGroup]="lotForm"
           (ngSubmit)="onSubmit()"
         >

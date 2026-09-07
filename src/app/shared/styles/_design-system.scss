@@ -56,6 +56,63 @@
   &:hover {
     background: #22544a;
   }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: #f8fafc;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.view-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid #e2e8f0;
+
+  button {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 0.75rem 1rem;
+    color: #64748b;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease;
+
+    &:hover {
+      color: #347769;
+    }
+
+    &.active {
+      color: #347769;
+      border-bottom-color: #347769;
+    }
+  }
 }
 
 .kpi-grid {
@@ -144,19 +201,27 @@
 .badge-pill {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem;
-  padding: 0.32rem 0.75rem;
+  box-sizing: border-box;
+  height: 1.75rem;
+  padding: 0 0.75rem;
   border-radius: 999px;
   font-size: 0.72rem;
   font-weight: 700;
+  line-height: 1;
   text-transform: uppercase;
   letter-spacing: 0.02em;
+  white-space: nowrap;
+  vertical-align: middle;
+  flex-shrink: 0;
   border: 1px solid transparent;
   background: #f1f5f9;
   color: #475569;
 
   &::before {
     content: '';
+    flex-shrink: 0;
     width: 7px;
     height: 7px;
     border-radius: 50%;
@@ -187,6 +252,58 @@
   background: #fef2f2;
   color: #b91c1c;
   border-color: #fecaca;
+}
+
+.badge-pill--accent {
+  background: #eef7f5;
+  color: #347769;
+  border-color: #b7d4cd;
+}
+
+.badge-pill--sold {
+  background: #22544a;
+  color: #ffffff;
+  border-color: #22544a;
+}
+
+.badge-pill--info {
+  background: #e0f2fe;
+  color: #0284c7;
+  border-color: #bae6fd;
+}
+
+.action-buttons,
+.table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  padding: 0.4rem;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  line-height: 0;
+
+  &:hover {
+    background: #f3f4f6;
+    color: #1e293b;
+  }
+
+  &.delete-btn:hover,
+  &.danger:hover {
+    background: #fee2e2;
+    color: #dc2626;
+  }
 }
 
 .avatar-circle {

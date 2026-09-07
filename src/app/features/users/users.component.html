@@ -81,24 +81,24 @@
     <form [formGroup]="userForm" (ngSubmit)="submit()" class="modal-body">
       <div *ngIf="errorMessage" class="alert alert-error">{{ errorMessage }}</div>
 
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Nombre *</label>
+      <div class="app-form-grid">
+        <div class="app-form-group">
+          <label class="app-form-label">Nombre *</label>
           <input type="text" formControlName="name" placeholder="Ana Pérez">
           <app-field-error [control]="userForm.controls.name" label="El nombre"></app-field-error>
         </div>
-        <div class="form-group">
-          <label>Correo *</label>
+        <div class="app-form-group">
+          <label class="app-form-label">Correo *</label>
           <input type="email" formControlName="email" placeholder="ana@empresa.com">
           <app-field-error [control]="userForm.controls.email" label="El correo"></app-field-error>
         </div>
-        <div class="form-group" *ngIf="!isEditing">
-          <label>Contraseña *</label>
+        <div class="app-form-group" *ngIf="!isEditing">
+          <label class="app-form-label">Contraseña *</label>
           <input type="password" formControlName="password" placeholder="Mínimo 8 caracteres">
           <app-field-error [control]="userForm.controls.password" label="La contraseña"></app-field-error>
         </div>
-        <div class="form-group">
-          <label>Rol *</label>
+        <div class="app-form-group">
+          <label class="app-form-label">Rol *</label>
           <select formControlName="role">
             <option *ngFor="let option of roleOptions" [value]="option.value">{{ option.label }}</option>
           </select>

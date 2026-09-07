@@ -1,12 +1,13 @@
 import { Component, ElementRef, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, FormArray, FormGroup, FormControl, FormsModule } from '@angular/forms';
-import { ContractService } from '../../../core/services/contract.service';
+import { ContractListFilters, ContractService } from '../../../core/services/contract.service';
 import { ProjectService } from '../../../core/services/project.service';
 import { LotService } from '../../../core/services/lot.service';
 import { CustomerService, Customer } from '../../../core/services/customer.service';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FinancialService } from '../../../core/services/financial.service';
+import { DashboardService } from '../../../core/services/dashboard.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AppRoles } from '../../../core/models/app-roles';
 import { CurrencyMaskDirective } from '../../../shared/directives/currency-mask.directive';
@@ -18,12 +19,12 @@ import { markAllAsTouched, scrollToFirstInvalid } from '../../../shared/utils/fo
 import { QuickCustomerModalComponent } from './quick-customer-modal/quick-customer-modal.component';
 import { ContractPaymentPromisesComponent, createPaymentPromiseGroup } from './contract-payment-promises/contract-payment-promises.component';
 import { unwrapPaginator } from '../../../core/models/api-response';
-import { LotStatusLabelPipe, lotStatusValue } from '../../../shared/pipes/lot-status-label.pipe';
+import { LotStatusBadgePipe, LotStatusLabelPipe } from '../../../shared/pipes/lot-status-label.pipe';
 
 @Component({
   selector: 'app-contracts',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule, CurrencyMaskDirective, ContractStatusLabelPipe, LotStatusLabelPipe, FieldErrorComponent, QuickCustomerModalComponent, ContractPaymentPromisesComponent, PaginationComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule, CurrencyMaskDirective, ContractStatusLabelPipe, LotStatusLabelPipe, LotStatusBadgePipe, FieldErrorComponent, QuickCustomerModalComponent, ContractPaymentPromisesComponent, PaginationComponent],
   templateUrl: './contracts.component.html',
   styleUrl: './contracts.component.scss'
 })
@@ -36,7 +37,9 @@ export class ContractsComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private financialService = inject(FinancialService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private authService = inject(AuthService);
+  private dashboardService = inject(DashboardService);
   private toast = inject(ToastService);
   private host = inject(ElementRef<HTMLElement>);
 
@@ -80,6 +83,7 @@ export class ContractsComponent implements OnInit {
   totalCollected = 0;
   outstandingBalance = 0;
   paymentProgressPercent = 0;
+  totalVencido = '0';
 
 
   // Control del Modal
@@ -105,6 +109,32 @@ export class ContractsComponent implements OnInit {
     is_special_lot: [false],
     payment_promises: this.fb.array([]),
   });
+
+  filterForm = this.fb.group({
+    contract_number: [''],
+    customer: [''],
+    project_id: [''],
+    lot_number: [''],
+    status: [''],
+    cartera: [''],
+    start_date_from: [''],
+    start_date_to: [''],
+  });
+
+  readonly contractStatusOptions = [
+    { value: 'preventa_inactiva', label: 'Preventa' },
+    { value: 'activo', label: 'Activo' },
+    { value: 'vencido', label: 'Vencido' },
+    { value: 'terminado', label: 'Terminado' },
+    { value: 'rescindido', label: 'Rescindido' },
+  ];
+
+  get contractsFoundLabel(): string {
+    const n = this.totalContracts;
+    return n === 1
+      ? '1 contrato encontrado'
+      : `${n} contratos encontrados`;
+  }
 
   get paymentPromises(): FormArray<FormGroup> {
   return this.contractForm.get('payment_promises') as FormArray<FormGroup>;
@@ -443,10 +473,6 @@ export class ContractsComponent implements OnInit {
     this.showGeneratedPromises = true;
   }
 
-  get lotStatusKey(): string {
-    return lotStatusValue(this.selectedLot?.status);
-  }
-
  calculateKPIs() {
   this.totalPortfolioValue = this.contracts.reduce((sum, contract) => {
     return sum + Number(contract.sale_price || 0);
@@ -462,6 +488,22 @@ export class ContractsComponent implements OnInit {
     ? Math.min(100, (collected / salePrice) * 100)
     : 0;
 }
+
+  private loadCarteraEnMora(): void {
+    this.dashboardService.getCarteraEnMora().subscribe({
+      next: (response) => {
+        const payload = response && typeof response === 'object' && 'data' in response
+          ? (response.data as Record<string, unknown>)
+          : (response as Record<string, unknown>);
+        this.totalVencido = String(payload?.['total_vencido'] ?? '0');
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.totalVencido = '0';
+        this.cdr.detectChanges();
+      },
+    });
+  }
 
   private pickKpiContract(contracts: any[]): any | null {
     if (!contracts.length) {
@@ -526,9 +568,23 @@ export class ContractsComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.route.queryParamMap.subscribe(params => {
-      const lotId = params.get('lotId');
+    this.route.queryParams.subscribe(params => {
+      const lotId = params['lotId'];
       this.selectedLotId = lotId ? Number(lotId) : null;
+
+      if (!this.selectedLotId) {
+        this.filterForm.patchValue({
+          contract_number: params['contract_number'] ?? '',
+          customer: params['customer'] ?? '',
+          project_id: params['project_id'] ?? '',
+          lot_number: params['lot_number'] ?? '',
+          status: params['status'] ?? '',
+          cartera: params['cartera'] ?? '',
+          start_date_from: params['start_date_from'] ?? '',
+          start_date_to: params['start_date_to'] ?? '',
+        }, { emitEvent: false });
+      }
+
       this.loadSelectedLot();
       this.loadContracts();
     });
@@ -566,6 +622,7 @@ export class ContractsComponent implements OnInit {
       this.loadCustomers();
     }
     this.loadProjects();
+    this.loadCarteraEnMora();
 
     // VIGILANTE REACTIVO: Escucha cada vez que cambia el select de proyecto
     this.contractForm.get('project_id')?.valueChanges.subscribe(projectId => {
@@ -652,11 +709,84 @@ export class ContractsComponent implements OnInit {
     });
   }
 
+  currentFilters(): ContractListFilters {
+    const value = this.filterForm.getRawValue();
+    const filters: ContractListFilters = {};
+
+    const contractNumber = (value.contract_number ?? '').trim();
+    const customer = (value.customer ?? '').trim();
+    const projectId = (value.project_id ?? '').trim();
+    const lotNumber = (value.lot_number ?? '').trim();
+    const status = (value.status ?? '').trim();
+    const cartera = (value.cartera ?? '').trim();
+    const startFrom = (value.start_date_from ?? '').trim();
+    const startTo = (value.start_date_to ?? '').trim();
+
+    if (contractNumber) {
+      filters.contract_number = contractNumber;
+    }
+    if (customer) {
+      filters.customer = customer;
+    }
+    if (projectId) {
+      filters.project_id = projectId;
+    }
+    if (lotNumber) {
+      filters.lot_number = lotNumber;
+    }
+    if (status) {
+      filters.status = status;
+    }
+    if (cartera) {
+      filters.cartera = cartera;
+    }
+    if (startFrom) {
+      filters.start_date_from = startFrom;
+    }
+    if (startTo) {
+      filters.start_date_to = startTo;
+    }
+
+    return filters;
+  }
+
+  applyFilters(): void {
+    if (this.selectedLotId) {
+      return;
+    }
+
+    this.currentPage = 1;
+    void this.router.navigate(['/contracts'], {
+      queryParams: this.currentFilters(),
+    });
+    this.loadContracts(1);
+  }
+
+  clearFilters(): void {
+    this.filterForm.reset({
+      contract_number: '',
+      customer: '',
+      project_id: '',
+      lot_number: '',
+      status: '',
+      cartera: '',
+      start_date_from: '',
+      start_date_to: '',
+    }, { emitEvent: false });
+
+    this.currentPage = 1;
+
+    void this.router.navigate(['/contracts'], {
+      queryParams: {},
+    });
+    this.loadContracts(1);
+  }
+
 loadContracts(page = 1) {
   this.currentPage = page;
 
   const params = {
-    ...(this.selectedLotId ? { lotId: this.selectedLotId } : {}),
+    ...(this.selectedLotId ? { lotId: this.selectedLotId } : this.currentFilters()),
     page: this.currentPage,
     perPage: this.selectedLotId ? 100 : this.pageSize,
   };

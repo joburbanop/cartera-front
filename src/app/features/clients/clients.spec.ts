@@ -22,4 +22,12 @@ describe('ClientsComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('muestra pestañas de clientes activos y archivados', () => {
+    const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll('.view-tabs button');
+    expect(buttons.length).toBe(2);
+    expect(buttons[0].textContent?.trim()).toBe('Clientes activos');
+    expect(buttons[1].textContent?.trim()).toBe('Clientes archivados');
+    expect(buttons[0].classList.contains('active')).toBe(true);
+  });
 });

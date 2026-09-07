@@ -4,6 +4,7 @@ import { AppRoles } from '../../core/models/app-roles';
 import { AuthService } from '../../core/services/auth.service';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { ChartCardComponent, ChartCardDataset } from '../../shared/components/chart-card/chart-card.component';
+import { lotStatusBadgeClass } from '../../shared/pipes/lot-status-label.pipe';
 
 @Component({
   selector: 'app-dashboard',
@@ -43,12 +44,13 @@ export class DashboardComponent implements OnInit {
   }> = [];
 
   readonly lotStatusPills = [
-    { key: 'disponible', label: 'Disponible', modifier: 'badge-pill--success' },
-    { key: 'preventa', label: 'Preventa', modifier: 'badge-pill--warning' },
-    { key: 'separado', label: 'Separado', modifier: 'badge-pill--warning' },
-    { key: 'vendido', label: 'Vendido', modifier: 'badge-pill--neutral' },
-    { key: 'abogado', label: 'Renegociación', modifier: 'badge-pill--danger' },
+    { key: 'disponible', label: 'Disponible', modifier: lotStatusBadgeClass('disponible') },
+    { key: 'preventa', label: 'Preventa', modifier: lotStatusBadgeClass('preventa') },
+    { key: 'separado', label: 'Separado', modifier: lotStatusBadgeClass('separado') },
+    { key: 'vendido', label: 'Vendido', modifier: lotStatusBadgeClass('vendido') },
+    { key: 'abogado', label: 'Renegociación', modifier: lotStatusBadgeClass('abogado') },
   ];
+  private readonly lotesChartColors = ['#047857', '#b45309', '#22544a', '#0284c7', '#347769'];
 
   recaudoLabels: string[] = [];
   recaudoDatasets: ChartCardDataset[] = [{ label: 'Recaudo', data: [] }];
@@ -57,7 +59,7 @@ export class DashboardComponent implements OnInit {
   contratosLabels = ['Activo', 'Preventa', 'Terminado', 'Rescindido'];
   contratosDatasets: ChartCardDataset[] = [{ data: [0, 0, 0, 0], backgroundColor: ['#047857', '#b45309', '#475569', '#b91c1c'] }];
   lotesLabels = ['Disponible', 'Preventa', 'Vendido', 'Renegociación', 'Separado'];
-  lotesDatasets: ChartCardDataset[] = [{ data: [0, 0, 0, 0, 0], backgroundColor: ['#047857', '#b45309', '#475569', '#b91c1c', '#347769'] }];
+  lotesDatasets: ChartCardDataset[] = [{ data: [0, 0, 0, 0, 0], backgroundColor: this.lotesChartColors }];
 
   get userName(): string {
     return this.authService.getUserName() ?? '';
@@ -281,7 +283,7 @@ export class DashboardComponent implements OnInit {
             Number(payload['abogado'] ?? 0),
             Number(payload['separado'] ?? 0),
           ],
-          backgroundColor: ['#047857', '#b45309', '#475569', '#b91c1c', '#347769'],
+          backgroundColor: this.lotesChartColors,
         }];
         this.cdr.detectChanges();
       },
@@ -289,7 +291,7 @@ export class DashboardComponent implements OnInit {
         this.totalLots = 0;
         this.totalAvailableLots = 0;
         this.lotsByStatus = { disponible: 0, preventa: 0, vendido: 0, abogado: 0, separado: 0 };
-        this.lotesDatasets = [{ data: [0, 0, 0, 0, 0], backgroundColor: ['#047857', '#b45309', '#475569', '#b91c1c', '#347769'] }];
+        this.lotesDatasets = [{ data: [0, 0, 0, 0, 0], backgroundColor: this.lotesChartColors }];
         this.cdr.detectChanges();
       },
     });

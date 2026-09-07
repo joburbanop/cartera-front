@@ -26,7 +26,7 @@
 
       <ng-container [ngSwitch]="tipo">
         <div *ngSwitchCase="'acuerdo_pago'" class="fields">
-          <label class="modal-label" for="extra-amount">Abono fijo mensual</label>
+          <label class="modal-label" for="extra-amount">Abono fijo mensual *</label>
           <input
             id="extra-amount"
             class="modal-input"
@@ -38,7 +38,7 @@
             name="extraAmount"
           />
 
-          <label class="modal-label" for="acuerdo-months">Meses</label>
+          <label class="modal-label" for="acuerdo-months">Meses *</label>
           <input
             id="acuerdo-months"
             class="modal-input"
@@ -51,7 +51,7 @@
         </div>
 
         <div *ngSwitchCase="'tiempo_gracia'" class="fields">
-          <label class="modal-label" for="gracia-months">Meses de prórroga</label>
+          <label class="modal-label" for="gracia-months">Meses de prórroga *</label>
           <input
             id="gracia-months"
             class="modal-input"
@@ -64,7 +64,7 @@
         </div>
 
         <div *ngSwitchCase="'refinanciar_saldo'" class="fields">
-          <label class="modal-label" for="new-term">Nuevo plazo (meses)</label>
+          <label class="modal-label" for="new-term">Nuevo plazo (meses) *</label>
           <input
             id="new-term"
             class="modal-input"
@@ -75,7 +75,7 @@
             name="newTermMonths"
           />
 
-          <label class="modal-label" for="new-rate">Nueva tasa mensual (%)</label>
+          <label class="modal-label" for="new-rate">Nueva tasa mensual (%) *</label>
           <input
             id="new-rate"
             class="modal-input"
@@ -89,7 +89,7 @@
         </div>
 
         <div *ngSwitchCase="'exoneracion_intereses'" class="fields">
-          <label class="modal-label" for="reduction-percent">Porcentaje de reducción</label>
+          <label class="modal-label" for="reduction-percent">Porcentaje de reducción *</label>
           <input
             id="reduction-percent"
             class="modal-input"

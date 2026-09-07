@@ -1,42 +1,51 @@
-<!-- OVERLAY DEL MODAL (Solo visible si isModalOpen es true) -->
-<div class="modal-backdrop" *ngIf="isModalOpen">
-  <div class="modal-content">
-    <button class="modal-close" (click)="closeModal()">✖</button>
-   <h3>{{ isEditMode ? 'Editar Proyecto' : 'Nuevo Proyecto' }}</h3>
-    
-    <div *ngIf="errorMessage" class="app-form-alert">
-      {{ errorMessage }}
+<div class="app-modal-backdrop" *ngIf="isModalOpen" (click)="closeModal()">
+  <div class="app-modal" (click)="$event.stopPropagation()">
+    <div class="app-modal-header">
+      <div>
+        <h2>{{ isEditMode ? 'Editar Proyecto' : 'Nuevo Proyecto' }}</h2>
+        <p>{{ isEditMode ? 'Actualiza la información del proyecto.' : 'Ingresa la información del nuevo proyecto.' }}</p>
+      </div>
+      <button type="button" class="app-modal-close" (click)="closeModal()">×</button>
     </div>
 
-    <!-- FORMULARIO REUTILIZADO -->
-    <form [formGroup]="projectForm" (ngSubmit)="onSubmit()">
-      <div class="app-form-group">
-        <label class="app-form-label">Nombre del Proyecto</label>
-        <input class="app-form-input" type="text" formControlName="name" placeholder="Ej. Condominio San Miguel">
-        <app-field-error [control]="projectForm.controls.name" label="El nombre del proyecto"></app-field-error>
+    <form [formGroup]="projectForm" (ngSubmit)="onSubmit()" class="app-modal-body">
+      <div *ngIf="errorMessage" class="app-form-alert">
+        {{ errorMessage }}
       </div>
-      <div class="app-form-group">
-        <label class="app-form-label">Ubicación / Dirección</label>
-        <input class="app-form-input" type="text" formControlName="location" placeholder="Ej. Calle 10 # 4-50">
-        <app-field-error [control]="projectForm.controls.location" label="La ubicación"></app-field-error>
-      </div>
-      <div class="app-form-group">
-        <label class="app-form-label">Descripción (Opcional)</label>
-        <textarea class="app-form-textarea" formControlName="description" rows="2"></textarea>
-      </div>
-      <div class="app-form-group">
-        <label class="app-form-label">Cuentas Bancarias Vinculadas</label>
-        <div class="checkbox-box">
-          <label *ngFor="let account of availableBankAccounts">
-            <input type="checkbox" [value]="account.id" (change)="onCheckboxChange($event)">
-            {{ account.bank_name }} ({{ account.account_number }})
-          </label>
+
+      <div class="app-form-grid">
+        <div class="app-form-group">
+          <label class="app-form-label">Nombre del proyecto *</label>
+          <input class="app-form-input" type="text" formControlName="name" placeholder="Ej. Condominio San Miguel">
+          <app-field-error [control]="projectForm.controls.name" label="El nombre del proyecto"></app-field-error>
         </div>
-        <app-field-error [control]="projectForm.controls.bank_account_ids" label="Las cuentas bancarias vinculadas"></app-field-error>
+        <div class="app-form-group">
+          <label class="app-form-label">Ubicación / Dirección *</label>
+          <input class="app-form-input" type="text" formControlName="location" placeholder="Ej. Calle 10 # 4-50">
+          <app-field-error [control]="projectForm.controls.location" label="La ubicación"></app-field-error>
+        </div>
+        <div class="app-form-group app-form-span-2">
+          <label class="app-form-label">Descripción (Opcional)</label>
+          <textarea class="app-form-textarea" formControlName="description" rows="2"></textarea>
+        </div>
+        <div class="app-form-group app-form-span-2">
+          <label class="app-form-label">Cuentas bancarias vinculadas *</label>
+          <div class="app-checkbox-box">
+            <label *ngFor="let account of availableBankAccounts">
+              <input type="checkbox" [value]="account.id" (change)="onCheckboxChange($event)">
+              {{ account.bank_name }} ({{ account.account_number }})
+            </label>
+          </div>
+          <app-field-error [control]="projectForm.controls.bank_account_ids" label="Las cuentas bancarias vinculadas"></app-field-error>
+        </div>
       </div>
-      <button type="submit" [disabled]="isLoading" class="app-form-button">
-        {{ isLoading ? 'Guardando...' : (isEditMode ? 'Actualizar Proyecto' : 'Guardar Proyecto') }}
-      </button>
+
+      <div class="app-form-actions">
+        <button type="button" class="btn-secondary" (click)="closeModal()" [disabled]="isLoading">Cancelar</button>
+        <button type="submit" class="btn-primary" [disabled]="isLoading">
+          {{ isLoading ? 'Guardando...' : (isEditMode ? 'Guardar cambios' : 'Guardar proyecto') }}
+        </button>
+      </div>
     </form>
   </div>
 </div>
@@ -85,19 +94,9 @@
         </svg>
       </div>
       <div>
-        <p class="kpi-card__value">$0</p>
+        <p class="kpi-card__value">$ {{ totalVencido | number:'1.0-0' }}</p>
         <p class="kpi-card__label">Cartera en mora</p>
       </div>
-    </div>
-  </div>
-
-  <div class="table-controls">
-    <input type="text" placeholder="Filtrar por nombre o ubicación...">
-    <div class="tabs">
-      <button class="active">Todos</button>
-      <button>En venta</button>
-      <button>Preventa</button>
-      <button>Cerrado</button>
     </div>
   </div>
 

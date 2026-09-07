@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Validators } from '@angular/forms';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
 
 import { ContractsComponent } from './contracts.component';
@@ -65,7 +65,7 @@ describe('ContractsComponent', () => {
 
     expect(component.isModalOpen).toBe(true);
     expect(component.valorFuturoDeuda).toBeGreaterThan(component.saldoAFinanciar);
-    expect(fixture.nativeElement.querySelector('.modal-backdrop')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.app-modal-backdrop')).toBeTruthy();
 
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('Saldo a financiar');
@@ -266,6 +266,98 @@ describe('ContractsComponent', () => {
     expect(fixture.nativeElement.querySelector('input[formControlName="down_payment_pactada"]')).toBeNull();
     expect(fixture.nativeElement.querySelector('input[formControlName="sale_price"]')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('input[formControlName="start_date"]')).toBeTruthy();
+  });
+
+  it('envía cada filtro y la combinación al backend', () => {
+    httpMock.match(() => true).forEach((req) => req.flush({
+      data: { data: [], total: 0, current_page: 1, last_page: 1, per_page: 10 },
+    }));
+
+    const cases: Array<{ patch: Record<string, string>; param: string; value: string }> = [
+      { patch: { contract_number: 'SM-1' }, param: 'contract_number', value: 'SM-1' },
+      { patch: { customer: 'Ana' }, param: 'customer', value: 'Ana' },
+      { patch: { project_id: '3' }, param: 'project_id', value: '3' },
+      { patch: { lot_number: '6' }, param: 'lot_number', value: '6' },
+      { patch: { status: 'activo' }, param: 'status', value: 'activo' },
+      { patch: { cartera: 'mora' }, param: 'cartera', value: 'mora' },
+      { patch: { start_date_from: '2026-01-01' }, param: 'start_date_from', value: '2026-01-01' },
+      { patch: { start_date_to: '2026-03-31' }, param: 'start_date_to', value: '2026-03-31' },
+    ];
+
+    for (const item of cases) {
+      component.filterForm.reset({
+        contract_number: '',
+        customer: '',
+        project_id: '',
+        lot_number: '',
+        status: '',
+        cartera: '',
+        start_date_from: '',
+        start_date_to: '',
+      }, { emitEvent: false });
+      component.filterForm.patchValue(item.patch, { emitEvent: false });
+      component.loadContracts(1);
+
+      const req = httpMock.expectOne((request) => request.url.includes('/contracts') && request.method === 'GET');
+      expect(req.request.params.get(item.param)).toBe(item.value);
+      req.flush({ data: { data: [], total: 4, current_page: 1, last_page: 1, per_page: 10 } });
+    }
+
+    component.filterForm.patchValue({
+      contract_number: 'SM-1',
+      customer: 'Ana',
+      project_id: '3',
+      lot_number: '6',
+      status: 'activo',
+      cartera: 'al_dia',
+      start_date_from: '2026-01-01',
+      start_date_to: '2026-03-31',
+    }, { emitEvent: false });
+    component.loadContracts(1);
+
+    const combined = httpMock.expectOne((request) => request.url.includes('/contracts') && request.method === 'GET');
+    expect(combined.request.params.get('contract_number')).toBe('SM-1');
+    expect(combined.request.params.get('customer')).toBe('Ana');
+    expect(combined.request.params.get('project_id')).toBe('3');
+    expect(combined.request.params.get('lot_number')).toBe('6');
+    expect(combined.request.params.get('status')).toBe('activo');
+    expect(combined.request.params.get('cartera')).toBe('al_dia');
+    expect(combined.request.params.get('start_date_from')).toBe('2026-01-01');
+    expect(combined.request.params.get('start_date_to')).toBe('2026-03-31');
+    combined.flush({ data: { data: [], total: 12, current_page: 1, last_page: 1, per_page: 10 } });
+
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('12 contratos encontrados');
+  });
+
+  it('limpia query params y vuelve a la página 1', () => {
+    const router = TestBed.inject(Router);
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    component.filterForm.patchValue({ contract_number: 'SM-1', status: 'activo' });
+    component.currentPage = 3;
+    component.clearFilters();
+
+    expect(component.filterForm.value.contract_number).toBe('');
+    expect(component.filterForm.value.status).toBe('');
+    expect(component.currentPage).toBe(1);
+    expect(navigate).toHaveBeenCalledWith(['/contracts'], { queryParams: {} });
+  });
+
+  it('no envía filtros de listado cuando está la hoja de vida del lote', () => {
+    httpMock.match(() => true).forEach((req) => req.flush({
+      data: { data: [], total: 0, current_page: 1, last_page: 1, per_page: 10 },
+    }));
+
+    component.selectedLotId = 9;
+    component.filterForm.patchValue({ status: 'activo', customer: 'Ana' }, { emitEvent: false });
+    component.loadContracts(1);
+
+    const req = httpMock.expectOne((request) => request.url.includes('/contracts') && request.method === 'GET');
+    expect(req.request.params.get('lot_id')).toBe('9');
+    expect(req.request.params.get('status')).toBeNull();
+    expect(req.request.params.get('customer')).toBeNull();
+    req.flush({ data: { data: [], total: 1, current_page: 1, last_page: 1, per_page: 100 } });
   });
 });
 

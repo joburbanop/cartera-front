@@ -13,8 +13,8 @@
       <form [formGroup]="paymentForm" style="display: flex; flex-direction: column; gap: 1.25rem;">
         
         <div>
-          <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #1e293b; margin-bottom: 0.4rem;">Monto a pagar</label>
-          <input type="text" formControlName="amount" appCurrencyMask style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1.1rem; color: #1e293b;">
+          <label class="app-form-label">Monto a pagar *</label>
+          <input class="app-form-input" type="text" formControlName="amount" appCurrencyMask>
           <app-field-error [control]="paymentForm.get('amount')" label="El monto"></app-field-error>
           <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem; font-weight: 500;">
              <span class="text-slate-600" style="color: #475569;">Deuda seleccionada:</span>
@@ -62,8 +62,8 @@
         </div>
 
         <div>
-          <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #1e293b; margin-bottom: 0.4rem;">Método de pago</label>
-          <select formControlName="payment_method" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; background-color: white;">
+          <label class="app-form-label">Método de pago *</label>
+          <select class="app-form-select" formControlName="payment_method">
             <option value="transfer">Transferencia</option>
             <option value="cash">Efectivo</option>
             <option value="card">Tarjeta</option>
@@ -73,8 +73,8 @@
         </div>
 
         <div *ngIf="paymentForm.get('payment_method')?.value === 'transfer'" style="animation: fadeIn 0.3s;">
-          <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #1e293b; margin-bottom: 0.4rem;">Cuenta de destino</label>
-          <select formControlName="bank_account_id" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; background-color: white;">
+          <label class="app-form-label">Cuenta de destino *</label>
+          <select class="app-form-select" formControlName="bank_account_id">
             <option value="">-- Seleccione la cuenta bancaria --</option>
             
             <!-- Recorremos las cuentas que nos mande el componente padre -->
@@ -86,14 +86,14 @@
         </div>
 
         <div>
-          <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #1e293b; margin-bottom: 0.4rem;">Fecha de pago</label>
-          <input type="date" formControlName="transaction_date" style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px;">
+          <label class="app-form-label">Fecha de pago *</label>
+          <input class="app-form-input" type="date" formControlName="transaction_date">
           <app-field-error [control]="paymentForm.get('transaction_date')" label="La fecha de pago"></app-field-error>
         </div>
 
         <!-- CAMPO PARA EL SOPORTE DE PAGO -->
         <div [class.ng-invalid]="receiptMissing">
-          <label style="display: block; font-size: 0.85rem; font-weight: bold; color: #1e293b; margin-bottom: 0.4rem;">Soporte de pago (Recibo)</label>
+          <label class="app-form-label">Soporte de pago (Recibo) *</label>
           <input type="file" (change)="onFileSelected($event)" accept="image/*,application/pdf" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; background-color: #f8fafc;">
           <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem;">
             * Obligatorio. Formatos aceptados: JPG, PNG, PDF.
@@ -126,8 +126,8 @@
     </div>
 
     <div class="panel-footer">
-      <button class="btn-outline" (click)="close()">Cancelar</button>
-      <button class="btn-success" (click)="submit()" [disabled]="isProcessing">
+      <button class="btn-secondary" (click)="close()">Cancelar</button>
+      <button class="btn-primary" (click)="submit()" [disabled]="isProcessing">
         {{ isProcessing ? 'Registrando...' : 'Confirmar pago' }}
       </button>
     </div>

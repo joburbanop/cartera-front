@@ -45,7 +45,7 @@ import { PaginationComponent } from '../../../shared/components/pagination/pagin
 
 import { BitacoraModalComponent } from '../../../shared/components/bitacora-modal/bitacora-modal.component';
 
-import { LotStatusLabelPipe } from '../../../shared/pipes/lot-status-label.pipe';
+import { LotStatusBadgePipe, LotStatusLabelPipe, lotStatusValue } from '../../../shared/pipes/lot-status-label.pipe';
 
 import {
   markAllAsTouched,
@@ -71,7 +71,8 @@ import { Lot } from '../../../core/models/lot.model';
     FieldErrorComponent,
     PaginationComponent,
     BitacoraModalComponent,
-    LotStatusLabelPipe
+    LotStatusLabelPipe,
+    LotStatusBadgePipe
   ],
 
   templateUrl: './lots.component.html',
@@ -749,22 +750,7 @@ export class LotsComponent implements OnInit {
 
 
             this.projectAvailableLots =
-              this.lots.filter(lot => {
-
-                const status =
-                  typeof lot.status === 'object'
-                    ? (
-                        lot.status?.value ||
-                        lot.status?.name
-                      )
-                    : lot.status;
-
-
-                return String(status)
-                  .toLowerCase()
-                  .trim() === 'disponible';
-
-              }).length;
+              this.lots.filter(lot => this.isLotAvailable(lot)).length;
 
 
             this.projectTotalValue =
@@ -1213,6 +1199,36 @@ export class LotsComponent implements OnInit {
   }
 
 
+  hasLotContractActions(
+    lot: {
+      status?: string | { value?: string };
+      contracts_count?: number;
+      contracts?: {
+        id?: number
+      }[]
+    }
+  ): boolean {
+
+    return !this.isLotAvailable(lot)
+      && this.lotContractsCount(lot) > 0;
+  }
+
+
+  lotContractActionTitle(
+    lot: {
+      contracts_count?: number;
+      contracts?: {
+        id?: number
+      }[]
+    }
+  ): string {
+
+    return this.singleContractId(lot)
+      ? 'Ver contrato'
+      : 'Ver contratos';
+  }
+
+
   // =========================================================
   // GUARDADO
   // =========================================================
@@ -1620,18 +1636,11 @@ export class LotsComponent implements OnInit {
   // =========================================================
 
   isLotAvailable(
-    lot: Lot
+    lot: Lot | {
+      status?: string | { value?: string; name?: string }
+    }
   ): boolean {
-
-    const status =
-      typeof lot.status === 'object'
-
-        ? (lot.status as any)?.value
-
-        : lot.status;
-
-
-    return status === 'disponible';
+    return lotStatusValue(lot.status) === 'disponible';
   }
 
 }

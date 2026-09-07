@@ -34,6 +34,9 @@ describe('DashboardComponent', () => {
     expect(component.lotesLabels).toContain('Renegociación');
     expect(component.lotesLabels).not.toContain('Abogado');
     expect(component.lotStatusPills.find((pill) => pill.key === 'abogado')?.label).toBe('Renegociación');
+    expect(component.lotStatusPills.find((pill) => pill.key === 'abogado')?.modifier).toBe('badge-pill--info');
+    expect(component.lotStatusPills.find((pill) => pill.key === 'vendido')?.modifier).toBe('badge-pill--sold');
+    expect(component.lotStatusPills.find((pill) => pill.key === 'separado')?.modifier).toBe('badge-pill--accent');
     expect(component.lotStatusPills.some((pill) => pill.label === 'Reservado')).toBe(false);
     expect(component.lotStatusPills.some((pill) => pill.key === 'reservado')).toBe(false);
   });

@@ -5,6 +5,17 @@ import { environment } from '../../../environments/environment';
 import { ApiListResponse, ApiResourceResponse } from '../models/api-response';
 import { Contract } from '../models/contract.model';
 
+export interface ContractListFilters {
+  contract_number?: string;
+  customer?: string;
+  project_id?: string | number;
+  lot_number?: string;
+  status?: string;
+  cartera?: string;
+  start_date_from?: string;
+  start_date_to?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -16,7 +27,11 @@ export class ContractService {
     return this.http.post<ApiResourceResponse<Contract>>(this.apiUrl, data);
   }
 
-  getContracts(params?: { lotId?: number; page?: number; perPage?: number }): Observable<ApiListResponse<Contract>> {
+  getContracts(params?: {
+    lotId?: number;
+    page?: number;
+    perPage?: number;
+  } & ContractListFilters): Observable<ApiListResponse<Contract>> {
     const httpParams: Record<string, string | number> = {};
 
     if (params?.lotId) {
@@ -27,6 +42,30 @@ export class ContractService {
     }
     if (params?.perPage) {
       httpParams['per_page'] = params.perPage;
+    }
+    if (params?.contract_number) {
+      httpParams['contract_number'] = params.contract_number;
+    }
+    if (params?.customer) {
+      httpParams['customer'] = params.customer;
+    }
+    if (params?.project_id) {
+      httpParams['project_id'] = params.project_id;
+    }
+    if (params?.lot_number) {
+      httpParams['lot_number'] = params.lot_number;
+    }
+    if (params?.status) {
+      httpParams['status'] = params.status;
+    }
+    if (params?.cartera) {
+      httpParams['cartera'] = params.cartera;
+    }
+    if (params?.start_date_from) {
+      httpParams['start_date_from'] = params.start_date_from;
+    }
+    if (params?.start_date_to) {
+      httpParams['start_date_to'] = params.start_date_to;
     }
 
     return this.http.get<ApiListResponse<Contract>>(this.apiUrl, { params: httpParams });

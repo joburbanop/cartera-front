@@ -56,6 +56,99 @@ describe('LotsComponent', () => {
     expect(component.bitacoraSubjectId).toBe(12);
   });
 
+  it('oculta la bitácora al administrador para no disparar un 403', () => {
+    const auth = TestBed.inject(AuthService);
+    vi.spyOn(auth, 'hasRole').mockImplementation((role) => role === 'administrador');
+
+    expect(component.canCreate).toBe(true);
+    expect(component.canViewBitacora).toBe(false);
+
+    component.openBitacora({ id: 12, number: 'L-01' });
+    expect(component.isBitacoraOpen).toBe(false);
+  });
+
+  it('en vendido muestra Ver contrato y no Editar', () => {
+    const auth = TestBed.inject(AuthService);
+    vi.spyOn(auth, 'hasRole').mockImplementation((role) => role === 'administrador');
+
+    fixture.detectChanges();
+    httpMock.match((req) => req.url.includes('/projects')).forEach((req) => req.flush({ data: [] }));
+    httpMock.match((req) => req.url.includes('/lots')).forEach((req) => req.flush({
+      data: {
+        data: [{
+          id: 8,
+          number: 'L-08',
+          area_m2: 120,
+          list_price: 80000000,
+          status: 'vendido',
+          contracts_count: 1,
+          contracts: [{ id: 54 }],
+          project: { name: 'Bosque Real' },
+        }],
+        total: 1,
+        current_page: 1,
+        last_page: 1,
+        per_page: 20,
+      },
+    }));
+    fixture.detectChanges();
+
+    const sold = fixture.nativeElement.querySelector('.badge-pill--sold') as HTMLElement | null;
+    expect(sold?.textContent).toContain('Vendido');
+    expect(fixture.nativeElement.querySelector('[title="Ver contrato"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[title="Editar lote"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[title="Ver bitácora"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.table-container tbody')?.textContent).not.toContain('Sin contrato');
+
+    const headers = [...fixture.nativeElement.querySelectorAll('.table-container thead th')]
+      .map((th: HTMLElement) => th.textContent?.trim());
+    expect(headers).not.toContain('Área');
+    expect(headers).not.toContain('Precio m²');
+    expect(headers).not.toContain('Tipo');
+    expect(headers).not.toContain('Contrato');
+    expect(headers).toEqual(['Lote', 'Proyecto', 'Precio', 'Estado', 'Acciones']);
+  });
+
+  it('en disponible muestra Editar y Archivar al administrador', () => {
+    const auth = TestBed.inject(AuthService);
+    vi.spyOn(auth, 'hasRole').mockImplementation((role) => role === 'administrador');
+
+    fixture.detectChanges();
+    httpMock.match((req) => req.url.includes('/projects')).forEach((req) => req.flush({ data: [] }));
+    httpMock.match((req) => req.url.includes('/lots')).forEach((req) => req.flush({
+      data: {
+        data: [{
+          id: 2,
+          number: 'L-02',
+          list_price: 80000000,
+          status: { name: 'DISPONIBLE' },
+          contracts_count: 0,
+          contracts: [],
+          project: { name: 'Bosque Real' },
+        }],
+        total: 1,
+        current_page: 1,
+        last_page: 1,
+        per_page: 20,
+      },
+    }));
+    fixture.detectChanges();
+
+    expect(component.canCreate).toBe(true);
+    expect(component.isLotAvailable(component.lots[0])).toBe(true);
+    expect(fixture.nativeElement.querySelector('[title="Editar lote"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[title="Archivar lote"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[title="Ver contrato"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.table-container tbody')?.textContent).not.toContain('Sin contrato');
+  });
+
+  it('reconoce Disponible con string o con objeto de enum', () => {
+    expect(component.isLotAvailable({ status: 'disponible' })).toBe(true);
+    expect(component.isLotAvailable({ status: { value: 'disponible' } })).toBe(true);
+    expect(component.isLotAvailable({ status: { name: 'DISPONIBLE' } })).toBe(true);
+    expect(component.isLotAvailable({ status: 'vendido' })).toBe(false);
+  });
+
   it('muestra Renegociación en el listado sin cambiar el valor almacenado abogado', () => {
     const lot = {
       id: 9,
@@ -114,6 +207,10 @@ describe('LotsComponent', () => {
     expect(component.lotResumeQueryParams(empty)).toEqual({ lotId: 2 });
     expect(component.lotResumeCommands(withHistory)).toEqual(['/contracts']);
     expect(component.lotResumeQueryParams(withHistory)).toEqual({ lotId: 3 });
+    expect(component.hasLotContractActions(withOne)).toBe(true);
+    expect(component.hasLotContractActions(empty)).toBe(false);
+    expect(component.lotContractActionTitle(withOne)).toBe('Ver contrato');
+    expect(component.lotContractActionTitle(withHistory)).toBe('Ver contratos');
   });
 
   it('envía cada filtro y la combinación al backend', () => {

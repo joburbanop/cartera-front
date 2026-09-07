@@ -63,8 +63,6 @@ export class ClientsComponent implements OnInit {
   archivedClientes: ClienteUI[] = [];
   mostrarArchivados = false;
 
-  // Búsqueda
-  searchTerm = '';
   pageSize = 10;
   currentPage = 1;
 
@@ -81,6 +79,12 @@ export class ClientsComponent implements OnInit {
 
   return lista.slice(start, start + this.pageSize);
 }
+
+  get clientesEnVistaCount(): number {
+    return this.mostrarArchivados
+      ? this.archivedClientes.length
+      : this.clientesFiltrados.length;
+  }
 
   // Formulario de nuevo cliente
   customerForm = this.fb.group({
@@ -159,24 +163,6 @@ this.clientesFiltrados = [...this.clientes];
     this.totalClientes = this.clientes.length;
     this.clientesConContrato = this.clientes.filter(c => c.lote !== null).length;
     this.clientesEnMora = this.clientes.filter(c => c.estadoCartera === 'vencida').length;
-  }
-
-  buscarCliente(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.searchTerm = input.value.toLowerCase();
-    this.currentPage = 1;
-
-    if (!this.searchTerm.trim()) {
-      this.clientesFiltrados = [...this.clientes];
-      return;
-    }
-
-    this.clientesFiltrados = this.clientes.filter(cliente =>
-      cliente.nombre.toLowerCase().includes(this.searchTerm) ||
-      cliente.documento.includes(this.searchTerm) ||
-      cliente.telefono.includes(this.searchTerm) ||
-      (cliente.lote && cliente.lote.toLowerCase().includes(this.searchTerm))
-    );
   }
 
   abrirModalNuevoCliente(): void {
@@ -555,17 +541,16 @@ cargarClientesArchivados(): void {
     }
   });
 }
-toggleArchivados(): void {
-  this.mostrarArchivados = !this.mostrarArchivados;
-
+showActive(): void {
+  this.mostrarArchivados = false;
   this.currentPage = 1;
-  this.searchTerm = '';
+  this.cargarClientes();
+}
 
-  if (this.mostrarArchivados) {
-    this.cargarClientesArchivados();
-  } else {
-    this.cargarClientes();
-  }
+showArchived(): void {
+  this.mostrarArchivados = true;
+  this.currentPage = 1;
+  this.cargarClientesArchivados();
 }
 
   private mostrarErroresCliente(err: any): void {

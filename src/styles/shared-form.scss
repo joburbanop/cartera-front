@@ -1,33 +1,65 @@
-.app-form-group {
-  margin-bottom: 1.25rem;
+/* Estándar de formularios y modales. Referencia: modal de Lotes + .btn-primary. */
+
+.app-form-group,
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
 }
 
-.app-form-label {
+.app-form-group {
+  margin-bottom: 0;
+}
+
+.app-form-label,
+.form-field > label,
+.modal-label {
   display: block;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #475569;
-  margin-bottom: 0.45rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+  margin: 0;
 }
 
 .app-form-input,
 .app-form-select,
-.app-form-textarea {
+.app-form-textarea,
+.app-form-group input:not([type='checkbox']):not([type='radio']):not([type='file']),
+.app-form-group select,
+.app-form-group textarea,
+.form-field input:not([type='checkbox']):not([type='radio']):not([type='file']),
+.form-field select,
+.form-field textarea,
+.modal-input {
   width: 100%;
   box-sizing: border-box;
+  min-height: 2.55rem;
   border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  background: #fff;
-  color: #0f172a;
-  padding: 0.72rem 0.8rem;
-  font-size: 0.92rem;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #334155;
+  padding: 0.65rem 0.8rem;
+  font-size: 0.9rem;
   line-height: 1.4;
+  outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 
   &:focus {
     outline: none;
-    border-color: #2f7d6c;
-    box-shadow: 0 0 0 3px rgba(47, 125, 108, 0.12);
+    border-color: #347769;
+    box-shadow: 0 0 0 3px rgba(52, 119, 105, 0.1);
+  }
+
+  &:read-only,
+  &:disabled {
+    background-color: #f8fafc;
+    color: #64748b;
+    cursor: not-allowed;
+  }
+
+  &::placeholder {
+    color: #94a3b8;
   }
 }
 
@@ -36,36 +68,38 @@
   min-height: 96px;
 }
 
-input.ng-invalid.ng-touched,
-select.ng-invalid.ng-touched,
-textarea.ng-invalid.ng-touched {
-  border-color: #dc2626 !important;
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
-}
-
-.app-form-button {
-  width: 100%;
-  padding: 0.8rem 1rem;
-  border: none;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #347769 0%, #2a615d 100%);
-  color: #fff;
-  font-weight: 700;
-  font-size: 0.96rem;
-  cursor: pointer;
-  box-shadow: 0 8px 16px rgba(52, 119, 105, 0.2);
-  transition: transform 0.2s ease, opacity 0.2s ease;
-
-  &:hover {
-    opacity: 0.96;
-    transform: translateY(-1px);
-  }
+/* macOS/Chrome pinta el <select> nativo en gris aunque el CSS pida fondo blanco. */
+html body select:not([multiple]) {
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: inherit;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+  padding-right: 2.25rem;
 
   &:disabled {
-    opacity: 0.7;
+    background-color: #f8fafc;
+    color: #64748b;
     cursor: not-allowed;
-    transform: none;
   }
+}
+
+.app-form-grid,
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.app-form-grid--1 {
+  grid-template-columns: 1fr;
+}
+
+.app-form-span-2 {
+  grid-column: 1 / -1;
 }
 
 .app-form-row {
@@ -74,12 +108,252 @@ textarea.ng-invalid.ng-touched {
   gap: 1rem;
 }
 
-.app-form-alert {
-  background: #fee2e2;
-  color: #dc2626;
+.app-form-row--doc {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 0.75rem;
+}
+
+.app-form-section-title {
+  margin: 0 0 1rem;
+  color: #475569;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.app-form-alert,
+.alert {
   padding: 0.75rem 0.9rem;
   border-radius: 8px;
   margin-bottom: 1rem;
   font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.app-form-alert,
+.alert-error {
+  background: #fee2e2;
+  color: #dc2626;
   border: 1px solid #fecaca;
+}
+
+.alert-success {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.app-checkbox-box {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.75rem;
+  max-height: 120px;
+  overflow-y: auto;
+  background: #f8fafc;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #334155;
+    cursor: pointer;
+    margin-bottom: 0.5rem;
+  }
+
+  label:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.app-plan-toggle {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.35rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+
+  button {
+    border: none;
+    border-radius: 8px;
+    padding: 0.55rem 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    min-width: 120px;
+    background: transparent;
+    color: #334155;
+
+    &.active {
+      background: #347769;
+      color: #ffffff;
+    }
+  }
+}
+
+.app-modal-backdrop,
+.modal-backdrop,
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.app-modal-backdrop--stack {
+  z-index: 1200;
+}
+
+.app-modal,
+.modal,
+.modal-content,
+.modal-container,
+.modal-card {
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+  position: relative;
+}
+
+.app-modal--wide,
+.modal-content.app-modal--wide {
+  max-width: 700px;
+}
+
+.app-modal-header,
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+
+  h2,
+  h3 {
+    margin: 0 0 0.25rem;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  p {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.85rem;
+  }
+}
+
+.app-modal-close,
+.modal-close,
+.btn-close {
+  flex-shrink: 0;
+  padding: 0.35rem;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  cursor: pointer;
+  line-height: 1;
+
+  &:hover {
+    color: #475569;
+  }
+}
+
+.app-modal-body,
+.modal-body {
+  padding: 1.5rem;
+}
+
+.app-form-actions,
+.modal-actions,
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+
+  > button {
+    flex: 0 0 auto;
+    min-width: 120px;
+    width: auto;
+  }
+}
+
+.app-form-button {
+  /* Compatibilidad: el CTA de formulario es el .btn-primary global, no un degradado a ancho completo. */
+}
+
+.app-form-input.ng-invalid.ng-touched,
+.app-form-select.ng-invalid.ng-touched,
+.app-form-textarea.ng-invalid.ng-touched,
+.app-form-group input.ng-invalid.ng-touched,
+.app-form-group select.ng-invalid.ng-touched,
+.app-form-group textarea.ng-invalid.ng-touched,
+.form-field input.ng-invalid.ng-touched,
+.form-field select.ng-invalid.ng-touched,
+.form-field textarea.ng-invalid.ng-touched,
+.modal-input.ng-invalid.ng-touched {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+
+@media (max-width: 900px) {
+  .app-form-grid,
+  .form-grid,
+  .app-form-row,
+  .app-form-row--doc {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-modal-backdrop,
+  .modal-backdrop,
+  .modal-overlay {
+    padding: 0.5rem;
+  }
+
+  .app-modal,
+  .modal,
+  .modal-content,
+  .modal-container,
+  .modal-card {
+    max-height: 95vh;
+  }
+
+  .app-modal-header,
+  .modal-header,
+  .app-modal-body,
+  .modal-body {
+    padding: 1rem;
+  }
+
+  .app-form-actions,
+  .modal-actions,
+  .modal-footer {
+    flex-direction: column-reverse;
+
+    > button {
+      width: 100%;
+    }
+  }
 }

@@ -33,6 +33,26 @@ export function lotStatusLabel(
   }
 }
 
+export function lotStatusBadgeClass(
+  value: string | { value?: string; name?: string } | null | undefined,
+): string {
+  switch (lotStatusValue(value)) {
+    case 'disponible':
+      return 'badge-pill--success';
+    case 'preventa':
+      return 'badge-pill--warning';
+    case 'separado':
+    case 'reservado':
+      return 'badge-pill--accent';
+    case 'vendido':
+      return 'badge-pill--sold';
+    case 'abogado':
+      return 'badge-pill--info';
+    default:
+      return 'badge-pill--neutral';
+  }
+}
+
 @Pipe({
   name: 'lotStatusLabel',
   standalone: true,
@@ -40,5 +60,15 @@ export function lotStatusLabel(
 export class LotStatusLabelPipe implements PipeTransform {
   transform(value: string | { value?: string; name?: string } | null | undefined): string {
     return lotStatusLabel(value);
+  }
+}
+
+@Pipe({
+  name: 'lotStatusBadge',
+  standalone: true,
+})
+export class LotStatusBadgePipe implements PipeTransform {
+  transform(value: string | { value?: string; name?: string } | null | undefined): string {
+    return lotStatusBadgeClass(value);
   }
 }
