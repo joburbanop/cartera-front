@@ -11,10 +11,13 @@
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition:
+    opacity var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
 }
 
 .btn-success:hover:not(:disabled) { opacity: 0.9; }
+.btn-success:active:not(:disabled) { transform: scale(0.98); }
 
 .btn-success:disabled {
   opacity: 0.55;

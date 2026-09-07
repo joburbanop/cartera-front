@@ -4,7 +4,7 @@
   background: rgba(15, 23, 42, 0.4);
   backdrop-filter: blur(2px);
   z-index: 1000;
-  animation: fadeIn 0.3s;
+  animation: fadeIn var(--motion-enter) var(--ease-out);
 }
 .side-panel {
   position: fixed;
@@ -17,7 +17,7 @@
   z-index: 1001;
   display: flex;
   flex-direction: column;
-  animation: slideInRight 0.3s ease-out;
+  animation: slideInRight var(--motion-enter) var(--ease-out);
 }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -30,7 +30,7 @@
   justify-content: space-between;
   align-items: center;
   h3 { margin: 0; font-size: 1.25rem; color: #0f172a; }
-  button { background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; transition: 0.2s; &:hover{color: #dc2626;} }
+  button { background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; transition: color var(--motion-fast) var(--ease-out); &:hover{color: #dc2626;} }
 }
 .panel-body { padding: 1.5rem; flex: 1; overflow-y: auto; }
 .panel-footer {

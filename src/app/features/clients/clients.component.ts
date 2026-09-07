@@ -5,9 +5,12 @@ import { CustomerService, Customer } from '../../core/services/customer.service'
 import { AuthService } from '../../core/services/auth.service';
 import { AppRoles } from '../../core/models/app-roles';
 import { RouterModule } from '@angular/router';
+import { unwrapResource } from '../../core/models/api-response';
 import { ToastService } from '../../shared/services/toast.service';
+import { JustChangedTracker, LeavingTracker, insertAtFront, removeById, replaceById } from '../../shared/utils/list-feedback';
 import { FieldErrorComponent } from '../../shared/components/field-error/field-error.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
+import { SkeletonComponent } from '../../shared/components/skeleton/skeleton.component';
 import { markAllAsTouched, scrollToFirstInvalid } from '../../shared/utils/form-utils';
 
 interface ClienteUI {
@@ -25,7 +28,7 @@ interface ClienteUI {
 @Component({
   selector: 'app-clients',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, FieldErrorComponent, PaginationComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, FieldErrorComponent, PaginationComponent, SkeletonComponent],
   templateUrl: './clients.component.html',
   styleUrl: './clients.component.scss'
 })
@@ -53,6 +56,11 @@ export class ClientsComponent implements OnInit {
   // Control del modal
   showCustomerModal = false;
   isLoading = false;
+  isInitialLoading = true;
+  isSaving = false;
+  mutatingClienteId: number | null = null;
+  private readonly justChanged = new JustChangedTracker();
+  private readonly leaving = new LeavingTracker();
   successMessage = '';
   errorMessage = '';
 
@@ -84,6 +92,14 @@ export class ClientsComponent implements OnInit {
     return this.mostrarArchivados
       ? this.archivedClientes.length
       : this.clientesFiltrados.length;
+  }
+
+  get showListSkeleton(): boolean {
+    if (this.mostrarArchivados) {
+      return this.isLoading && this.archivedClientes.length === 0;
+    }
+
+    return this.isInitialLoading;
   }
 
   // Formulario de nuevo cliente
@@ -145,6 +161,7 @@ this.archivedClientes = customersData
 this.clientesFiltrados = [...this.clientes];
         this.calcularKPIs();
         this.isLoading = false;
+        this.isInitialLoading = false;
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -154,6 +171,7 @@ this.clientesFiltrados = [...this.clientes];
         this.clientesFiltrados = [];
         this.calcularKPIs();
         this.isLoading = false;
+        this.isInitialLoading = false;
         this.cdr.detectChanges();
       }
     });
@@ -161,7 +179,7 @@ this.clientesFiltrados = [...this.clientes];
 
   private calcularKPIs(): void {
     this.totalClientes = this.clientes.length;
-    this.clientesConContrato = this.clientes.filter(c => c.lote !== null).length;
+    this.clientesConContrato = this.clientes.filter((cliente) => Number(cliente.cantidad_contratos ?? 0) > 0).length;
     this.clientesEnMora = this.clientes.filter(c => c.estadoCartera === 'vencida').length;
   }
 
@@ -260,7 +278,7 @@ abrirModalEditarCliente(cliente: ClienteUI): void {
       return;
     }
 
-    this.isLoading = true;
+    this.isSaving = true;
     this.errorMessage = '';
     this.successMessage = '';
 
@@ -274,73 +292,39 @@ abrirModalEditarCliente(cliente: ClienteUI): void {
       city: this.customerForm.value.city || null
     };
 
-      if (this.isEditMode) {
-  if (!this.editingCustomerId) {
-    this.isLoading = false;
-    this.errorMessage = 'No se pudo identificar el cliente.';
-    return;
-  }
+    const editingId = this.editingCustomerId ?? this.selectedCustomer?.id ?? null;
 
-  this.customerService
-    .updateCustomer(this.editingCustomerId, customerData)
-    .subscribe({
-      next: () => {
-        this.successMessage = 'Cliente actualizado correctamente';
-        this.isLoading = false;
-
-        setTimeout(() => {
-          this.cerrarModal();
-          this.cargarClientes();
-        }, 1000);
-
-        this.cdr.detectChanges();
-      },
-
-      error: (err) => {
-        console.error('Error al actualizar cliente:', err);
-
-        this.isLoading = false;
-        this.mostrarErroresCliente(err);
-
-        this.cdr.detectChanges();
-      }
-    });
-
-  return;
-}
-
-    // =========================
-    // EDITAR CLIENTE
-    // =========================
     if (this.isEditMode) {
-
-      if (!this.selectedCustomer?.id) {
-        this.isLoading = false;
-        this.errorMessage = 'No se pudo identificar el cliente a actualizar.';
+      if (!editingId) {
+        this.isSaving = false;
+        this.errorMessage = 'No se pudo identificar el cliente.';
         return;
       }
 
       this.customerService
-        .updateCustomer(this.selectedCustomer.id, customerData)
+        .updateCustomer(editingId, customerData)
         .subscribe({
-          next: () => {
-            this.successMessage = 'Cliente actualizado correctamente';
-            this.isLoading = false;
-
-            setTimeout(() => {
-              this.cerrarModal();
-              this.cargarClientes();
-            }, 1000);
-
+          next: (response) => {
+            this.isSaving = false;
+            const mapped = this.mapCliente({
+              id: editingId,
+              name: customerData.name,
+              document_number: customerData.document_number,
+              phone: customerData.phone,
+              email: customerData.email,
+              ...((unwrapResource<Customer>(response) ?? {}) as Customer),
+            });
+            this.clientes = replaceById(this.clientes, mapped);
+            this.clientesFiltrados = replaceById(this.clientesFiltrados, mapped);
+            this.calcularKPIs();
+            this.cerrarModal();
+            this.toast.show('Cliente actualizado', 'success', 'Los datos se guardaron correctamente.');
+            this.markJustChanged(mapped.id);
             this.cdr.detectChanges();
           },
-
           error: (err) => {
-            console.error('Error al actualizar cliente:', err);
-            this.isLoading = false;
-
+            this.isSaving = false;
             this.mostrarErroresCliente(err);
-
             this.cdr.detectChanges();
           }
         });
@@ -348,28 +332,28 @@ abrirModalEditarCliente(cliente: ClienteUI): void {
       return;
     }
 
-    // =========================
-    // CREAR CLIENTE
-    // =========================
     this.customerService.createCustomer(customerData).subscribe({
-      next: () => {
-        this.successMessage = 'Cliente registrado correctamente';
-        this.isLoading = false;
-
-        setTimeout(() => {
-          this.cerrarModal();
-          this.cargarClientes();
-        }, 1000);
-
+      next: (response) => {
+        this.isSaving = false;
+        const mapped = this.mapCliente({
+          name: customerData.name,
+          document_number: customerData.document_number,
+          phone: customerData.phone,
+          email: customerData.email,
+          ...((unwrapResource<Customer>(response) ?? {}) as Customer),
+        });
+        this.clientes = insertAtFront(this.clientes, mapped);
+        this.clientesFiltrados = insertAtFront(this.clientesFiltrados, mapped);
+        this.currentPage = 1;
+        this.calcularKPIs();
+        this.cerrarModal();
+        this.toast.show('Cliente registrado', 'success', 'El cliente se creó correctamente.');
+        this.markJustChanged(mapped.id);
         this.cdr.detectChanges();
       },
-
       error: (err) => {
-        console.error('Error al crear cliente:', err);
-        this.isLoading = false;
-
+        this.isSaving = false;
         this.mostrarErroresCliente(err);
-
         this.cdr.detectChanges();
       }
     });
@@ -388,7 +372,7 @@ abrirModalEditarCliente(cliente: ClienteUI): void {
     return;
   }
 
-  this.isLoading = true;
+  this.mutatingClienteId = cliente.id;
   this.errorMessage = '';
 
   this.customerService.archiveCustomer(cliente.id).subscribe({
@@ -399,35 +383,32 @@ abrirModalEditarCliente(cliente: ClienteUI): void {
         'El cliente fue archivado correctamente'
       );
 
-      this.isLoading = false;
+      this.mutatingClienteId = null;
+      this.markLeaving(cliente.id, () => {
+        this.clientes = this.clientes.filter(
+          c => c.id !== cliente.id
+        );
 
-      // Actualizar la lista sin recargar la página
-      this.clientes = this.clientes.filter(
-        c => c.id !== cliente.id
-      );
+        this.clientesFiltrados = this.clientesFiltrados.filter(
+          c => c.id !== cliente.id
+        );
 
-      this.clientesFiltrados = this.clientesFiltrados.filter(
-        c => c.id !== cliente.id
-      );
+        this.calcularKPIs();
 
-      this.calcularKPIs();
+        const totalPages = Math.ceil(
+          this.clientesFiltrados.length / this.pageSize
+        );
 
-      // Evitar quedar en una página vacía
-      const totalPages = Math.ceil(
-        this.clientesFiltrados.length / this.pageSize
-      );
-
-      if (this.currentPage > totalPages && totalPages > 0) {
-        this.currentPage = totalPages;
-      }
-
-      this.cdr.detectChanges();
+        if (this.currentPage > totalPages && totalPages > 0) {
+          this.currentPage = totalPages;
+        }
+      });
     },
 
     error: (err) => {
       console.error('Error archivando cliente:', err);
 
-      this.isLoading = false;
+      this.mutatingClienteId = null;
 
       const message =
         err.error?.message ||
@@ -456,7 +437,7 @@ activarCliente(cliente: ClienteUI): void {
     return;
   }
 
-  this.isLoading = true;
+  this.mutatingClienteId = cliente.id;
   this.errorMessage = '';
 
   this.customerService.activateCustomer(cliente.id).subscribe({
@@ -467,19 +448,23 @@ activarCliente(cliente: ClienteUI): void {
         'El cliente fue activado correctamente'
       );
 
-      this.isLoading = false;
-
-      this.archivedClientes = this.archivedClientes.filter(
-        c => c.id !== cliente.id
-      );
-
-      this.cdr.detectChanges();
+      this.mutatingClienteId = null;
+      this.markLeaving(cliente.id, () => {
+        this.archivedClientes = this.archivedClientes.filter(
+          c => c.id !== cliente.id
+        );
+        const activated = { ...cliente, deleted_at: null };
+        this.clientes = insertAtFront(this.clientes, activated);
+        this.clientesFiltrados = insertAtFront(this.clientesFiltrados, activated);
+        this.calcularKPIs();
+        this.markJustChanged(activated.id);
+      });
     },
 
     error: (err) => {
       console.error('Error activando cliente:', err);
 
-      this.isLoading = false;
+      this.mutatingClienteId = null;
 
       this.toast.show(
         'No se pudo activar',
@@ -586,4 +571,37 @@ showArchived(): void {
       'No se pudo guardar el cliente. Intente nuevamente.';
   }
 }
+
+  isJustChanged(id: number | null | undefined): boolean {
+    return this.justChanged.has(id);
+  }
+
+  isLeaving(id: number | null | undefined): boolean {
+    return this.leaving.has(id);
+  }
+
+  private markJustChanged(id: number | null | undefined): void {
+    this.justChanged.mark(id, () => this.cdr.detectChanges());
+  }
+
+  private markLeaving(id: number | null | undefined, apply: () => void): void {
+    this.leaving.mark(id, () => this.cdr.detectChanges(), () => {
+      apply();
+      this.cdr.detectChanges();
+    });
+  }
+
+  private mapCliente(customer: Partial<Customer> & { id?: number }): ClienteUI {
+    return {
+      id: customer.id,
+      nombre: customer.nombre ?? customer.name ?? '',
+      documento: customer.documento ?? customer.document_number ?? '',
+      telefono: customer.telefono ?? customer.phone ?? '',
+      email: customer.email ?? null,
+      lote: customer.lote ?? null,
+      cantidad_contratos: customer.cantidad_contratos ?? 0,
+      estadoCartera: customer.estadoCartera ?? 'sin_contrato',
+      deleted_at: customer.deleted_at ?? null,
+    };
+  }
 }

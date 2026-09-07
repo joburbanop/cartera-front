@@ -43,7 +43,10 @@
   font-size: 0.9rem;
   line-height: 1.4;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  transition:
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    background-color var(--motion-fast) var(--ease-out);
 
   &:focus {
     outline: none;
@@ -215,6 +218,7 @@ html body select:not([multiple]) {
   padding: 1rem;
   background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(4px);
+  animation: modal-backdrop-in var(--motion-enter) var(--ease-out);
 }
 
 .app-modal-backdrop--stack {
@@ -234,6 +238,7 @@ html body select:not([multiple]) {
   border-radius: 16px;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
   position: relative;
+  animation: modal-panel-in var(--motion-enter) var(--ease-out);
 }
 
 .app-modal--wide,
@@ -276,6 +281,7 @@ html body select:not([multiple]) {
   font-size: 1.1rem;
   cursor: pointer;
   line-height: 1;
+  transition: color var(--motion-fast) var(--ease-out), background var(--motion-fast) var(--ease-out);
 
   &:hover {
     color: #475569;

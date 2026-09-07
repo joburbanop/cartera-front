@@ -25,6 +25,7 @@ import { PageTitleService } from '../../../core/services/page-title.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { BitacoraComponent } from '../../../shared/components/bitacora/bitacora.component';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
+import { SkeletonComponent } from '../../../shared/components/skeleton/skeleton.component';
 import { PaymentPromise } from '../../../core/models/payment-promise.model';
 import { AmortizationInstallment } from '../../../core/models/amortization-installment.model';
 import { AppRoles } from '../../../core/models/app-roles';
@@ -49,6 +50,7 @@ import { FinancialRules } from '../../../core/constants/financial-rules';
     RefinanceModalComponent,
     BitacoraComponent,
     PaginationComponent,
+    SkeletonComponent,
   ],
   templateUrl: './tabla-amortizacion.component.html',
   styleUrl: './tabla-amortizacion.component.scss',

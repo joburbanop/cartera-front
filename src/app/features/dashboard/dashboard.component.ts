@@ -4,12 +4,13 @@ import { AppRoles } from '../../core/models/app-roles';
 import { AuthService } from '../../core/services/auth.service';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { ChartCardComponent, ChartCardDataset } from '../../shared/components/chart-card/chart-card.component';
+import { SkeletonComponent } from '../../shared/components/skeleton/skeleton.component';
 import { lotStatusBadgeClass } from '../../shared/pipes/lot-status-label.pipe';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, ChartCardComponent],
+  imports: [CommonModule, ChartCardComponent, SkeletonComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
 })
@@ -27,6 +28,18 @@ export class DashboardComponent implements OnInit {
   totalRecaudado = '0';
   totalPorVencer = '0';
   cantidadPorVencer = 0;
+  kpiReady = {
+    proyectos: false,
+    lotes: false,
+    contratos: false,
+    clientes: false,
+    mora: false,
+    recaudo: false,
+    porVencer: false,
+  };
+  isLoadingActivity = true;
+  isLoadingRecaudoChart = true;
+  isLoadingCarteraChart = true;
   lotsByStatus: Record<string, number> = {
     disponible: 0,
     preventa: 0,
@@ -121,10 +134,12 @@ export class DashboardComponent implements OnInit {
       next: (response) => {
         const payload = this.unwrapPayload(response) as Record<string, any>;
         this.proyectosActivos = Number(payload['total_proyectos_activos'] ?? 0);
+        this.kpiReady.proyectos = true;
         this.cdr.detectChanges();
       },
       error: () => {
         this.proyectosActivos = 0;
+        this.kpiReady.proyectos = true;
         this.cdr.detectChanges();
       },
     });
@@ -135,10 +150,12 @@ export class DashboardComponent implements OnInit {
       next: (response) => {
         const payload = this.unwrapPayload(response) as Record<string, any>;
         this.totalClientes = Number(payload['total_clientes'] ?? 0);
+        this.kpiReady.clientes = true;
         this.cdr.detectChanges();
       },
       error: () => {
         this.totalClientes = 0;
+        this.kpiReady.clientes = true;
         this.cdr.detectChanges();
       },
     });
@@ -149,10 +166,12 @@ export class DashboardComponent implements OnInit {
       next: (response) => {
         const payload = this.unwrapPayload(response) as Record<string, any>;
         this.totalVencido = payload['total_vencido'] ?? '0';
+        this.kpiReady.mora = true;
         this.cdr.detectChanges();
       },
       error: () => {
         this.totalVencido = '0';
+        this.kpiReady.mora = true;
         this.cdr.detectChanges();
       },
     });
@@ -163,10 +182,12 @@ export class DashboardComponent implements OnInit {
       next: (response) => {
         const payload = this.unwrapPayload(response) as Record<string, any>;
         this.totalRecaudado = payload['total_recaudado'] ?? '0';
+        this.kpiReady.recaudo = true;
         this.cdr.detectChanges();
       },
       error: () => {
         this.totalRecaudado = '0';
+        this.kpiReady.recaudo = true;
         this.cdr.detectChanges();
       },
     });
@@ -178,11 +199,13 @@ export class DashboardComponent implements OnInit {
         const payload = this.unwrapPayload(response) as Record<string, any>;
         this.totalPorVencer = payload['total_por_vencer'] ?? '0';
         this.cantidadPorVencer = Number(payload['cantidad_cuotas'] ?? 0);
+        this.kpiReady.porVencer = true;
         this.cdr.detectChanges();
       },
       error: () => {
         this.totalPorVencer = '0';
         this.cantidadPorVencer = 0;
+        this.kpiReady.porVencer = true;
         this.cdr.detectChanges();
       },
     });
@@ -193,10 +216,12 @@ export class DashboardComponent implements OnInit {
       next: (response) => {
         const payload = this.unwrapPayload(response) as any[];
         this.actividadReciente = Array.isArray(payload) ? payload : [];
+        this.isLoadingActivity = false;
         this.cdr.detectChanges();
       },
       error: () => {
         this.actividadReciente = [];
+        this.isLoadingActivity = false;
         this.cdr.detectChanges();
       },
     });
@@ -211,11 +236,13 @@ export class DashboardComponent implements OnInit {
           label: 'Recaudo',
           data: rows.map((row) => Number(row.total ?? 0)),
         }];
+        this.isLoadingRecaudoChart = false;
         this.cdr.detectChanges();
       },
       error: () => {
         this.recaudoLabels = [];
         this.recaudoDatasets = [{ label: 'Recaudo', data: [] }];
+        this.isLoadingRecaudoChart = false;
         this.cdr.detectChanges();
       },
     });
@@ -229,10 +256,12 @@ export class DashboardComponent implements OnInit {
           data: [Number(payload['al_dia'] ?? 0), Number(payload['vencidas'] ?? 0)],
           backgroundColor: ['#047857', '#b91c1c'],
         }];
+        this.isLoadingCarteraChart = false;
         this.cdr.detectChanges();
       },
       error: () => {
         this.carteraDatasets = [{ data: [0, 0], backgroundColor: ['#047857', '#b91c1c'] }];
+        this.isLoadingCarteraChart = false;
         this.cdr.detectChanges();
       },
     });
@@ -243,6 +272,7 @@ export class DashboardComponent implements OnInit {
       next: (response) => {
         const payload = this.unwrapPayload(response) as Record<string, number>;
         this.contratosActivos = Number(payload['activo'] ?? 0);
+        this.kpiReady.contratos = true;
         this.contratosDatasets = [{
           data: [
             Number(payload['activo'] ?? 0),
@@ -256,6 +286,7 @@ export class DashboardComponent implements OnInit {
       },
       error: () => {
         this.contratosActivos = 0;
+        this.kpiReady.contratos = true;
         this.contratosDatasets = [{ data: [0, 0, 0, 0], backgroundColor: ['#047857', '#b45309', '#475569', '#b91c1c'] }];
         this.cdr.detectChanges();
       },
@@ -275,6 +306,7 @@ export class DashboardComponent implements OnInit {
         };
         this.totalAvailableLots = this.lotsByStatus['disponible'];
         this.totalLots = Object.values(payload).reduce((sum, value) => sum + Number(value ?? 0), 0);
+        this.kpiReady.lotes = true;
         this.lotesDatasets = [{
           data: [
             Number(payload['disponible'] ?? 0),
@@ -290,6 +322,7 @@ export class DashboardComponent implements OnInit {
       error: () => {
         this.totalLots = 0;
         this.totalAvailableLots = 0;
+        this.kpiReady.lotes = true;
         this.lotsByStatus = { disponible: 0, preventa: 0, vendido: 0, abogado: 0, separado: 0 };
         this.lotesDatasets = [{ data: [0, 0, 0, 0, 0], backgroundColor: this.lotesChartColors }];
         this.cdr.detectChanges();

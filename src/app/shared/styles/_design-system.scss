@@ -2,6 +2,74 @@
 
 :root {
   --font-family-base: 'Montserrat', -apple-system, sans-serif;
+  --motion-fast: 120ms;
+  --motion-enter: 180ms;
+  --motion-exit: 160ms;
+  --motion-flash: 1000ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-enter: 0ms;
+    --motion-exit: 0ms;
+    --motion-flash: 0ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.row-just-changed {
+  animation: row-flash var(--motion-flash) var(--ease-out);
+}
+
+.row-leaving {
+  animation: row-leave var(--motion-exit) var(--ease-in) forwards;
+  pointer-events: none;
+}
+
+@keyframes row-flash {
+  from {
+    background-color: rgba(52, 119, 105, 0.16);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+@keyframes row-leave {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-panel-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .card-elevated {
@@ -51,10 +119,18 @@
   cursor: pointer;
   text-decoration: none;
   box-shadow: 0 8px 18px rgba(52, 119, 105, 0.22);
-  transition: background 0.2s ease, opacity 0.2s ease;
+  transition:
+    background var(--motion-fast) var(--ease-out),
+    opacity var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out);
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: #22544a;
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
   }
 
   &:disabled {
@@ -76,9 +152,17 @@
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
+  transition:
+    background var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out);
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: #f8fafc;
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
   }
 
   &:disabled {
@@ -102,7 +186,7 @@
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
-    transition: color 0.2s ease, border-color 0.2s ease;
+    transition: color var(--motion-enter) var(--ease-out), border-color var(--motion-enter) var(--ease-out);
 
     &:hover {
       color: #347769;
@@ -293,10 +377,18 @@
   justify-content: center;
   text-decoration: none;
   line-height: 0;
+  transition:
+    background var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: #f3f4f6;
     color: #1e293b;
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.96);
   }
 
   &.delete-btn:hover,
@@ -404,6 +496,10 @@
     border-bottom: none;
   }
 
+  tbody tr:not(.empty-row) {
+    transition: background var(--motion-fast) var(--ease-out);
+  }
+
   tbody tr:hover:not(.empty-row) {
     background: #f8fafc;
   }
@@ -433,12 +529,20 @@
   font-weight: 700;
   font-size: 0.85rem;
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  transition:
+    background var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
 
   &:hover:not(:disabled) {
     background: #eef7f5;
     color: #347769;
     border-color: #347769;
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
   }
 
   &:disabled {

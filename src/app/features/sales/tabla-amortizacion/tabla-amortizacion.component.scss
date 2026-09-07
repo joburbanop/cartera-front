@@ -74,10 +74,13 @@
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition:
+    opacity var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
 }
 
 .btn-primary:hover { opacity: 0.9; }
+.btn-primary:active:not(:disabled) { transform: scale(0.98); }
 
 .view-switch {
   display: inline-flex;
@@ -98,7 +101,9 @@
   border-radius: 10px;
   padding: 0.65rem 1.1rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out);
   letter-spacing: 0.02em;
 }
 
@@ -122,7 +127,11 @@
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
 }
 
 .btn-outline:hover {
@@ -140,10 +149,13 @@
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition:
+    opacity var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
 }
 
 .btn-success:hover:not(:disabled) { opacity: 0.9; }
+.btn-success:active:not(:disabled) { transform: scale(0.98); }
 
 .btn-success:disabled {
   opacity: 0.55;

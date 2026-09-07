@@ -246,6 +246,10 @@ export class DrawerPagoComponent implements OnInit {
   }
 
   close() {
+    if (this.isProcessing) {
+      return;
+    }
+
     this._isProcessing = false;
     this.resetState();
     this.closeDrawer.emit();

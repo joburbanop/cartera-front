@@ -5,7 +5,7 @@
         <h2>Nueva cuenta bancaria</h2>
         <p>Registra una cuenta para recaudos y pagos.</p>
       </div>
-      <button type="button" class="app-modal-close" (click)="closeModal()">×</button>
+      <button type="button" class="app-modal-close" (click)="closeModal()" [disabled]="isSaving">×</button>
     </div>
 
     <form [formGroup]="accountForm" (ngSubmit)="onSubmit()" class="app-modal-body">
@@ -39,9 +39,9 @@
       </div>
 
       <div class="app-form-actions">
-        <button type="button" class="btn-secondary" (click)="closeModal()" [disabled]="isLoading">Cancelar</button>
-        <button type="submit" class="btn-primary" [disabled]="isLoading">
-          {{ isLoading ? 'Guardando...' : 'Guardar cuenta' }}
+        <button type="button" class="btn-secondary" (click)="closeModal()" [disabled]="isSaving">Cancelar</button>
+        <button type="submit" class="btn-primary" [disabled]="isSaving">
+          {{ isSaving ? 'Guardando...' : 'Guardar cuenta' }}
         </button>
       </div>
     </form>
@@ -105,7 +105,7 @@
   </div>
 
   <div *ngIf="accounts.length > 0" class="cards-grid">
-    <article *ngFor="let account of accounts" class="card-elevated account-card">
+    <article *ngFor="let account of accounts" class="card-elevated account-card" [class.row-just-changed]="isJustChanged(account.id)">
       <div class="account-card__icon" aria-hidden="true">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.315 48.315 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75Z" />

@@ -182,8 +182,8 @@
   <!-- ========================================== -->
   <!-- ESTADO 1: CARGANDO INICIAL                 -->
   <!-- ========================================== -->
-  <div *ngIf="isLoading" style="text-align: center; padding: 4rem; color: #64748b;">
-    Cargando información del contrato...
+  <div *ngIf="isLoading" class="card-elevated" style="padding: 1.25rem 1.5rem; margin-top: 1.5rem;">
+    <app-skeleton variant="table" [rows]="10" [columns]="6"></app-skeleton>
   </div>
 
   <!-- ========================================== -->

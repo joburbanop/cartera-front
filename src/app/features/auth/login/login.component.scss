@@ -205,7 +205,9 @@ form {
     color: #0f172a;
     font-family: inherit;
     font-size: 0.98rem;
-    transition: border-color 180ms ease, box-shadow 180ms ease;
+    transition:
+      border-color var(--motion-fast) var(--ease-out),
+      box-shadow var(--motion-fast) var(--ease-out);
 
     &::placeholder {
       color: #94a3b8;
@@ -235,7 +237,9 @@ form {
   background: transparent;
   color: #64748b;
   cursor: pointer;
-  transition: color 180ms ease, background-color 180ms ease;
+  transition:
+    color var(--motion-fast) var(--ease-out),
+    background-color var(--motion-fast) var(--ease-out);
 
   svg {
     width: 18px;
@@ -265,10 +269,17 @@ button[type="submit"] {
   font-size: 0.98rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background-color 180ms ease, opacity 180ms ease;
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    opacity var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
 
   &:hover:not(:disabled) {
     background: #22544a;
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
   }
 
   &:disabled {

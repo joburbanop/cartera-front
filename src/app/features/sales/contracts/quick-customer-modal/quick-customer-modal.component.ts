@@ -25,6 +25,16 @@ export class QuickCustomerModalComponent {
   @Output() customerCreated = new EventEmitter<Customer>();
   @Output() createFailed = new EventEmitter<string>();
 
+  isSaving = false;
+
+  close(): void {
+    if (this.isSaving) {
+      return;
+    }
+
+    this.closed.emit();
+  }
+
   customerForm = this.fb.group({
     name: ['', Validators.required],
     document: ['', Validators.required],
@@ -51,8 +61,11 @@ export class QuickCustomerModalComponent {
       email: rawCustomer.email?.trim() || null,
     };
 
+    this.isSaving = true;
+
     this.customerService.createCustomer(payload).subscribe({
       next: (response) => {
+        this.isSaving = false;
         const customerPayload = Array.isArray(response)
           ? response
           : response && typeof response === 'object' && 'data' in response
@@ -62,11 +75,13 @@ export class QuickCustomerModalComponent {
         const customer = customerPayload as Customer;
 
         this.customerForm.reset();
+        this.toast.show('Cliente registrado', 'success', 'El cliente se creó y quedó seleccionado en el contrato.');
         this.customerCreated.emit(customer);
         this.closed.emit();
         this.cdr.markForCheck();
       },
       error: (err) => {
+        this.isSaving = false;
         console.error('Error al crear cliente', err);
 
         if (err.status === 422 && err.error?.errors) {

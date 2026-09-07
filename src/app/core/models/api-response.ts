@@ -65,3 +65,28 @@ export function unwrapPaginator(response: unknown): { items: unknown[]; total: n
   return { items: [], total: 0, currentPage: 1, lastPage: 1, perPage: 20 };
 }
 
+export function unwrapResource<T>(response: unknown): T | null {
+  if (response == null) {
+    return null;
+  }
+
+  if (Array.isArray(response)) {
+    return (response[0] as T) ?? null;
+  }
+
+  if (typeof response === 'object' && 'data' in response) {
+    const data = (response as { data: unknown }).data;
+    if (data == null) {
+      return null;
+    }
+
+    if (Array.isArray(data)) {
+      return (data[0] as T) ?? null;
+    }
+
+    return data as T;
+  }
+
+  return response as T;
+}
+

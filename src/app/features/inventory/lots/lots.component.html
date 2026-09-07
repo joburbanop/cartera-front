@@ -110,7 +110,11 @@
         </span>
 
         <strong>
-          {{ projectTotalLots }}
+          @if (isLoading) {
+            <app-skeleton variant="kpi" />
+          } @else {
+            {{ projectTotalLots }}
+          }
         </strong>
 
       </div>
@@ -123,7 +127,11 @@
         </span>
 
         <strong>
-          {{ projectAvailableLots }}
+          @if (isLoading) {
+            <app-skeleton variant="kpi" />
+          } @else {
+            {{ projectAvailableLots }}
+          }
         </strong>
 
       </div>
@@ -136,7 +144,11 @@
         </span>
 
         <strong>
-          {{ projectTotalValue | currency:'COP':'symbol':'1.0-0' }}
+          @if (isLoading) {
+            <app-skeleton variant="kpi" />
+          } @else {
+            {{ projectTotalValue | currency:'COP':'symbol':'1.0-0' }}
+          }
         </strong>
 
       </div>
@@ -375,21 +387,6 @@
        CARGANDO
   ====================================================== -->
 
-  @if (isLoading) {
-
-    <div class="loading">
-
-      Cargando...
-
-    </div>
-
-  }
-
-
-  <!-- =====================================================
-       LOTES ACTIVOS
-  ====================================================== -->
-
   @if (!showArchivedLots) {
 
     <div class="table-container">
@@ -401,13 +398,20 @@
         </h2>
 
         <span>
-          {{ lotsFoundLabel }}
+          @if (isLoading) {
+            <app-skeleton width="9rem" height="0.8rem" />
+          } @else {
+            {{ lotsFoundLabel }}
+          }
         </span>
 
       </div>
 
+      @if (isLoading) {
+        <app-skeleton variant="table" [rows]="8" [columns]="5" />
+      }
 
-      @if (pagedLots.length > 0) {
+      @if (!isLoading && pagedLots.length > 0) {
 
         <table>
 
@@ -448,7 +452,7 @@
 
             @for (lot of pagedLots; track lot.id) {
 
-              <tr>
+              <tr [class.row-just-changed]="isJustChanged(lot.id)" [class.row-leaving]="isLeaving(lot.id)">
 
                 <!-- LOTE -->
 
@@ -531,6 +535,7 @@
                         class="action-btn delete-btn"
                         title="Archivar lote"
                         aria-label="Archivar lote"
+                        [disabled]="mutatingLotId === lot.id"
                         (click)="archiveLot(lot)"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 18px; height: 18px;">
@@ -599,7 +604,7 @@
         </app-pagination>
 
 
-      } @else {
+      } @else if (!isLoading) {
 
         <div class="empty-state">
 
@@ -690,7 +695,7 @@
               track lot.id
             ) {
 
-              <tr>
+              <tr [class.row-just-changed]="isJustChanged(lot.id)" [class.row-leaving]="isLeaving(lot.id)">
 
                 <!-- LOTE -->
 
@@ -749,6 +754,7 @@
                         type="button"
                         class="action-btn"
                         title="Reactivar lote"
+                        [disabled]="mutatingLotId === lot.id"
                         (click)="activateLot(lot)"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 18px; height: 18px;">
@@ -1076,7 +1082,7 @@
             <button
               type="button"
               class="btn-secondary"
-              [disabled]="isLoading"
+              [disabled]="isSaving"
               (click)="closeModal()"
             >
               Cancelar
@@ -1086,10 +1092,10 @@
             <button
               type="submit"
               class="btn-primary"
-              [disabled]="isLoading"
+              [disabled]="isSaving"
             >
 
-              @if (isLoading) {
+              @if (isSaving) {
 
                 Guardando...
 

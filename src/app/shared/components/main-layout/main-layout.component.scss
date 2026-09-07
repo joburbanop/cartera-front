@@ -101,7 +101,10 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out);
   flex-shrink: 0;
 
   &:hover {
@@ -171,7 +174,9 @@
   color: #cbd5e1;
   text-decoration: none;
   position: relative;
-  transition: all 0.2s ease;
+  transition:
+    background var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out);
   white-space: nowrap;
   overflow: hidden;
   box-sizing: border-box;
@@ -396,12 +401,20 @@
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
 
   &:hover {
     background: #f8fafc;
     border-color: var(--brand-primary);
     color: var(--brand-dark);
+  }
+
+  &:active {
+    transform: scale(0.98);
   }
 }
 

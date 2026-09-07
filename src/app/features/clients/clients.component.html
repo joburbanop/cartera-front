@@ -36,7 +36,10 @@
         </svg>
       </div>
       <div>
-        <p class="kpi-card__value">{{ totalClientes || 0 }}</p>
+        <p class="kpi-card__value">
+          <app-skeleton *ngIf="isInitialLoading" variant="kpi"></app-skeleton>
+          <ng-container *ngIf="!isInitialLoading">{{ totalClientes || 0 }}</ng-container>
+        </p>
         <p class="kpi-card__label">Total clientes</p>
       </div>
     </div>
@@ -47,7 +50,10 @@
         </svg>
       </div>
       <div>
-        <p class="kpi-card__value">{{ clientesConContrato || 0 }}</p>
+        <p class="kpi-card__value">
+          <app-skeleton *ngIf="isInitialLoading" variant="kpi"></app-skeleton>
+          <ng-container *ngIf="!isInitialLoading">{{ clientesConContrato || 0 }}</ng-container>
+        </p>
         <p class="kpi-card__label">Con contrato activo</p>
       </div>
     </div>
@@ -58,7 +64,10 @@
         </svg>
       </div>
       <div>
-        <p class="kpi-card__value">{{ clientesEnMora || 0 }}</p>
+        <p class="kpi-card__value">
+          <app-skeleton *ngIf="isInitialLoading" variant="kpi"></app-skeleton>
+          <ng-container *ngIf="!isInitialLoading">{{ clientesEnMora || 0 }}</ng-container>
+        </p>
         <p class="kpi-card__label">Con cartera vencida</p>
       </div>
     </div>
@@ -76,7 +85,13 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngIf="clientesEnVistaCount === 0" class="empty-row">
+        <tr *ngIf="showListSkeleton" class="empty-row">
+          <td colspan="5">
+            <app-skeleton variant="table" [rows]="8" [columns]="5"></app-skeleton>
+          </td>
+        </tr>
+
+        <tr *ngIf="!showListSkeleton && clientesEnVistaCount === 0" class="empty-row">
           <td colspan="5">
             <div class="empty-state">
 
@@ -108,6 +123,8 @@
         <tr
   *ngFor="let cliente of clientesMostrados"
   class="client-row"
+  [class.row-just-changed]="isJustChanged(cliente.id)"
+  [class.row-leaving]="isLeaving(cliente.id)"
   [routerLink]="cliente.id != null ? ['/clientes', cliente.id] : null"
 >
           <td>
@@ -171,6 +188,7 @@
       type="button"
       class="action-btn delete-btn"
       title="Archivar cliente"
+      [disabled]="mutatingClienteId === cliente.id"
       (click)="archivarCliente(cliente); $event.stopPropagation()">
 
       <svg
@@ -196,6 +214,7 @@
       type="button"
       class="action-btn"
       title="Activar cliente"
+      [disabled]="mutatingClienteId === cliente.id"
       (click)="activarCliente(cliente); $event.stopPropagation()">
 
       <svg
@@ -328,11 +347,11 @@
 
       <!-- Botones -->
       <div class="modal-footer">
-        <button type="button" class="btn-secondary" (click)="cerrarModal()">
+        <button type="button" class="btn-secondary" (click)="cerrarModal()" [disabled]="isSaving">
           Cancelar
         </button>
-       <button type="submit" class="btn-primary" [disabled]="isLoading">
-          {{ isLoading
+       <button type="submit" class="btn-primary" [disabled]="isSaving">
+          {{ isSaving
             ? 'Guardando...'
             : (isEditMode ? 'Guardar cambios' : 'Guardar cliente') }}
         </button>

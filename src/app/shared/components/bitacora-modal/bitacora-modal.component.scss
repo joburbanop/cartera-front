@@ -8,6 +8,7 @@
   background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(4px);
   z-index: 1200;
+  animation: modal-backdrop-in var(--motion-enter) var(--ease-out);
 }
 
 .bitacora-modal-panel {
@@ -16,6 +17,7 @@
   max-height: 80vh;
   overflow: auto;
   border-radius: 16px;
+  animation: modal-panel-in var(--motion-enter) var(--ease-out);
 }
 
 .bitacora-modal-close {

@@ -38,7 +38,13 @@
     border: none;
     cursor: pointer;
 
-    &:hover { background-color: #25574c; }
+    transition:
+      background-color var(--motion-fast) var(--ease-out),
+      transform var(--motion-fast) var(--ease-out);
+
+    &:hover:not(:disabled) { background-color: #25574c; }
+
+    &:active:not(:disabled) { transform: scale(0.98); }
   }
 }
 

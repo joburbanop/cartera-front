@@ -35,6 +35,14 @@
   vertical-align: middle;
 }
 
+.custom-table tbody tr {
+  transition: background var(--motion-fast) var(--ease-out);
+}
+
+.custom-table tbody tr:hover {
+  background: #f8fafc;
+}
+
 .due-date-cell {
   display: inline-flex;
   align-items: center;
@@ -52,7 +60,10 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out);
 }
 
 .due-date-edit-btn svg {

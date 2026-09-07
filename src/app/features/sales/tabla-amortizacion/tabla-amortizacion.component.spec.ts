@@ -583,6 +583,7 @@ describe('AmortizationComponent', () => {
       transactions: [],
       down_payment_pactada: 2000000,
     };
+    fixture.componentInstance.isLoading = false;
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;

@@ -185,13 +185,13 @@
       </div>
 
       <div class="app-form-actions">
-        <button type="button" class="btn-secondary" (click)="closeModal()" [disabled]="isLoading">Cancelar</button>
+        <button type="button" class="btn-secondary" (click)="closeModal()" [disabled]="isSaving">Cancelar</button>
         <button
           type="submit"
           class="btn-primary"
-          [disabled]="isLoading || (isCustomPlan && hasFinancialDifference)"
+          [disabled]="isSaving || (isCustomPlan && hasFinancialDifference)"
           [attr.title]="isCustomPlan && hasFinancialDifference ? 'Ajusta las cuotas personalizadas para cuadrar el valor futuro (margen permitido: +/- $1,000).' : null">
-          {{ isLoading ? 'Procesando contrato...' : 'Guardar y generar amortización' }}
+          {{ isSaving ? 'Procesando contrato...' : 'Guardar y generar amortización' }}
         </button>
       </div>
     </form>
@@ -297,7 +297,10 @@
         </svg>
       </div>
       <div>
-        <p class="kpi-card__value">{{ totalContracts }}</p>
+        <p class="kpi-card__value">
+          <app-skeleton *ngIf="isLoading" variant="kpi"></app-skeleton>
+          <ng-container *ngIf="!isLoading">{{ totalContracts }}</ng-container>
+        </p>
         <p class="kpi-card__label">Total contratos</p>
       </div>
     </div>
@@ -308,7 +311,10 @@
         </svg>
       </div>
       <div>
-        <p class="kpi-card__value">$ {{ (totalPortfolioValue / 1000000) | number:'1.0-1' }}M</p>
+        <p class="kpi-card__value">
+          <app-skeleton *ngIf="isLoading" variant="kpi"></app-skeleton>
+          <ng-container *ngIf="!isLoading">$ {{ (totalPortfolioValue / 1000000) | number:'1.0-1' }}M</ng-container>
+        </p>
         <p class="kpi-card__label">Valor total de cartera</p>
       </div>
     </div>
@@ -319,7 +325,10 @@
         </svg>
       </div>
       <div>
-        <p class="kpi-card__value">$ {{ totalVencido | number:'1.0-0' }}</p>
+        <p class="kpi-card__value">
+          <app-skeleton *ngIf="isLoading" variant="kpi"></app-skeleton>
+          <ng-container *ngIf="!isLoading">$ {{ totalVencido | number:'1.0-0' }}</ng-container>
+        </p>
         <p class="kpi-card__label">Cartera en mora</p>
       </div>
     </div>
@@ -407,7 +416,10 @@
   <div class="table-shell">
     <div class="table-header" *ngIf="!selectedLotId">
       <h2>Contratos</h2>
-      <span>{{ contractsFoundLabel }}</span>
+      <span>
+        <app-skeleton *ngIf="isLoading" width="10rem" height="0.8rem"></app-skeleton>
+        <ng-container *ngIf="!isLoading">{{ contractsFoundLabel }}</ng-container>
+      </span>
     </div>
     <table class="custom-table">
       <thead>
@@ -420,7 +432,13 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngIf="contracts.length === 0" class="empty-row">
+        <tr *ngIf="isLoading" class="empty-row">
+          <td colspan="5">
+            <app-skeleton variant="table" [rows]="8" [columns]="5"></app-skeleton>
+          </td>
+        </tr>
+
+        <tr *ngIf="!isLoading && contracts.length === 0" class="empty-row">
           <td colspan="5">
             <div class="empty-state">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
@@ -431,7 +449,7 @@
           </td>
         </tr>
 
-        <tr *ngFor="let c of contracts">
+        <tr *ngFor="let c of contracts" [class.row-just-changed]="isJustChanged(c.id)">
           <td>
             <div class="main-text lot-link">Lote {{ c.lot?.number || c.lot_id }}</div>
             <div class="sub-text">Radicado: {{ c.contract_number }}</div>

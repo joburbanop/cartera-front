@@ -13,7 +13,10 @@
       </svg>
     </div>
     <div>
-      <p class="kpi-card__value">{{ proyectosActivos }}</p>
+      <p class="kpi-card__value">
+        <app-skeleton *ngIf="!kpiReady.proyectos" variant="kpi"></app-skeleton>
+        <ng-container *ngIf="kpiReady.proyectos">{{ proyectosActivos }}</ng-container>
+      </p>
       <p class="kpi-card__label">Proyectos activos</p>
     </div>
   </div>
@@ -25,8 +28,16 @@
       </svg>
     </div>
     <div>
-      <p class="kpi-card__value">{{ totalAvailableLots }}</p>
-      <p class="kpi-card__label">Lotes disponibles de {{ totalLots }} totales</p>
+      <p class="kpi-card__value">
+        <app-skeleton *ngIf="!kpiReady.lotes" variant="kpi"></app-skeleton>
+        <ng-container *ngIf="kpiReady.lotes">{{ totalAvailableLots }}</ng-container>
+      </p>
+      <p class="kpi-card__label">
+        Lotes disponibles de
+        <ng-container *ngIf="kpiReady.lotes">{{ totalLots }}</ng-container>
+        <app-skeleton *ngIf="!kpiReady.lotes" width="2.2rem" height="0.7rem"></app-skeleton>
+        totales
+      </p>
     </div>
   </div>
 
@@ -37,7 +48,10 @@
       </svg>
     </div>
     <div>
-      <p class="kpi-card__value">{{ contratosActivos }}</p>
+      <p class="kpi-card__value">
+        <app-skeleton *ngIf="!kpiReady.contratos" variant="kpi"></app-skeleton>
+        <ng-container *ngIf="kpiReady.contratos">{{ contratosActivos }}</ng-container>
+      </p>
       <p class="kpi-card__label">Contratos activos</p>
     </div>
   </div>
@@ -49,7 +63,10 @@
       </svg>
     </div>
     <div>
-      <p class="kpi-card__value">{{ totalClientes }}</p>
+      <p class="kpi-card__value">
+        <app-skeleton *ngIf="!kpiReady.clientes" variant="kpi"></app-skeleton>
+        <ng-container *ngIf="kpiReady.clientes">{{ totalClientes }}</ng-container>
+      </p>
       <p class="kpi-card__label">Clientes totales</p>
     </div>
   </div>
@@ -61,7 +78,10 @@
       </svg>
     </div>
     <div>
-      <p class="kpi-card__value">$ {{ totalVencido | number:'1.0-0' }}</p>
+      <p class="kpi-card__value">
+        <app-skeleton *ngIf="!kpiReady.mora" variant="kpi"></app-skeleton>
+        <ng-container *ngIf="kpiReady.mora">$ {{ totalVencido | number:'1.0-0' }}</ng-container>
+      </p>
       <p class="kpi-card__label">Cartera en mora</p>
     </div>
   </div>
@@ -73,7 +93,10 @@
       </svg>
     </div>
     <div>
-      <p class="kpi-card__value">$ {{ totalRecaudado | number:'1.0-0' }}</p>
+      <p class="kpi-card__value">
+        <app-skeleton *ngIf="!kpiReady.recaudo" variant="kpi"></app-skeleton>
+        <ng-container *ngIf="kpiReady.recaudo">$ {{ totalRecaudado | number:'1.0-0' }}</ng-container>
+      </p>
       <p class="kpi-card__label">Recaudo del mes</p>
     </div>
   </div>
@@ -85,14 +108,24 @@
       </svg>
     </div>
     <div>
-      <p class="kpi-card__value">$ {{ totalPorVencer | number:'1.0-0' }}</p>
-      <p class="kpi-card__label">Por vencer ({{ cantidadPorVencer }} cuotas, 7 días)</p>
+      <p class="kpi-card__value">
+        <app-skeleton *ngIf="!kpiReady.porVencer" variant="kpi"></app-skeleton>
+        <ng-container *ngIf="kpiReady.porVencer">$ {{ totalPorVencer | number:'1.0-0' }}</ng-container>
+      </p>
+      <p class="kpi-card__label">
+        Por vencer (
+        <ng-container *ngIf="kpiReady.porVencer">{{ cantidadPorVencer }}</ng-container>
+        <app-skeleton *ngIf="!kpiReady.porVencer" width="1.4rem" height="0.7rem"></app-skeleton>
+        cuotas, 7 días)
+      </p>
     </div>
   </div>
 </div>
 
 <section *ngIf="canViewCharts()" class="charts-grid">
+  <app-skeleton *ngIf="isLoadingRecaudoChart" variant="chart"></app-skeleton>
   <app-chart-card
+    *ngIf="!isLoadingRecaudoChart"
     type="bar"
     title="Recaudo mensual"
     format="currency"
@@ -100,7 +133,9 @@
     [datasets]="recaudoDatasets">
   </app-chart-card>
 
+  <app-skeleton *ngIf="isLoadingCarteraChart" variant="chart"></app-skeleton>
   <app-chart-card
+    *ngIf="!isLoadingCarteraChart"
     type="doughnut"
     title="Cartera vencida vs al día"
     format="count"
@@ -108,7 +143,9 @@
     [datasets]="carteraDatasets">
   </app-chart-card>
 
+  <app-skeleton *ngIf="!kpiReady.contratos" variant="chart"></app-skeleton>
   <app-chart-card
+    *ngIf="kpiReady.contratos"
     type="doughnut"
     title="Contratos por estado"
     format="count"
@@ -116,7 +153,9 @@
     [datasets]="contratosDatasets">
   </app-chart-card>
 
+  <app-skeleton *ngIf="!kpiReady.lotes" variant="chart"></app-skeleton>
   <app-chart-card
+    *ngIf="kpiReady.lotes"
     type="doughnut"
     title="Lotes por estado"
     format="count"
@@ -130,7 +169,10 @@
   <ul class="lot-distribution">
     <li *ngFor="let pill of lotStatusPills">
       <span class="badge-pill" [ngClass]="pill.modifier">{{ pill.label }}</span>
-      <strong>{{ lotsByStatus[pill.key] || 0 }}</strong>
+      <strong>
+        <app-skeleton *ngIf="!kpiReady.lotes" variant="kpi"></app-skeleton>
+        <ng-container *ngIf="kpiReady.lotes">{{ lotsByStatus[pill.key] || 0 }}</ng-container>
+      </strong>
     </li>
   </ul>
 </section>
@@ -138,14 +180,16 @@
 <section class="dashboard-panel card-elevated">
   <h2>Actividad reciente</h2>
 
-  <div *ngIf="actividadReciente.length === 0" class="empty-state">
+  <app-skeleton *ngIf="isLoadingActivity" variant="activity" [rows]="4"></app-skeleton>
+
+  <div *ngIf="!isLoadingActivity && actividadReciente.length === 0" class="empty-state">
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
       <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
     </svg>
     <p>No hay actividad reciente.</p>
   </div>
 
-  <ul *ngIf="actividadReciente.length > 0" class="activity-list">
+  <ul *ngIf="!isLoadingActivity && actividadReciente.length > 0" class="activity-list">
     <li *ngFor="let item of actividadReciente">
       <span class="activity-list__icon" [class.activity-list__icon--pago]="item.tipo === 'pago'" aria-hidden="true">
         <svg *ngIf="item.tipo === 'pago'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">

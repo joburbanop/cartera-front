@@ -1,0 +1,36 @@
+@switch (variant) {
+  @case ('kpi') {
+    <span class="sk sk-kpi" role="status" aria-label="Cargando"></span>
+  }
+  @case ('chart') {
+    <div class="sk sk-chart" role="status" aria-label="Cargando gráfico"></div>
+  }
+  @case ('table') {
+    <div class="sk-table" role="status" aria-label="Cargando listado">
+      @for (row of rowIndexes; track row) {
+        <div class="sk-table-row">
+          @for (col of colIndexes; track col) {
+            <span class="sk sk-line" [style.width]="colWidth(col)"></span>
+          }
+        </div>
+      }
+    </div>
+  }
+  @case ('activity') {
+    <ul class="sk-activity" role="status" aria-label="Cargando actividad">
+      @for (row of rowIndexes; track row) {
+        <li>
+          <span class="sk sk-avatar"></span>
+          <div class="sk-activity__body">
+            <span class="sk sk-line" style="width: 58%"></span>
+            <span class="sk sk-line" style="width: 36%"></span>
+          </div>
+          <span class="sk sk-line" style="width: 4.5rem"></span>
+        </li>
+      }
+    </ul>
+  }
+  @default {
+    <span class="sk sk-line" [style.width]="width" [style.height]="height" role="status" aria-label="Cargando"></span>
+  }
+}

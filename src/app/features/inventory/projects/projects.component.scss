@@ -86,7 +86,10 @@
   border-radius: 6px;
   cursor: pointer;
   color: #94a3b8;
-  transition: all 0.2s ease;
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
   display: flex;
   align-items: center;
   justify-content: center;

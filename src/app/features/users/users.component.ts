@@ -4,7 +4,10 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { UserService } from '../../core/services/user.service';
 import { AppRoles } from '../../core/models/app-roles';
+import { unwrapResource } from '../../core/models/api-response';
 import { ToastService } from '../../shared/services/toast.service';
+import { JustChangedTracker, LeavingTracker, insertAtFront, removeById, replaceById } from '../../shared/utils/list-feedback';
+import { User } from '../../core/models/user.model';
 import { FieldErrorComponent } from '../../shared/components/field-error/field-error.component';
 import { markAllAsTouched, scrollToFirstInvalid } from '../../shared/utils/form-utils';
 
@@ -38,6 +41,10 @@ export class UsersComponent implements OnInit {
 
   users: UserUI[] = [];
   isLoading = false;
+  isSaving = false;
+  mutatingUserId: number | null = null;
+  private readonly justChanged = new JustChangedTracker();
+  private readonly leaving = new LeavingTracker();
   isModalOpen = false;
   isEditing = false;
   editingUserId: number | null = null;
@@ -150,7 +157,7 @@ export class UsersComponent implements OnInit {
       return;
     }
 
-    this.isLoading = true;
+    this.isSaving = true;
     this.errorMessage = '';
     const value = this.userForm.getRawValue();
 
@@ -169,14 +176,30 @@ export class UsersComponent implements OnInit {
         });
 
     request$.subscribe({
-      next: () => {
-        this.isLoading = false;
+      next: (response) => {
+        this.isSaving = false;
+        const payload = unwrapResource<User>(response);
+        const mapped: UserUI = {
+          id: payload?.id ?? this.editingUserId ?? 0,
+          name: payload?.name ?? value.name,
+          email: payload?.email ?? value.email,
+          roles: Array.isArray(payload?.roles) ? payload.roles : [value.role],
+        };
+
+        if (this.isEditing) {
+          this.users = replaceById(this.users, mapped);
+          this.toast.show('Usuario actualizado', 'success', 'Los cambios se guardaron correctamente.');
+        } else {
+          this.users = insertAtFront(this.users, mapped);
+          this.toast.show('Usuario creado', 'success', 'La cuenta ya puede iniciar sesión.');
+        }
+
         this.closeModal();
-        this.loadUsers();
+        this.markJustChanged(mapped.id);
         this.cdr.detectChanges();
       },
       error: (err) => {
-        this.isLoading = false;
+        this.isSaving = false;
         this.errorMessage = this.readError(err);
         this.cdr.detectChanges();
       }
@@ -192,12 +215,40 @@ export class UsersComponent implements OnInit {
       return;
     }
 
+    this.mutatingUserId = user.id;
     this.userService.deleteUser(user.id).subscribe({
-      next: () => this.loadUsers(),
+      next: () => {
+        this.mutatingUserId = null;
+        this.toast.show('Usuario eliminado', 'success', `${user.name} ya no tiene acceso.`);
+        this.markLeaving(user.id, () => {
+          this.users = removeById(this.users, user.id);
+        });
+      },
       error: (err) => {
+        this.mutatingUserId = null;
         this.errorMessage = this.readError(err);
+        this.toast.show('No se pudo eliminar', 'error', this.readError(err));
         this.cdr.detectChanges();
       }
+    });
+  }
+
+  isJustChanged(id: number | null | undefined): boolean {
+    return this.justChanged.has(id);
+  }
+
+  isLeaving(id: number | null | undefined): boolean {
+    return this.leaving.has(id);
+  }
+
+  private markJustChanged(id: number | null | undefined): void {
+    this.justChanged.mark(id, () => this.cdr.detectChanges());
+  }
+
+  private markLeaving(id: number | null | undefined, apply: () => void): void {
+    this.leaving.mark(id, () => this.cdr.detectChanges(), () => {
+      apply();
+      this.cdr.detectChanges();
     });
   }
 

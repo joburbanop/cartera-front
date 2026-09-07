@@ -49,7 +49,7 @@
             </div>
           </td>
         </tr>
-        <tr *ngFor="let user of users">
+        <tr *ngFor="let user of users" [class.row-just-changed]="isJustChanged(user.id)" [class.row-leaving]="isLeaving(user.id)">
           <td>
             <p class="user-name">{{ user.name }}</p>
           </td>
@@ -60,7 +60,7 @@
           </td>
           <td class="row-actions">
             <button type="button" class="btn-link" (click)="openEditModal(user)">Editar</button>
-            <button *ngIf="canDelete(user)" type="button" class="btn-link danger" (click)="deleteUser(user)">Eliminar</button>
+            <button *ngIf="canDelete(user)" type="button" class="btn-link danger" [disabled]="mutatingUserId === user.id" (click)="deleteUser(user)">Eliminar</button>
           </td>
         </tr>
       </tbody>
@@ -75,7 +75,7 @@
         <h2>{{ isEditing ? 'Editar usuario' : 'Nuevo usuario' }}</h2>
         <p>{{ isEditing ? 'Actualiza nombre, correo, rol o contraseña' : 'Crea una cuenta y asígnale un rol' }}</p>
       </div>
-      <button class="btn-close" type="button" (click)="closeModal()">✖</button>
+      <button class="btn-close" type="button" (click)="closeModal()" [disabled]="isSaving">✖</button>
     </div>
 
     <form [formGroup]="userForm" (ngSubmit)="submit()" class="modal-body">
@@ -111,9 +111,9 @@
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn-secondary" (click)="closeModal()">Cancelar</button>
-        <button type="submit" class="btn-primary" [disabled]="isLoading">
-          {{ isLoading ? 'Guardando...' : (isEditing ? 'Guardar cambios' : 'Crear usuario') }}
+        <button type="button" class="btn-secondary" (click)="closeModal()" [disabled]="isSaving">Cancelar</button>
+        <button type="submit" class="btn-primary" [disabled]="isSaving">
+          {{ isSaving ? 'Guardando...' : (isEditing ? 'Guardar cambios' : 'Crear usuario') }}
         </button>
       </div>
     </form>

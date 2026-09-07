@@ -28,11 +28,11 @@
   padding: 14px 16px 16px;
   border-radius: 12px;
   box-shadow: 0 14px 32px rgba(15, 23, 42, 0.16);
-  animation: toast-in 220ms ease-out;
+  animation: toast-in var(--motion-enter) var(--ease-out);
 }
 
 .toast-leaving {
-  animation: toast-out 220ms ease-in forwards;
+  animation: toast-out var(--motion-exit) var(--ease-in) forwards;
 }
 
 .toast-success {

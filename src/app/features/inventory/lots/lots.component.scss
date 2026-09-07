@@ -166,9 +166,16 @@
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
+  transition:
+    background var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: #f8fafc;
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
   }
 
   &:disabled {
@@ -270,7 +277,7 @@
   }
 
   tbody tr {
-    transition: background 0.15s ease;
+    transition: background var(--motion-fast) var(--ease-out);
 
     &:hover {
       background: #f8fafc;

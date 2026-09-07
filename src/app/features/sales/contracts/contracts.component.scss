@@ -179,7 +179,7 @@
   text-decoration: none;
   padding: 0.5rem 0.75rem;
   border-radius: 8px;
-  transition: background 0.2s ease;
+  transition: background var(--motion-fast) var(--ease-out);
 
   &:hover {
     background: rgba(29, 78, 216, 0.06);
@@ -219,7 +219,10 @@
   color: #94a3b8;
   padding: 0.42rem 0.7rem;
   border-radius: 8px;
-  transition: 0.2s;
+  transition:
+    background var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
   display: flex;
   align-items: center;
   gap: 0.45rem;
@@ -230,6 +233,10 @@
 .action-btn:hover {
   background: #f3f4f6;
   color: #1e293b;
+}
+
+.action-btn:active:not(:disabled) {
+  transform: scale(0.96);
 }
 
 .amortization-btn {

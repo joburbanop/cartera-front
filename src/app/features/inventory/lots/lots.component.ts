@@ -37,11 +37,14 @@ import {
 
 import { CurrencyMaskDirective } from '../../../shared/directives/currency-mask.directive';
 
+import { unwrapResource } from '../../../core/models/api-response';
 import { ToastService } from '../../../shared/services/toast.service';
+import { JustChangedTracker, LeavingTracker, insertAtFront, removeById, replaceById } from '../../../shared/utils/list-feedback';
 
 import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
 
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
+import { SkeletonComponent } from '../../../shared/components/skeleton/skeleton.component';
 
 import { BitacoraModalComponent } from '../../../shared/components/bitacora-modal/bitacora-modal.component';
 
@@ -70,6 +73,7 @@ import { Lot } from '../../../core/models/lot.model';
     CurrencyMaskDirective,
     FieldErrorComponent,
     PaginationComponent,
+    SkeletonComponent,
     BitacoraModalComponent,
     LotStatusLabelPipe,
     LotStatusBadgePipe
@@ -146,7 +150,14 @@ export class LotsComponent implements OnInit {
   // CONTROL DEL UI
   // =========================================================
 
-  isLoading = false;
+  isLoading = true;
+
+  isSaving = false;
+
+  mutatingLotId: number | null = null;
+
+  private readonly justChanged = new JustChangedTracker();
+  private readonly leaving = new LeavingTracker();
 
   isModalOpen = false;
 
@@ -765,6 +776,7 @@ export class LotsComponent implements OnInit {
           }
 
 
+          this.isLoading = false;
           this.cdr.detectChanges();
         },
 
@@ -776,6 +788,7 @@ export class LotsComponent implements OnInit {
             err
           );
 
+          this.isLoading = false;
           this.lots = [];
 
           this.lotsTotal = 0;
@@ -1258,7 +1271,7 @@ export class LotsComponent implements OnInit {
     }
 
 
-    this.isLoading = true;
+    this.isSaving = true;
 
     this.errorMessage = '';
 
@@ -1325,10 +1338,16 @@ export class LotsComponent implements OnInit {
         )
         .subscribe({
 
-          next: () => {
+          next: (response) => {
 
-            this.isLoading = false;
+            this.isSaving = false;
 
+            const updated = this.mergeLot(
+              this.selectedLot,
+              unwrapResource<Lot>(response),
+            );
+
+            this.applyUpdatedLot(updated);
 
             this.toast.show(
               'Lote actualizado',
@@ -1336,21 +1355,15 @@ export class LotsComponent implements OnInit {
               'El lote se actualizó correctamente.'
             );
 
-
             this.closeModal();
-
-            this.loadLots(
-              this.currentPage
-            );
-
-
+            this.markJustChanged(updated.id);
             this.cdr.detectChanges();
           },
 
 
           error: (err) => {
 
-            this.isLoading = false;
+            this.isSaving = false;
 
 
             if (
@@ -1427,10 +1440,24 @@ export class LotsComponent implements OnInit {
       .createLot(createData)
       .subscribe({
 
-        next: () => {
+        next: (response) => {
 
-          this.isLoading = false;
+          this.isSaving = false;
 
+          const created = this.mergeLot(
+            {
+              project_id: Number(formValues.project_id),
+              number: formValues.number ?? undefined,
+              area_m2: area,
+              list_price: price,
+              status: formValues.status ?? undefined,
+              type: formValues.type ?? undefined,
+              project: this.projects.find((project) => project.id === Number(formValues.project_id)),
+            },
+            unwrapResource<Lot>(response),
+          );
+
+          this.applyCreatedLot(created);
 
           this.toast.show(
             'Lote registrado',
@@ -1438,18 +1465,15 @@ export class LotsComponent implements OnInit {
             'El lote se registró correctamente.'
           );
 
-
           this.closeModal();
-
-          this.loadLots(1);
-
+          this.markJustChanged(created.id);
           this.cdr.detectChanges();
         },
 
 
         error: (err) => {
 
-          this.isLoading = false;
+          this.isSaving = false;
 
 
           if (
@@ -1511,22 +1535,16 @@ export class LotsComponent implements OnInit {
     }
 
 
+    this.mutatingLotId = lot.id;
+
     this.lotService
       .archiveLot(lot.id)
       .subscribe({
 
-        next: () => {
+        next: (response) => {
 
-          this.loadLots(
-            this.currentPage
-          );
-
-
-          if (this.showArchivedLots) {
-
-            this.loadArchivedLots();
-          }
-
+          this.mutatingLotId = null;
+          this.applyArchivedLot(this.mergeLot(lot, unwrapResource<Lot>(response)));
 
           this.toast.show(
             'Lote archivado',
@@ -1540,6 +1558,8 @@ export class LotsComponent implements OnInit {
 
 
         error: (error) => {
+
+          this.mutatingLotId = null;
 
           console.error(
             'Error archivando lote:',
@@ -1584,18 +1604,18 @@ export class LotsComponent implements OnInit {
     }
 
 
+    this.mutatingLotId = lot.id;
+
     this.lotService
       .activateLot(lot.id)
       .subscribe({
 
-        next: () => {
+        next: (response) => {
 
-          this.loadArchivedLots();
-
-          this.loadLots(
-            this.currentPage
-          );
-
+          this.mutatingLotId = null;
+          const activated = this.mergeLot(lot, unwrapResource<Lot>(response));
+          this.applyActivatedLot(activated);
+          this.markJustChanged(activated.id);
 
           this.toast.show(
             'Lote reactivado',
@@ -1609,6 +1629,8 @@ export class LotsComponent implements OnInit {
 
 
         error: (error) => {
+
+          this.mutatingLotId = null;
 
           console.error(
             'Error reactivando lote:',
@@ -1641,6 +1663,100 @@ export class LotsComponent implements OnInit {
     }
   ): boolean {
     return lotStatusValue(lot.status) === 'disponible';
+  }
+
+  isJustChanged(id: number | null | undefined): boolean {
+    return this.justChanged.has(id);
+  }
+
+  isLeaving(id: number | null | undefined): boolean {
+    return this.leaving.has(id);
+  }
+
+  private markJustChanged(id: number | null | undefined): void {
+    this.justChanged.mark(id, () => this.cdr.detectChanges());
+  }
+
+  private markLeaving(id: number | null | undefined, apply: () => void): void {
+    this.leaving.mark(id, () => this.cdr.detectChanges(), () => {
+      apply();
+      this.cdr.detectChanges();
+    });
+  }
+
+  private mergeLot(base: Partial<Lot> | null | undefined, incoming: Lot | null): Lot {
+    return {
+      ...(base ?? {}),
+      ...(incoming ?? {}),
+    } as Lot;
+  }
+
+  private applyCreatedLot(lot: Lot): void {
+    this.lotsTotal += 1;
+    this.adjustProjectLotCounts(lot, 1, this.isLotAvailable(lot) ? 1 : 0);
+    if (this.currentPage === 1 && !this.showArchivedLots) {
+      this.lots = insertAtFront(this.lots, lot, this.pageSize);
+    }
+    this.refreshLotCounters();
+  }
+
+  private applyUpdatedLot(lot: Lot): void {
+    const previous = this.lots.find((row) => row.id === lot.id);
+    if (previous) {
+      const availableDelta = Number(this.isLotAvailable(lot)) - Number(this.isLotAvailable(previous));
+      this.adjustProjectLotCounts(lot, 0, availableDelta);
+    }
+    this.lots = replaceById(this.lots, lot);
+    this.refreshLotCounters();
+  }
+
+  private applyArchivedLot(lot: Lot): void {
+    const previous = this.lots.find((row) => row.id === lot.id) ?? lot;
+    this.markLeaving(lot.id, () => {
+      this.lots = removeById(this.lots, Number(lot.id));
+      this.lotsTotal = Math.max(0, this.lotsTotal - 1);
+      this.adjustProjectLotCounts(previous, -1, this.isLotAvailable(previous) ? -1 : 0);
+      if (this.showArchivedLots) {
+        this.archivedLots = insertAtFront(this.archivedLots, { ...lot, deleted_at: lot.deleted_at ?? new Date().toISOString() });
+      }
+      this.refreshLotCounters();
+    });
+  }
+
+  private applyActivatedLot(lot: Lot): void {
+    this.markLeaving(lot.id, () => {
+      this.archivedLots = removeById(this.archivedLots, Number(lot.id));
+      this.lotsTotal += 1;
+      this.adjustProjectLotCounts(lot, 1, this.isLotAvailable(lot) ? 1 : 0);
+      if (!this.showArchivedLots && this.currentPage === 1) {
+        this.lots = insertAtFront(this.lots, { ...lot, deleted_at: null }, this.pageSize);
+      }
+      this.refreshLotCounters();
+    });
+  }
+
+  private adjustProjectLotCounts(lot: Lot, totalDelta: number, availableDelta: number): void {
+    if (!this.activeProject) {
+      return;
+    }
+
+    if (lot.project_id != null && this.activeProject.id !== lot.project_id) {
+      return;
+    }
+
+    this.activeProject.total_lots_count = Math.max(0, Number(this.activeProject.total_lots_count ?? this.lotsTotal) + totalDelta);
+    this.activeProject.available_lots_count = Math.max(0, Number(this.activeProject.available_lots_count ?? 0) + availableDelta);
+  }
+
+  private refreshLotCounters(): void {
+    if (this.selectedProjectId) {
+      this.calculateProjectKPIs();
+      return;
+    }
+
+    this.projectTotalLots = this.lotsTotal;
+    this.projectAvailableLots = this.lots.filter((lot) => this.isLotAvailable(lot)).length;
+    this.projectTotalValue = this.lots.reduce((sum, lot) => sum + Number(lot.list_price || 0), 0);
   }
 
 }

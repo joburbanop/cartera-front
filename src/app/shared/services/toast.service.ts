@@ -19,7 +19,7 @@ export class ToastService {
   private readonly timers = new Map<number, number[]>();
   private nextId = 1;
   private readonly dismissMs = 4000;
-  private readonly leaveMs = 220;
+  private readonly leaveMs = 180;
 
   readonly toasts = this.toastsState.asReadonly();
 

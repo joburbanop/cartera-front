@@ -4,7 +4,10 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { BankAccountService } from '../../../core/services/bank-account.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AppRoles } from '../../../core/models/app-roles';
+import { BankAccount } from '../../../core/models/bank-account.model';
+import { unwrapResource } from '../../../core/models/api-response';
 import { ToastService } from '../../../shared/services/toast.service';
+import { JustChangedTracker, insertAtFront } from '../../../shared/utils/list-feedback';
 import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
 import { markAllAsTouched, scrollToFirstInvalid } from '../../../shared/utils/form-utils';
 
@@ -28,9 +31,11 @@ export class BankAccountsComponent implements OnInit {
   }
   accounts: any[] = [];
   isLoading = false;
+  isSaving = false;
   successMessage = '';
   errorMessage = '';
   isModalOpen = false;
+  private readonly justChanged = new JustChangedTracker();
 
   totalAccounts = 0;
   savingsCount = 0;
@@ -49,8 +54,8 @@ export class BankAccountsComponent implements OnInit {
   // Llama a esta función después de cargar las cuentas desde tu backend
   calculateKPIs() {
     this.totalAccounts = this.accounts.length;
-    this.savingsCount = this.accounts.filter(a => a.account_type === 'savings').length;
-    this.checkingCount = this.accounts.filter(a => a.account_type === 'checking').length;
+    this.savingsCount = this.accounts.filter((account) => this.accountTypeOf(account) === 'savings').length;
+    this.checkingCount = this.accounts.filter((account) => this.accountTypeOf(account) === 'checking').length;
   }
 
   // --- CONTROL DEL MODAL ---
@@ -61,8 +66,12 @@ export class BankAccountsComponent implements OnInit {
   }
 
   closeModal() {
+    if (this.isSaving) {
+      return;
+    }
+
     this.isModalOpen = false;
-    this.accountForm.reset({ account_type: 'savings' }); // Resetea con valor por defecto
+    this.accountForm.reset({ account_type: 'savings' });
   }
 
   loadAccounts() {
@@ -98,7 +107,7 @@ export class BankAccountsComponent implements OnInit {
       return;
     }
 
-    this.isLoading = true;
+    this.isSaving = true;
     this.successMessage = '';
     this.errorMessage = '';
 
@@ -106,16 +115,21 @@ export class BankAccountsComponent implements OnInit {
 
     this.bankAccountService.createAccount(payload).subscribe({
       next: (response) => {
-        this.isLoading = false;
-        this.successMessage = 'Cuenta bancaria registrada exitosamente.';
-
+        this.isSaving = false;
+        const created = {
+          ...payload,
+          ...(unwrapResource<BankAccount>(response) ?? {}),
+        };
+        this.accounts = insertAtFront(this.accounts, created);
+        this.calculateKPIs();
         this.accountForm.reset({ account_type: 'savings' });
         this.isModalOpen = false;
-        this.loadAccounts();
+        this.toast.show('Cuenta registrada', 'success', 'La cuenta bancaria ya está disponible para recaudos.');
+        this.markJustChanged(created.id);
         this.cdr.detectChanges();
       },
       error: (err) => {
-        this.isLoading = false;
+        this.isSaving = false;
 
         if (err.status === 422 && err.error?.errors) {
           const primerCampoConError = Object.keys(err.error.errors)[0];
@@ -127,5 +141,18 @@ export class BankAccountsComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  isJustChanged(id: number | null | undefined): boolean {
+    return this.justChanged.has(id);
+  }
+
+  private markJustChanged(id: number | null | undefined): void {
+    this.justChanged.mark(id, () => this.cdr.detectChanges());
+  }
+
+  private accountTypeOf(account: { account_type?: string | { value?: string } }): string {
+    const type = account?.account_type;
+    return String((typeof type === 'object' ? type?.value : type) ?? '').toLowerCase();
   }
 }

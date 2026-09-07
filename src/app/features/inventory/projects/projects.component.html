@@ -41,9 +41,9 @@
       </div>
 
       <div class="app-form-actions">
-        <button type="button" class="btn-secondary" (click)="closeModal()" [disabled]="isLoading">Cancelar</button>
-        <button type="submit" class="btn-primary" [disabled]="isLoading">
-          {{ isLoading ? 'Guardando...' : (isEditMode ? 'Guardar cambios' : 'Guardar proyecto') }}
+        <button type="button" class="btn-secondary" (click)="closeModal()" [disabled]="isSaving">Cancelar</button>
+        <button type="submit" class="btn-primary" [disabled]="isSaving">
+          {{ isSaving ? 'Guardando...' : (isEditMode ? 'Guardar cambios' : 'Guardar proyecto') }}
         </button>
       </div>
     </form>
@@ -59,7 +59,7 @@
   <div class="page-header">
     <div>
       <h1>Proyectos</h1>
-      <p>{{ projects.length }} proyectos activos · Gestión general</p>
+      <p>{{ activeProjectsCount }} proyectos activos · Gestión general</p>
     </div>
     <button *ngIf="canCreate" class="btn-primary btn-new-project" (click)="openModal()">+ Nuevo proyecto</button>
   </div>
@@ -72,7 +72,7 @@
         </svg>
       </div>
       <div>
-        <p class="kpi-card__value">{{ projects.length }}</p>
+        <p class="kpi-card__value">{{ activeProjectsCount }}</p>
         <p class="kpi-card__label">Proyectos activos</p>
       </div>
     </div>
@@ -108,7 +108,7 @@
   </div>
 
   <div *ngIf="projects.length > 0" class="cards-grid">
-    <article *ngFor="let p of projects" class="card-elevated project-card">
+    <article *ngFor="let p of projects" class="card-elevated project-card" [class.row-just-changed]="isJustChanged(p.id)">
       <div class="project-card__head">
         <h3>{{ p.name }}</h3>
         <div class="action-buttons">
@@ -153,6 +153,7 @@
     *ngIf="p.status === 'active'"
     class="action-btn delete-btn"
     title="Archivar Proyecto"
+    [disabled]="mutatingProjectId === p.id"
     (click)="archiveProject(p)"
   >
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -165,6 +166,7 @@
     *ngIf="p.status === 'inactive' || p.status === 'archived'"
     class="action-btn edit-btn"
     title="Reactivar Proyecto"
+    [disabled]="mutatingProjectId === p.id"
     (click)="activateProject(p)"
   >
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">

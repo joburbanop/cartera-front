@@ -1,11 +1,11 @@
-<div class="app-modal-backdrop app-modal-backdrop--stack" *ngIf="isOpen" (click)="closed.emit()">
+<div class="app-modal-backdrop app-modal-backdrop--stack" *ngIf="isOpen" (click)="close()">
   <div class="app-modal" (click)="$event.stopPropagation()">
     <div class="app-modal-header">
       <div>
         <h2>Registrar nuevo cliente</h2>
         <p>Se seleccionará automáticamente en el contrato.</p>
       </div>
-      <button type="button" class="app-modal-close" (click)="closed.emit()">×</button>
+      <button type="button" class="app-modal-close" (click)="close()" [disabled]="isSaving">×</button>
     </div>
 
     <form [formGroup]="customerForm" (ngSubmit)="saveQuickCustomer()" class="app-modal-body">
@@ -33,8 +33,10 @@
       </div>
 
       <div class="app-form-actions">
-        <button type="button" class="btn-secondary" (click)="closed.emit()">Cancelar</button>
-        <button type="submit" class="btn-primary">Guardar y seleccionar</button>
+        <button type="button" class="btn-secondary" (click)="close()" [disabled]="isSaving">Cancelar</button>
+        <button type="submit" class="btn-primary" [disabled]="isSaving">
+          {{ isSaving ? 'Guardando...' : 'Guardar y seleccionar' }}
+        </button>
       </div>
     </form>
   </div>

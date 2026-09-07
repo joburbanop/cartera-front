@@ -15,16 +15,18 @@ import { ContractStatusLabelPipe } from '../../../shared/pipes/contract-status-l
 import { ToastService } from '../../../shared/services/toast.service';
 import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
+import { SkeletonComponent } from '../../../shared/components/skeleton/skeleton.component';
 import { markAllAsTouched, scrollToFirstInvalid } from '../../../shared/utils/form-utils';
 import { QuickCustomerModalComponent } from './quick-customer-modal/quick-customer-modal.component';
 import { ContractPaymentPromisesComponent, createPaymentPromiseGroup } from './contract-payment-promises/contract-payment-promises.component';
-import { unwrapPaginator } from '../../../core/models/api-response';
+import { unwrapPaginator, unwrapResource } from '../../../core/models/api-response';
+import { JustChangedTracker, insertAtFront } from '../../../shared/utils/list-feedback';
 import { LotStatusBadgePipe, LotStatusLabelPipe } from '../../../shared/pipes/lot-status-label.pipe';
 
 @Component({
   selector: 'app-contracts',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule, CurrencyMaskDirective, ContractStatusLabelPipe, LotStatusLabelPipe, LotStatusBadgePipe, FieldErrorComponent, QuickCustomerModalComponent, ContractPaymentPromisesComponent, PaginationComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule, CurrencyMaskDirective, ContractStatusLabelPipe, LotStatusLabelPipe, LotStatusBadgePipe, FieldErrorComponent, QuickCustomerModalComponent, ContractPaymentPromisesComponent, PaginationComponent, SkeletonComponent],
   templateUrl: './contracts.component.html',
   styleUrl: './contracts.component.scss'
 })
@@ -58,7 +60,9 @@ export class ContractsComponent implements OnInit {
 
   
   
-  isLoading = false;
+  isLoading = true;
+  isSaving = false;
+  private readonly justChanged = new JustChangedTracker();
   successMessage = '';
   errorMessage = '';
   projectedQuota: number = 0;
@@ -804,12 +808,14 @@ loadContracts(page = 1) {
       }
 
       this.calculateKPIs();
+      this.isLoading = false;
       this.cdr.detectChanges();
     },
     error: (err) => {
       console.error('Error cargando contratos', err);
       this.contracts = [];
       this.totalContracts = 0;
+      this.isLoading = false;
       this.errorMessage = 'No se pudieron cargar los contratos. Intente nuevamente.';
       this.cdr.detectChanges();
     }
@@ -880,7 +886,7 @@ loadContracts(page = 1) {
     this.contractForm.patchValue({ customer_id: customer.id as any });
     this.loadCustomers();
     this.showCustomerModal = false;
-    this.successMessage = 'Cliente registrado y seleccionado correctamente.';
+    this.successMessage = '';
     this.errorMessage = '';
     this.cdr.detectChanges();
   }
@@ -957,7 +963,7 @@ loadContracts(page = 1) {
       return;
     }
 
-    this.isLoading = true;
+    this.isSaving = true;
     this.successMessage = '';
     this.errorMessage = '';
 
@@ -995,9 +1001,16 @@ loadContracts(page = 1) {
     };
 
     this.contractService.createContract(payload).subscribe({
-      next: () => {
-        this.isLoading = false;
-        this.successMessage = 'Contrato registrado exitosamente.';
+      next: (response) => {
+        this.isSaving = false;
+        const created = unwrapResource<any>(response) ?? payload;
+        this.totalContracts += 1;
+        if (this.currentPage === 1) {
+          this.contracts = insertAtFront(this.contracts, created, this.pageSize);
+        }
+        this.calculateKPIs();
+        this.successMessage = '';
+        this.toast.show('Contrato registrado', 'success', 'El contrato se creó correctamente.');
 
         this.isProgrammaticPlanReset = true;
         this.contractForm.reset({ interest_rate: 1.00, project_id: '', preventa_stages: 7 });
@@ -1007,13 +1020,12 @@ loadContracts(page = 1) {
         this.isProgrammaticPlanReset = false;
         this.availableLots = [];
         this.isModalOpen = false;
-
-        this.loadContracts();
+        this.markJustChanged(created?.id);
         this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('[Contracts] Error al crear contrato', err);
-        this.isLoading = false;
+        this.isSaving = false;
 
         if (err.status === 422 && err.error?.errors) {
           const backendErrors = err.error.errors as Record<string, string[]>;
@@ -1031,5 +1043,13 @@ loadContracts(page = 1) {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  isJustChanged(id: number | null | undefined): boolean {
+    return this.justChanged.has(id);
+  }
+
+  private markJustChanged(id: number | null | undefined): void {
+    this.justChanged.mark(id, () => this.cdr.detectChanges());
   }
 }

@@ -6,7 +6,7 @@
   <div class="side-panel">
     <div class="panel-header">
       <h3>Registrar pago</h3>
-      <button (click)="close()">✖</button>
+      <button (click)="close()" [disabled]="isProcessing">✖</button>
     </div>
 
     <div class="panel-body">
@@ -72,7 +72,7 @@
           <app-field-error [control]="paymentForm.get('payment_method')" label="El método de pago"></app-field-error>
         </div>
 
-        <div *ngIf="paymentForm.get('payment_method')?.value === 'transfer'" style="animation: fadeIn 0.3s;">
+        <div *ngIf="paymentForm.get('payment_method')?.value === 'transfer'" style="animation: fadeIn var(--motion-enter) var(--ease-out);">
           <label class="app-form-label">Cuenta de destino *</label>
           <select class="app-form-select" formControlName="bank_account_id">
             <option value="">-- Seleccione la cuenta bancaria --</option>
@@ -126,7 +126,7 @@
     </div>
 
     <div class="panel-footer">
-      <button class="btn-secondary" (click)="close()">Cancelar</button>
+      <button class="btn-secondary" (click)="close()" [disabled]="isProcessing">Cancelar</button>
       <button class="btn-primary" (click)="submit()" [disabled]="isProcessing">
         {{ isProcessing ? 'Registrando...' : 'Confirmar pago' }}
       </button>

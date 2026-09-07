@@ -34,7 +34,9 @@ import {
 
 import { RouterModule } from '@angular/router';
 
+import { unwrapResource } from '../../../core/models/api-response';
 import { ToastService } from '../../../shared/services/toast.service';
+import { JustChangedTracker, insertAtFront, replaceById } from '../../../shared/utils/list-feedback';
 
 import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
 
@@ -111,6 +113,14 @@ export class ProjectsComponent implements OnInit {
   }
 
 
+  get activeProjectsCount(): number {
+    return this.projects.filter((project) => {
+      const status = String(project.status?.value ?? project.status ?? '').toLowerCase();
+      return status === 'active';
+    }).length;
+  }
+
+
   // =========================================================
   // DATOS
   // =========================================================
@@ -125,6 +135,12 @@ export class ProjectsComponent implements OnInit {
   // =========================================================
 
   isLoading = false;
+
+  isSaving = false;
+
+  mutatingProjectId: number | null = null;
+
+  private readonly justChanged = new JustChangedTracker();
 
   successMessage = '';
 
@@ -779,24 +795,31 @@ export class ProjectsComponent implements OnInit {
 
   archiveProject(project: any): void {
 
+    this.mutatingProjectId = project.id;
+
     this.projectService
       .archiveProject(project.id)
       .subscribe({
 
-        next: () => {
+        next: (response) => {
 
+          this.mutatingProjectId = null;
+          const updated = { ...project, ...(unwrapResource<any>(response) ?? {}), status: 'archived' };
+          this.projects = replaceById(this.projects, updated);
+          this.applyLotStatsFromProjects();
           this.toast.show(
-            'Proyecto archivado correctamente.',
-            'success'
+            'Proyecto archivado',
+            'success',
+            'El proyecto se archivó correctamente.'
           );
-
-
-          this.loadProjects();
+          this.cdr.detectChanges();
 
         },
 
 
         error: (err) => {
+
+          this.mutatingProjectId = null;
 
           if (err.status === 422) {
 
@@ -815,6 +838,8 @@ export class ProjectsComponent implements OnInit {
 
           }
 
+          this.cdr.detectChanges();
+
         }
 
       });
@@ -827,24 +852,32 @@ export class ProjectsComponent implements OnInit {
 
   activateProject(project: any): void {
 
+    this.mutatingProjectId = project.id;
+
     this.projectService
       .activateProject(project.id)
       .subscribe({
 
-        next: () => {
+        next: (response) => {
 
+          this.mutatingProjectId = null;
+          const updated = { ...project, ...(unwrapResource<any>(response) ?? {}), status: 'active' };
+          this.projects = replaceById(this.projects, updated);
+          this.applyLotStatsFromProjects();
           this.toast.show(
-            'Proyecto activado correctamente.',
-            'success'
+            'Proyecto activado',
+            'success',
+            'El proyecto volvió a estar activo.'
           );
-
-
-          this.loadProjects();
+          this.markJustChanged(updated.id);
+          this.cdr.detectChanges();
 
         },
 
 
         error: (err) => {
+
+          this.mutatingProjectId = null;
 
           if (err.status === 422) {
 
@@ -981,7 +1014,7 @@ export class ProjectsComponent implements OnInit {
     }
 
 
-    this.isLoading = true;
+    this.isSaving = true;
 
     this.successMessage = '';
 
@@ -1007,9 +1040,17 @@ if (
     )
     .subscribe({
 
-      next: () => {
+      next: (response) => {
 
-        this.isLoading = false;
+        this.isSaving = false;
+
+        const updated = {
+          ...this.selectedProject,
+          ...this.projectForm.getRawValue(),
+          ...(unwrapResource<any>(response) ?? {}),
+        };
+        this.projects = replaceById(this.projects, updated);
+        this.applyLotStatsFromProjects();
 
         this.toast.show(
           'Proyecto actualizado',
@@ -1018,17 +1059,13 @@ if (
         );
 
         this.closeModal();
-
-        this.loadProjects();
-
-        this.loadLotsStats();
-
+        this.markJustChanged(updated.id);
         this.cdr.detectChanges();
       },
 
       error: (err) => {
 
-        this.isLoading = false;
+        this.isSaving = false;
 
         if (
           err.status === 422 &&
@@ -1076,26 +1113,35 @@ if (
       )
       .subscribe({
 
-        next: () => {
+        next: (response) => {
 
-          this.isLoading = false;
+          this.isSaving = false;
 
+          const created = {
+            ...this.projectForm.getRawValue(),
+            total_lots_count: 0,
+            available_lots_count: 0,
+            status: 'active',
+            ...(unwrapResource<any>(response) ?? {}),
+          };
+          this.projects = insertAtFront(this.projects, created);
+          this.applyLotStatsFromProjects();
+
+          this.toast.show(
+            'Proyecto creado',
+            'success',
+            'El proyecto ya está disponible.'
+          );
 
           this.closeModal();
-
-
-          this.loadProjects();
-
-          this.loadLotsStats();
-
-
+          this.markJustChanged(created.id);
           this.cdr.detectChanges();
         },
 
 
         error: (err) => {
 
-          this.isLoading = false;
+          this.isSaving = false;
 
 
           if (
@@ -1125,5 +1171,13 @@ if (
         }
 
       });
+  }
+
+  isJustChanged(id: number | null | undefined): boolean {
+    return this.justChanged.has(id);
+  }
+
+  private markJustChanged(id: number | null | undefined): void {
+    this.justChanged.mark(id, () => this.cdr.detectChanges());
   }
 }

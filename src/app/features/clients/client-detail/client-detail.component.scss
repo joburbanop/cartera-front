@@ -297,7 +297,11 @@
   font-size: 0.85rem;
   font-weight: 700;
   text-decoration: none;
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  transition:
+    background var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
 
   svg {
     width: 16px;
@@ -308,6 +312,10 @@
     background: #eef7f5;
     border-color: #347769;
     color: #22544a;
+  }
+
+  &:active {
+    transform: scale(0.98);
   }
 }
 
