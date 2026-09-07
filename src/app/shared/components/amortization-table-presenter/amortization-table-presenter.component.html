@@ -46,7 +46,7 @@
         <th>Cuota</th>
         <th>Abono Extra</th>
         <th>Intereses</th>
-        <th>Capital Pagado</th>
+        <th>Amortización</th>
         <th>Saldo total pendiente</th>
         <th>Estado</th>
       </tr>
@@ -98,8 +98,8 @@
         </td>
         <td style="font-weight: 600; color: #1e293b;">$ {{ fee.installment_value | number:'1.2-2' }}</td>
         <td style="font-weight: 600; color: #0f172a;">$ {{ (fee.extra_payment ?? 0) | number:'1.2-2' }}</td>
-        <td style="color: #64748b;">$ {{ (fee.interest_paid ?? 0) | number:'1.2-2' }}</td>
-        <td style="color: #059669;">$ {{ (fee.principal_paid ?? 0) | number:'1.2-2' }}</td>
+        <td style="color: #64748b;">$ {{ displayedInterest(fee) | number:'1.2-2' }}</td>
+        <td style="color: #059669;">$ {{ displayedAmortization(fee) | number:'1.2-2' }}</td>
         <td style="font-weight: 600; color: #0f172a;">$ {{ (fee.remaining_balance ?? 0) | number:'1.2-2' }}</td>
         <td>
           <span class="badge-status" [ngClass]="statusBadgeClass(fee)">

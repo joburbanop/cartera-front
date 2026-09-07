@@ -22,6 +22,41 @@ export class AmortizationFinancialsService {
     return isVencida(fee?.due_date ?? fee?.fecha_vencimiento ?? null);
   }
 
+  /**
+   * Intereses a pintar: lo cobrado si hay, si no el teórico del plan.
+   * Un 0 cobrado (p. ej. Lote 11) cae al teórico, que también puede ser 0.
+   */
+  displayedInterest(fee: AmortizationInstallment): number {
+    const paid = Number(fee?.interest_paid ?? 0);
+    if (paid > 0) {
+      return paid;
+    }
+
+    return Number(fee?.interest_value ?? 0);
+  }
+
+  /**
+   * Amortización (capital) a pintar: lo cobrado si hay, si no el teórico.
+   * En cuota inicial, si aún no hay principal_paid, se usa pactada − quota_debt
+   * para no mostrar la inicial completa cuando el abono es parcial.
+   */
+  displayedAmortization(fee: AmortizationInstallment): number {
+    const paid = Number(fee?.principal_paid ?? 0);
+    if (paid > 0) {
+      return paid;
+    }
+
+    if (Number(fee?.installment_number) === 0) {
+      const pactada = Number(fee?.principal_value ?? fee?.installment_value ?? 0);
+      const debt = Number(fee?.quota_debt);
+      if (Number.isFinite(debt)) {
+        return Math.max(0, pactada - debt);
+      }
+    }
+
+    return Number(fee?.principal_value ?? 0);
+  }
+
   getFeeDebtValue(fee: AmortizationInstallment): number {
     if (isPaidStatus(fee?.status)) {
       return 0;

@@ -86,7 +86,7 @@ describe('AmortizationTablePresenterComponent', () => {
     expect(editButtons.length).toBe(0);
   });
 
-  it('muestra intereses y capital realmente pagados, no los del plan', () => {
+  it('en cuotas cobradas muestra intereses y amortización pagados, no el teórico', () => {
     component.installments = [
       {
         installment_number: 1,
@@ -105,6 +105,10 @@ describe('AmortizationTablePresenterComponent', () => {
 
     fixture.detectChanges();
 
+    const header = fixture.debugElement.queryAll(By.css('thead th')).map((th) => th.nativeElement.textContent.trim());
+    expect(header).toContain('Amortización');
+    expect(header).not.toContain('Capital Pagado');
+
     const cells = fixture.debugElement.queryAll(By.css('tbody td'));
     const interestCell = cells[6].nativeElement.textContent.replace(/\s+/g, ' ').trim();
     const principalCell = cells[7].nativeElement.textContent.replace(/\s+/g, ' ').trim();
@@ -113,6 +117,89 @@ describe('AmortizationTablePresenterComponent', () => {
     expect(principalCell).toContain('99,829.50');
     expect(interestCell).not.toContain('1,714,431.44');
     expect(principalCell).not.toContain('1,714,431.44');
+  });
+
+  it('en cuotas pendientes muestra el desglose teórico del plan', () => {
+    component.installments = [
+      {
+        installment_number: 3,
+        due_date: '2027-09-15',
+        payment_date: null,
+        installment_value: 2268026.09,
+        extra_payment: 0,
+        interest_value: 994490.96,
+        principal_value: 1273535.13,
+        interest_paid: 0,
+        principal_paid: 0,
+        remaining_balance: 100,
+        status: 'pending',
+      },
+    ];
+
+    fixture.detectChanges();
+
+    const cells = fixture.debugElement.queryAll(By.css('tbody td'));
+    const interestCell = cells[6].nativeElement.textContent.replace(/\s+/g, ' ').trim();
+    const principalCell = cells[7].nativeElement.textContent.replace(/\s+/g, ' ').trim();
+
+    expect(interestCell).toContain('994,490.96');
+    expect(principalCell).toContain('1,273,535.13');
+  });
+
+  it('en cuota inicial parcial muestra el capital cobrado (pactada − quota_debt)', () => {
+    component.installments = [
+      {
+        installment_number: 0,
+        due_date: '2026-05-26',
+        payment_date: '2026-07-14',
+        installment_value: 16077970,
+        extra_payment: 0,
+        interest_value: 0,
+        principal_value: 16077970,
+        interest_paid: 0,
+        principal_paid: 0,
+        quota_debt: 5577970,
+        remaining_balance: 144701730,
+        status: 'partial',
+      },
+    ];
+
+    fixture.detectChanges();
+
+    const cells = fixture.debugElement.queryAll(By.css('tbody td'));
+    const interestCell = cells[6].nativeElement.textContent.replace(/\s+/g, ' ').trim();
+    const principalCell = cells[7].nativeElement.textContent.replace(/\s+/g, ' ').trim();
+
+    expect(interestCell).toContain('0.00');
+    expect(principalCell).toContain('10,500,000.00');
+    expect(principalCell).not.toContain('16,077,970.00');
+  });
+
+  it('mantiene intereses en 0 cuando el plan y lo cobrado son 0', () => {
+    component.installments = [
+      {
+        installment_number: 1,
+        due_date: '2025-12-01',
+        payment_date: '2025-12-01',
+        installment_value: 20731800,
+        extra_payment: 0,
+        interest_value: 0,
+        principal_value: 20731800,
+        interest_paid: 0,
+        principal_paid: 20731800,
+        remaining_balance: 103659000,
+        status: 'paid',
+      },
+    ];
+
+    fixture.detectChanges();
+
+    const cells = fixture.debugElement.queryAll(By.css('tbody td'));
+    const interestCell = cells[6].nativeElement.textContent.replace(/\s+/g, ' ').trim();
+    const principalCell = cells[7].nativeElement.textContent.replace(/\s+/g, ' ').trim();
+
+    expect(interestCell).toContain('0.00');
+    expect(principalCell).toContain('20,731,800.00');
   });
 
   it('emite editDueDate al hacer clic en el icono', () => {

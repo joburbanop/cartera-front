@@ -42,6 +42,14 @@ export class AmortizationTablePresenterComponent {
     return this.installments.slice(start, start + this.pageSize);
   }
 
+  displayedInterest(fee: AmortizationInstallment): number {
+    return this.financials.displayedInterest(fee);
+  }
+
+  displayedAmortization(fee: AmortizationInstallment): number {
+    return this.financials.displayedAmortization(fee);
+  }
+
   feeStatus(fee: any): AmortizationStatus {
     return toAmortizationStatus(fee?.status);
   }
