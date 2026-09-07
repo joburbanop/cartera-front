@@ -9,6 +9,7 @@ import {
 import { AmortizationInstallment } from '../models/amortization-installment.model';
 import { Contract } from '../models/contract.model';
 import { Transaction } from '../models/transaction.model';
+import { FinancialRules } from '../constants/financial-rules';
 
 @Injectable({
   providedIn: 'root',
@@ -63,23 +64,15 @@ export class AmortizationFinancialsService {
     }
 
     const quotaDebt = Number(fee?.quota_debt ?? 0);
-    const installmentValue = Number(fee.installment_value ?? 0);
-    const overdueBalance = Number(fee.overdue_balance ?? 0);
-    const remainingBalance = Number(fee.remaining_balance ?? 0);
-
     if (quotaDebt > 0) {
       return Math.max(0, quotaDebt);
     }
 
-    if (overdueBalance > 0) {
-      return Math.max(0, Math.min(overdueBalance, installmentValue || overdueBalance));
-    }
+    const installmentValue = Number(fee.installment_value ?? 0);
+    const alreadyPaid = Number(fee?.interest_paid ?? 0) + Number(fee?.principal_paid ?? 0);
+    const remainder = installmentValue - alreadyPaid;
 
-    if (remainingBalance > 0 && remainingBalance < installmentValue) {
-      return Math.max(0, remainingBalance);
-    }
-
-    return Math.max(0, installmentValue);
+    return Math.max(0, remainder);
   }
 
   initialFee(plan: AmortizationInstallment[] = [], contractData?: Contract | null): AmortizationInstallment | null {
@@ -125,6 +118,25 @@ export class AmortizationFinancialsService {
     return Math.max(0, this.initialFeeTotal(plan, contractData) - this.initialFeePaid(plan, contractData));
   }
 
+  /**
+   * En preventa con inicial incompleta (residual ≥ $500) las regulares
+   * no cuentan como mora: ni banner, ni overdueFees, ni estado overdue.
+   */
+  suppressesRegularOverdue(plan: AmortizationInstallment[] = [], contractData?: Contract | null): boolean {
+    const contractStatus = String(contractData?.status ?? '').toLowerCase();
+    const rawLot = contractData?.lot?.status as string | { value?: string; name?: string } | undefined;
+    const lotStatus = typeof rawLot === 'string'
+      ? rawLot
+      : String(rawLot?.value ?? rawLot?.name ?? '');
+    const isPreventa = contractStatus === 'preventa_inactiva' || lotStatus.toLowerCase() === 'preventa';
+
+    if (!isPreventa) {
+      return false;
+    }
+
+    return this.initialFeeBalance(plan, contractData) >= FinancialRules.quotaCompletionResidual;
+  }
+
   initialFeeProgress(plan: AmortizationInstallment[] = [], contractData?: Contract | null): number {
     const total = this.initialFeeTotal(plan, contractData);
     if (total === 0) {
@@ -148,7 +160,18 @@ export class AmortizationFinancialsService {
       return 'pending';
     }
 
-    return toAmortizationStatus(fee?.status);
+    const status = toAmortizationStatus(fee?.status);
+    if (this.suppressesRegularOverdue(plan, contractData) && status === 'overdue') {
+      const debt = Number(fee?.quota_debt ?? 0);
+      const value = Number(fee?.installment_value ?? 0);
+      if (debt > 0 && value > 0 && debt < value) {
+        return 'partial';
+      }
+
+      return 'pending';
+    }
+
+    return status;
   }
 
   isFeeSelectable(fee: AmortizationInstallment, plan: AmortizationInstallment[] = [], contractData?: Contract | null): boolean {
@@ -178,26 +201,21 @@ export class AmortizationFinancialsService {
   overdueFees(plan: AmortizationInstallment[] = [], contractData?: Contract | null): AmortizationInstallment[] {
     return (plan ?? [])
       .filter((fee) => {
-        if (contractData?.status === 'preventa_inactiva') {
+        if (this.suppressesRegularOverdue(plan, contractData)) {
           return false;
         }
 
         return this.isPastDueFee(fee);
       })
-      .map((fee) => {
-        const installmentValue = Number(fee.installment_value || 0);
-        const remainingBalance = Number(fee.remaining_balance ?? installmentValue ?? 0);
-
-        return {
-          ...fee,
-          overdue_balance: Math.max(0, Math.min(installmentValue, Math.max(0, remainingBalance))),
-        };
-      })
-      .filter((fee) => Number(fee.installment_value || 0) > 0);
+      .map((fee) => ({
+        ...fee,
+        overdue_balance: this.getFeeDebtValue(fee),
+      }))
+      .filter((fee) => Number(fee.overdue_balance || 0) >= FinancialRules.quotaCompletionResidual);
   }
 
   activeMoraFees(plan: AmortizationInstallment[] = [], contractData?: Contract | null): AmortizationInstallment[] {
-    if (contractData?.status === 'preventa_inactiva') {
+    if (this.suppressesRegularOverdue(plan, contractData)) {
       return [];
     }
 

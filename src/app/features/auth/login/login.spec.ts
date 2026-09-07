@@ -100,4 +100,42 @@ describe('LoginComponent', () => {
 
     errorSpy.mockRestore();
   });
+
+  it('tras login de administrador navega al dashboard', () => {
+    component.loginForm.setValue({
+      email: 'admin@admin.com',
+      password: 'password',
+    });
+
+    component.onSubmit();
+    const req = httpMock.expectOne((request) => request.url.includes('/login'));
+    req.flush({
+      data: {
+        access_token: 'tok-admin',
+        roles: ['administrador'],
+        user: { id: 1, name: 'Administrador' },
+      },
+    });
+
+    expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
+  });
+
+  it('tras login de admin_sistema navega a /usuarios', () => {
+    component.loginForm.setValue({
+      email: 'sistema@cartera.test',
+      password: 'password',
+    });
+
+    component.onSubmit();
+    const req = httpMock.expectOne((request) => request.url.includes('/login'));
+    req.flush({
+      data: {
+        access_token: 'tok-sistema',
+        roles: ['admin_sistema'],
+        user: { id: 3, name: 'Admin Sistema' },
+      },
+    });
+
+    expect(router.navigate).toHaveBeenCalledWith(['/usuarios']);
+  });
 });

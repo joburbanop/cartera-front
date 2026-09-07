@@ -19,6 +19,8 @@ export const routes: Routes = [
     children: [
       {
         path: 'dashboard',
+        canActivate: [roleGuard],
+        data: { roles: businessViewerRoles },
         loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent)
       },
       {

@@ -163,6 +163,31 @@ describe('AmortizationComponent', () => {
     expect(isVencida(cuota1.due_date)).toBeTruthy();
     expect(isVencida(cuota2.due_date)).toBeTruthy();
     expect(isVencida(cuota3.due_date)).toBeFalsy();
+    expect(isVencida(isoWithOffset(0))).toBeFalsy();
+  });
+
+  it('el banner de cartera vencida usa quota_debt y no el saldo del préstamo', () => {
+    const cuotaConSaldoPrestamo = {
+      ...cuota1,
+      remaining_balance: 80000000,
+      projected_balance: 80000000,
+      quota_debt: 1000000,
+      status: 'pending',
+    };
+    const cuotaQueVenceHoy = {
+      ...cuota3,
+      id: 30,
+      installment_number: 30,
+      due_date: isoWithOffset(0),
+      remaining_balance: 80000000,
+      quota_debt: 1000000,
+      status: 'pending',
+    };
+
+    component.amortizationPlan = [cuotaConSaldoPrestamo, cuota2, cuotaQueVenceHoy];
+
+    expect(component.cantidadCuotasVencidas).toBe(1);
+    expect(component.totalDineroVencido).toBe(1000000);
   });
 
   it('Debe asignar correctamente las etiquetas visuales (Vencida, Pagada, Pendiente)', () => {
@@ -275,9 +300,10 @@ describe('AmortizationComponent', () => {
 
     expect(component.isPreventaLot).toBe(true);
     expect(component.pendingInitialAmount).toBe(2000000);
-    expect(component.overdueRegularAmount).toBe(1000000);
-    expect(component.overdueRegularCount).toBe(1);
+    expect(component.overdueRegularAmount).toBe(0);
+    expect(component.overdueRegularCount).toBe(0);
     expect(component.tieneCarteraVencida).toBe(true);
+    expect(component.getFeeStatus({ ...cuota1, status: 'overdue' })).toBe('pending');
   });
 
   it('en preventa con inicial pendiente precarga solo la inicial y muestra el total vencido', () => {
@@ -293,8 +319,26 @@ describe('AmortizationComponent', () => {
     component.openGeneralPaymentDrawer();
 
     expect(component.drawerSuggestedAmount).toBe(2000000);
-    expect(component.drawerOverdueTotal).toBe(3000000);
+    expect(component.drawerOverdueTotal).toBe(2000000);
     expect(component.selectedFees).toEqual([]);
+  });
+
+  it('en preventa no fusiona regulares vencidas al abrir el drawer de una cuota futura', () => {
+    component.contractData = {
+      ...component.contractData,
+      status: 'preventa_inactiva',
+      lot: { status: 'preventa' },
+      down_payment_pactada: 2000000,
+      transactions: [],
+    };
+    component.amortizationPlan = [cuotaInicial, cuota1, cuota2, cuota3];
+    component.selectedFees = [{ ...cuota3 }];
+
+    component.openDrawer();
+
+    const selectedIds = component.selectedFees.map((fee: any) => fee.id);
+    expect(selectedIds).toEqual([3]);
+    expect(selectedIds).not.toContain(1);
   });
 
   it('habilita Pagar en preventa si solo queda la inicial pendiente', () => {
@@ -554,20 +598,49 @@ describe('AmortizationComponent', () => {
     expect(fixture.nativeElement.querySelector('.btn-refinance')).toBeTruthy();
   });
 
-  it('debe cortar la recursión si el plan sigue vacío después de intentar generarlo', () => {
+  it('con plan vacío muestra el aviso y no genera automáticamente', () => {
     const getPlanSpy = vi.spyOn(component['amortizationService'], 'getPlan').mockReturnValue(of({ data: [] }));
     const generatePlanSpy = vi.spyOn(component['amortizationService'], 'generatePlan').mockReturnValue(of({}));
-    const toastSpy = vi.spyOn(toastService, 'show');
 
     component.contractId = 42;
     component.loadAmortizationPlan();
 
-    expect(getPlanSpy).toHaveBeenCalledTimes(2);
-    expect(generatePlanSpy).toHaveBeenCalledTimes(1);
-    expect(toastSpy).toHaveBeenCalledWith(
-      'No se pudo cargar la tabla de amortización',
-      'error',
-      expect.stringContaining('no está disponible')
-    );
+    expect(getPlanSpy).toHaveBeenCalledTimes(1);
+    expect(generatePlanSpy).not.toHaveBeenCalled();
+    expect(component.amortizationPlan).toEqual([]);
+    expect(component.isLoading).toBe(false);
+  });
+
+  it('el socio ve el aviso sin botón de generar tabla', () => {
+    const auth = TestBed.inject(AuthService);
+    vi.spyOn(auth, 'hasRole').mockImplementation((role) => role === AppRoles.SOCIO_GERENCIA);
+
+    const fixture = TestBed.createComponent(AmortizationComponent);
+    const instance = fixture.componentInstance;
+    instance.isLoading = false;
+    instance.isGenerating = false;
+    instance.amortizationPlan = [];
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('Este contrato aún no tiene tabla de amortización');
+    expect(text).not.toContain('Generar Tabla Definitiva');
+    expect(fixture.nativeElement.querySelector('button.btn-primary')).toBeNull();
+  });
+
+  it('el administrador ve el botón de generar tabla cuando no hay plan', () => {
+    const auth = TestBed.inject(AuthService);
+    vi.spyOn(auth, 'hasRole').mockImplementation((role) => role === AppRoles.ADMINISTRADOR);
+
+    const fixture = TestBed.createComponent(AmortizationComponent);
+    const instance = fixture.componentInstance;
+    instance.isLoading = false;
+    instance.isGenerating = false;
+    instance.amortizationPlan = [];
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('Este contrato aún no tiene tabla de amortización');
+    expect(text).toContain('Generar Tabla Definitiva');
   });
 });

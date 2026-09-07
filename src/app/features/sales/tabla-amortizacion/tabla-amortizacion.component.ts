@@ -30,6 +30,7 @@ import { AmortizationInstallment } from '../../../core/models/amortization-insta
 import { AppRoles } from '../../../core/models/app-roles';
 import { unwrapListItems, unwrapPaginator } from '../../../core/models/api-response';
 import { isPaidStatus, isVencida } from '../../../core/models/amortization-status';
+import { FinancialRules } from '../../../core/constants/financial-rules';
 @Component({
   selector: 'app-tabla-amortizacion',
   standalone: true,
@@ -141,8 +142,6 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   customerActivityPage = 1;
   customerActivityTotal = 0;
   readonly activityPageSize = 20;
-  private amortizationGenerationAttempts = 0;
-  private readonly maxAmortizationGenerationAttempts = 1;
   isEditDueDateModalOpen = false;
   isUpdatingDueDate = false;
   editingInstallment: AmortizationInstallment | null = null;
@@ -306,29 +305,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
         const planData = payload as AmortizationInstallment[] | { rows?: AmortizationInstallment[] };
         const plan = Array.isArray(planData) ? planData : planData.rows ?? [];
 
-        if (Array.isArray(plan) && plan.length === 0) {
-          if (this.isGenerating) {
-            return;
-          }
-
-          if (this.amortizationGenerationAttempts >= this.maxAmortizationGenerationAttempts) {
-            this.isLoading = false;
-            this.toast.show(
-              'No se pudo cargar la tabla de amortización',
-              'error',
-              'La tabla de amortización no está disponible en este momento. Intenta nuevamente más tarde.',
-            );
-            this.cdr.detectChanges();
-            return;
-          }
-
-          this.amortizationGenerationAttempts += 1;
-          this.generatePlan();
-          return;
-        }
-
-        this.amortizationGenerationAttempts = 0;
-        this.amortizationPlan = plan;
+        this.amortizationPlan = Array.isArray(plan) ? plan : [];
         this.clearTableSelection();
         this.selection.setPlan(this.amortizationPlan);
         this.isLoading = false;
@@ -336,7 +313,6 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.isLoading = false;
-        this.amortizationGenerationAttempts = 0;
         this.cdr.markForCheck();
       },
     });
@@ -369,7 +345,6 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.isGenerating = false;
-        this.amortizationGenerationAttempts = 0;
         const backendMessage = this.readFirstBackendError(err);
         this.toast.show(
           'No se pudo generar la tabla de amortización',
@@ -666,6 +641,11 @@ export class AmortizationComponent implements OnInit, OnDestroy {
 
       if (esPagada || !esVencida) return false;
 
+      // En preventa con inicial incompleta las regulares no son mora FIFO.
+      if (!isSeleccionInicial && this.shouldPrioritizePendingInitial() && !esInicial) {
+        return false;
+      }
+
       // Solo incluir mora del mismo "carril" que la selección del usuario
       return isSeleccionInicial ? esInicial : !esInicial;
     });
@@ -748,10 +728,14 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   }
 
   private shouldPrioritizePendingInitial(): boolean {
-    return this.lotStatusValue() === 'preventa' && this.initialFeeBalance > 0;
+    return this.financials.suppressesRegularOverdue(this.amortizationPlan, this.contractData);
   }
 
   private overdueRegularInstallments(): any[] {
+    if (this.shouldPrioritizePendingInitial()) {
+      return [];
+    }
+
     return this.getRegularPendingInstallmentsSorted()
       .filter((fee: any) => this.isVencida(fee?.due_date));
   }
@@ -1005,35 +989,20 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   }
 
   get cuotasVencidas(): any[] {
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-
     return (this.amortizationPlan ?? []).filter((cuota: any) => {
       if (isPaidStatus(cuota?.status)) {
         return false;
       }
 
-      const saldoPendiente = Number(
-        cuota?.saldo_pendiente ??
-        cuota?.projected_balance ??
-        cuota?.remaining_balance ??
-        cuota?.amount ??
-        cuota?.quota_debt ??
-        cuota?.installment_value ??
-        0
-      );
-
-      if (saldoPendiente < 500) {
+      if (this.shouldPrioritizePendingInitial() && Number(cuota?.installment_number) !== 0) {
         return false;
       }
 
-      const fechaVencimiento = cuota?.due_date ? new Date(cuota.due_date) : null;
-      if (!fechaVencimiento || Number.isNaN(fechaVencimiento.getTime())) {
+      if (this.financials.getFeeDebtValue(cuota) < FinancialRules.quotaCompletionResidual) {
         return false;
       }
 
-      fechaVencimiento.setHours(0, 0, 0, 0);
-      return fechaVencimiento < hoy;
+      return this.isVencida(cuota?.due_date);
     });
   }
 

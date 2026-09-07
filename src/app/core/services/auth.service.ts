@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError, finalize, map, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
-import { AppRole } from '../models/app-roles';
+import { AppRole, AppRoles } from '../models/app-roles';
 
 @Injectable({
   providedIn: 'root'
@@ -75,6 +75,10 @@ export class AuthService {
 
   hasRole(role: string | AppRole): boolean {
     return this.roles.includes(role);
+  }
+
+  homePath(): string {
+    return this.hasRole(AppRoles.ADMIN_SISTEMA) ? '/usuarios' : '/dashboard';
   }
 
   getRoles(): string[] {

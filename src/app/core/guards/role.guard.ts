@@ -14,12 +14,12 @@ export const roleGuard: CanActivateFn = (route) => {
   }
 
   if (deniedRoles?.some((role) => authService.hasRole(role))) {
-    void router.navigate(['/dashboard']);
+    void router.navigate([authService.homePath()]);
     return false;
   }
 
   if (allowedRoles && !allowedRoles.some((role) => authService.hasRole(role))) {
-    void router.navigate(['/dashboard']);
+    void router.navigate([authService.homePath()]);
     return false;
   }
 

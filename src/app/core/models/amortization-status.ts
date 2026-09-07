@@ -50,18 +50,51 @@ export function amortizationStatusLabel(value: unknown): string {
 }
 
 /**
- * True si la fecha de vencimiento es hoy o anterior
- * (comparación por día, sin horas).
+ * True si la fecha de vencimiento es anterior a hoy
+ * (comparación por día calendario local). El día de vencimiento no es mora.
  */
 export function isVencida(dueDate: string | Date | null | undefined): boolean {
-  if (!dueDate) {
+  const due = startOfLocalDay(dueDate);
+  if (!due) {
     return false;
   }
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const limitDate = new Date(dueDate);
-  limitDate.setHours(0, 0, 0, 0);
 
-  return limitDate <= today;
+  return due.getTime() < today.getTime();
+}
+
+function startOfLocalDay(value: string | Date | null | undefined): Date | null {
+  if (!value) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) {
+      return null;
+    }
+
+    const copy = new Date(value);
+    copy.setHours(0, 0, 0, 0);
+    return copy;
+  }
+
+  const match = String(value).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const parsed = new Date(year, month - 1, day);
+    parsed.setHours(0, 0, 0, 0);
+    return parsed;
+  }
+
+  const fallback = new Date(value);
+  if (Number.isNaN(fallback.getTime())) {
+    return null;
+  }
+
+  fallback.setHours(0, 0, 0, 0);
+  return fallback;
 }

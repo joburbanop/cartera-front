@@ -60,7 +60,15 @@ Sigue estos pasos para levantar el frontend en tu entorno local:
    ng serve
    ```
 
-   La aplicación estará disponible en `http://localhost:4200`.
+   La aplicación estará disponible en `http://localhost:4200`. El desarrollo usa `src/environments/environment.ts` (`http://127.0.0.1:8000/api`).
+
+5. **Build de producción:**
+
+   ```bash
+   npx ng build
+   ```
+
+   Usa `src/environments/environment.prod.ts` (`https://api.casasylotes.com.co/api`). El artefacto queda en `dist/sgci-front/browser/`. El procedimiento del VPS (nginx, CORS, primer usuario) está en `DEPLOYMENT.md` del repo **cartera-api**.
 
 ---
 

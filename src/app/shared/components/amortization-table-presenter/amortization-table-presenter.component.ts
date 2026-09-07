@@ -78,8 +78,8 @@ export class AmortizationTablePresenterComponent {
   /**
    * Una cuota está bloqueada (checkbox deshabilitado) si:
    * - ya fue pagada, O
-   * - su fecha de vencimiento ya expiró (periodo contable cerrado).
-   * Las cuotas FUTURAS nunca se bloquean para permitir pagos adelantados.
+   * - su fecha de vencimiento es anterior a hoy (periodo contable cerrado).
+   * El día de vencimiento y las cuotas futuras no se bloquean.
    */
   isBloqueada(fee: any): boolean {
     return isPaidStatus(fee?.status) || isVencida(fee?.due_date);

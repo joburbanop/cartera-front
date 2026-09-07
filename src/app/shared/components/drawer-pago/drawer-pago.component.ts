@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CurrencyMaskDirective } from '../../directives/currency-mask.directive';
 import { AmortizationFinancialsService } from '../../../core/services/amortization-financials.service';
+import { FinancialRules } from '../../../core/constants/financial-rules';
 import { ToastService } from '../../services/toast.service';
 import { FieldErrorComponent } from '../field-error/field-error.component';
 import { markAllAsTouched, scrollToFirstInvalid } from '../../utils/form-utils';
@@ -93,7 +94,7 @@ export class DrawerPagoComponent implements OnInit {
   }
 
   get hasSurplus(): boolean {
-    return this.excessAmount > 0;
+    return this.excessAmount > FinancialRules.absorbedSurplus;
   }
 
   private syncSurplusValidation(): void {
