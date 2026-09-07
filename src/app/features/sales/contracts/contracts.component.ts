@@ -658,7 +658,7 @@ loadContracts(page = 1) {
   const params = {
     ...(this.selectedLotId ? { lotId: this.selectedLotId } : {}),
     page: this.currentPage,
-    perPage: this.pageSize
+    perPage: this.selectedLotId ? 100 : this.pageSize,
   };
 
   this.contractService.getContracts(params).subscribe({
