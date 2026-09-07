@@ -73,7 +73,7 @@
     <div class="modal-header">
       <div>
         <h2>{{ isEditing ? 'Editar usuario' : 'Nuevo usuario' }}</h2>
-        <p>{{ isEditing ? 'Actualiza nombre, correo o rol' : 'Crea una cuenta y asígnale un rol' }}</p>
+        <p>{{ isEditing ? 'Actualiza nombre, correo, rol o contraseña' : 'Crea una cuenta y asígnale un rol' }}</p>
       </div>
       <button class="btn-close" type="button" (click)="closeModal()">✖</button>
     </div>
@@ -92,9 +92,13 @@
           <input type="email" formControlName="email" placeholder="ana@empresa.com">
           <app-field-error [control]="userForm.controls.email" label="El correo"></app-field-error>
         </div>
-        <div class="app-form-group" *ngIf="!isEditing">
-          <label class="app-form-label">Contraseña *</label>
-          <input type="password" formControlName="password" placeholder="Mínimo 8 caracteres">
+        <div class="app-form-group">
+          <label class="app-form-label">{{ isEditing ? 'Nueva contraseña' : 'Contraseña *' }}</label>
+          <input
+            type="password"
+            formControlName="password"
+            [placeholder]="isEditing ? 'Dejar vacío para no cambiar' : 'Mínimo 8 caracteres'"
+          >
           <app-field-error [control]="userForm.controls.password" label="La contraseña"></app-field-error>
         </div>
         <div class="app-form-group">

@@ -123,6 +123,14 @@ html body select:not([multiple]) {
   letter-spacing: 0.05em;
 }
 
+.app-form-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: #64748b;
+}
+
 .app-form-alert,
 .alert {
   padding: 0.75rem 0.9rem;

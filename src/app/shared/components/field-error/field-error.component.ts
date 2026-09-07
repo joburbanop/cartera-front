@@ -16,6 +16,7 @@ export class FieldErrorComponent implements OnChanges, OnDestroy {
 
   @Input() control: AbstractControl | null = null;
   @Input() label = 'Este campo';
+  @Input() messages: Partial<Record<string, string>> = {};
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['control']) {
@@ -38,16 +39,29 @@ export class FieldErrorComponent implements OnChanges, OnDestroy {
       return '';
     }
 
+    if (errors['server'] && typeof errors['server'] === 'string') {
+      return errors['server'];
+    }
+
+    if (errors['mismatch']) {
+      return this.messages['mismatch'] ?? 'Las contraseñas no coinciden.';
+    }
+
+    if (errors['sameAsCurrent']) {
+      return this.messages['sameAsCurrent'] ?? 'La nueva contraseña debe ser diferente a la actual.';
+    }
+
     if (errors['required']) {
-      return `${this.label} es obligatorio`;
+      return this.messages['required'] ?? `${this.label} es obligatorio`;
     }
 
     if (errors['email']) {
-      return 'Ingresa un correo válido';
+      return this.messages['email'] ?? 'Ingresa un correo válido';
     }
 
     if (errors['minlength']) {
-      return `${this.label} debe tener al menos ${errors['minlength'].requiredLength} caracteres`;
+      return this.messages['minlength']
+        ?? `${this.label} debe tener al menos ${errors['minlength'].requiredLength} caracteres`;
     }
 
     if (errors['min']) {

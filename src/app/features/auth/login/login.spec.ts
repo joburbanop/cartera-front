@@ -69,14 +69,14 @@ describe('LoginComponent', () => {
     );
 
     expect(component.isLoading).toBeFalsy();
-    expect(component.errorMessage).toBe('Las credenciales proporcionadas son incorrectas.');
+    expect(component.errorMessage).toBe('El correo o la contraseña no son correctos.');
     expect(logoutSpy).not.toHaveBeenCalled();
     expect(router.navigate).not.toHaveBeenCalled();
-    expect(errorSpy).toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
 
     fixture.detectChanges();
     const alert = fixture.nativeElement.querySelector('.login-error') as HTMLElement | null;
-    expect(alert?.textContent).toContain('Las credenciales proporcionadas son incorrectas.');
+    expect(alert?.textContent).toContain('El correo o la contraseña no son correctos.');
     expect((fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement).disabled).toBeFalsy();
 
     errorSpy.mockRestore();
@@ -96,9 +96,22 @@ describe('LoginComponent', () => {
     req.flush({ status: 'error', errors: null }, { status: 422, statusText: 'Unprocessable Content' });
 
     expect(component.isLoading).toBeFalsy();
-    expect(component.errorMessage).toBe('Credenciales incorrectas o servidor no disponible.');
+    expect(component.errorMessage).toBe('El correo o la contraseña no son correctos.');
 
     errorSpy.mockRestore();
+  });
+
+  it('distingue un fallo de servidor de un error de credenciales', () => {
+    component.loginForm.setValue({
+      email: 'admin@admin.com',
+      password: 'password',
+    });
+
+    component.onSubmit();
+    const req = httpMock.expectOne((request) => request.url.includes('/login'));
+    req.flush({ status: 'error' }, { status: 500, statusText: 'Server Error' });
+
+    expect(component.errorMessage).toBe('No pudimos conectar con el servidor. Intenta de nuevo.');
   });
 
   it('tras login de administrador navega al dashboard', () => {
@@ -137,5 +150,52 @@ describe('LoginComponent', () => {
     });
 
     expect(router.navigate).toHaveBeenCalledWith(['/usuarios']);
+  });
+
+  it('tras login con must_change_password navega a /cambiar-contrasena', () => {
+    component.loginForm.setValue({
+      email: 'admin@admin.com',
+      password: 'password',
+    });
+
+    component.onSubmit();
+    const req = httpMock.expectOne((request) => request.url.includes('/login'));
+    req.flush({
+      data: {
+        access_token: 'tok-force',
+        roles: ['administrador'],
+        user: { id: 1, name: 'Administrador', must_change_password: true, password_changed_at: null },
+      },
+    });
+
+    expect(router.navigate).toHaveBeenCalledWith(['/cambiar-contrasena']);
+    expect(authService.mustChangePassword()).toBe(true);
+    expect(authService.hasPreviousPasswordChange()).toBe(false);
+  });
+
+  it('tras login con reset de admin conserva password_changed_at', () => {
+    component.loginForm.setValue({
+      email: 'admin@admin.com',
+      password: 'password',
+    });
+
+    component.onSubmit();
+    const req = httpMock.expectOne((request) => request.url.includes('/login'));
+    req.flush({
+      data: {
+        access_token: 'tok-reset',
+        roles: ['administrador'],
+        user: {
+          id: 1,
+          name: 'Administrador',
+          must_change_password: true,
+          password_changed_at: '2026-01-15T10:00:00-05:00',
+        },
+      },
+    });
+
+    expect(router.navigate).toHaveBeenCalledWith(['/cambiar-contrasena']);
+    expect(authService.mustChangePassword()).toBe(true);
+    expect(authService.hasPreviousPasswordChange()).toBe(true);
   });
 });

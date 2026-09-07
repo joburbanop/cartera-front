@@ -1,5 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { changePasswordGuard } from './core/guards/change-password.guard';
+import { passwordChangedGuard } from './core/guards/password-changed.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { AppRoles } from './core/models/app-roles';
 
@@ -13,9 +15,14 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/login/login.component').then(m => m.LoginComponent)
   },
   {
+    path: 'cambiar-contrasena',
+    canActivate: [changePasswordGuard],
+    loadComponent: () => import('./features/auth/change-password/change-password.component').then(m => m.ChangePasswordComponent)
+  },
+  {
     path: '',
     loadComponent: () => import('./shared/components/main-layout/main-layout.component').then(m => m.MainLayoutComponent),
-    canActivate: [authGuard],
+    canActivate: [authGuard, passwordChangedGuard],
     children: [
       {
         path: 'dashboard',

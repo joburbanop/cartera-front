@@ -15,6 +15,8 @@ export class AuthService {
   private readonly rolesKey = 'auth_roles';
   private readonly userIdKey = 'auth_user_id';
   private readonly userNameKey = 'auth_user_name';
+  private readonly mustChangePasswordKey = 'auth_must_change_password';
+  private readonly passwordChangedAtKey = 'auth_password_changed_at';
   private roles: string[] = this.readStoredRoles();
   private loggingOut = false;
   private readonly userNameState = signal<string | null>(this.readStoredName());
@@ -35,6 +37,7 @@ export class AuthService {
             localStorage.setItem(this.userIdKey, String(userId));
           }
           this.persistUserName(payload?.user?.name);
+          this.persistPasswordFlags(payload?.user);
           return;
         }
 
@@ -79,6 +82,49 @@ export class AuthService {
 
   homePath(): string {
     return this.hasRole(AppRoles.ADMIN_SISTEMA) ? '/usuarios' : '/dashboard';
+  }
+
+  postLoginPath(): string {
+    return this.mustChangePassword() ? '/cambiar-contrasena' : this.homePath();
+  }
+
+  mustChangePassword(): boolean {
+    return localStorage.getItem(this.mustChangePasswordKey) === '1';
+  }
+
+  setMustChangePassword(value: boolean): void {
+    if (value) {
+      localStorage.setItem(this.mustChangePasswordKey, '1');
+      return;
+    }
+
+    localStorage.removeItem(this.mustChangePasswordKey);
+  }
+
+  hasPreviousPasswordChange(): boolean {
+    return !!localStorage.getItem(this.passwordChangedAtKey);
+  }
+
+  setPasswordChangedAt(value: string | null | undefined): void {
+    if (typeof value === 'string' && value.trim()) {
+      localStorage.setItem(this.passwordChangedAtKey, value.trim());
+      return;
+    }
+
+    localStorage.removeItem(this.passwordChangedAtKey);
+  }
+
+  changePassword(payload: {
+    current_password: string;
+    password: string;
+    password_confirmation: string;
+  }): Observable<unknown> {
+    return this.http.put(`${this.apiUrl}/me/password`, payload).pipe(
+      tap((response: any) => {
+        const user = response?.data ?? response;
+        this.persistPasswordFlags(user);
+      })
+    );
   }
 
   getRoles(): string[] {
@@ -126,6 +172,7 @@ export class AuthService {
       next: (response: any) => {
         const payload = response?.data ?? response;
         this.persistUserName(payload?.user?.name ?? payload?.name);
+        this.persistPasswordFlags(payload?.user ?? payload);
       }
     });
   }
@@ -157,6 +204,22 @@ export class AuthService {
     localStorage.removeItem(this.rolesKey);
     localStorage.removeItem(this.userIdKey);
     localStorage.removeItem(this.userNameKey);
+    localStorage.removeItem(this.mustChangePasswordKey);
+    localStorage.removeItem(this.passwordChangedAtKey);
+  }
+
+  private persistPasswordFlags(user: { must_change_password?: boolean; password_changed_at?: string | null } | null | undefined): void {
+    if (!user || typeof user !== 'object') {
+      return;
+    }
+
+    if (typeof user.must_change_password === 'boolean') {
+      this.setMustChangePassword(user.must_change_password);
+    }
+
+    if ('password_changed_at' in user) {
+      this.setPasswordChangedAt(user.password_changed_at);
+    }
   }
 
   private readStoredRoles(): string[] {

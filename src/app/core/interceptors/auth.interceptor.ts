@@ -25,6 +25,14 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
+      const errorCode = (error.error as { errors?: { code?: string } } | null)?.errors?.code;
+
+      if (error.status === 403 && errorCode === 'password_change_required') {
+        authService.setMustChangePassword(true);
+        void router.navigate(['/cambiar-contrasena']);
+        return throwError(() => error);
+      }
+
       if (error.status === 401 && !shouldSkipAutoLogout && !authService.isLogoutRequest(req.url)) {
         authService.logout().subscribe(() => {
           void router.navigate(['/login']);

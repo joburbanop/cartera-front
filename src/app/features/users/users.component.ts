@@ -127,7 +127,7 @@ export class UsersComponent implements OnInit {
       password: '',
       role: (user.roles[0] as typeof AppRoles.ADMINISTRADOR) || AppRoles.ADMINISTRADOR,
     });
-    this.userForm.controls.password.clearValidators();
+    this.userForm.controls.password.setValidators([Validators.minLength(8)]);
     this.userForm.controls.password.updateValueAndValidity();
     this.successMessage = '';
     this.errorMessage = '';
@@ -159,6 +159,7 @@ export class UsersComponent implements OnInit {
           name: value.name,
           email: value.email,
           role: value.role,
+          ...(value.password.trim() ? { password: value.password } : {}),
         })
       : this.userService.createUser({
           name: value.name,
