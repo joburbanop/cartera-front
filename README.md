@@ -68,7 +68,7 @@ Sigue estos pasos para levantar el frontend en tu entorno local:
    npx ng build
    ```
 
-   Usa `src/environments/environment.prod.ts` (`https://api.casasylotes.com.co/api`). El artefacto queda en `dist/sgci-front/browser/`. El procedimiento del VPS (nginx, CORS, primer usuario) está en `DEPLOYMENT.md` del repo **cartera-api**.
+   Usa `src/environments/environment.prod.ts` (`https://api.casasylotes.com.co/api`). El artefacto queda en `dist/browser/`. El procedimiento del VPS (nginx, CORS, primer usuario) está en `DEPLOYMENT.md` del repo **cartera-api**.
 
 ---
 

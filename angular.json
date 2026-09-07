@@ -7,7 +7,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "sgci-front": {
+    "cartera-front": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -21,6 +21,9 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
+            "outputPath": {
+              "base": "dist"
+            },
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
@@ -73,10 +76,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "sgci-front:build:production"
+              "buildTarget": "cartera-front:build:production"
             },
             "development": {
-              "buildTarget": "sgci-front:build:development"
+              "buildTarget": "cartera-front:build:development"
             }
           },
           "defaultConfiguration": "development"
