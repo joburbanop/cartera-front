@@ -81,7 +81,7 @@ export class AuthService {
   }
 
   homePath(): string {
-    return this.hasRole(AppRoles.ADMIN_SISTEMA) ? '/usuarios' : '/dashboard';
+    return '/dashboard';
   }
 
   postLoginPath(): string {

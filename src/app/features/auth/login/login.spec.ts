@@ -133,7 +133,7 @@ describe('LoginComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
   });
 
-  it('tras login de admin_sistema navega a /usuarios', () => {
+  it('tras login de admin_sistema navega a /dashboard', () => {
     component.loginForm.setValue({
       email: 'sistema@cartera.test',
       password: 'password',
@@ -149,7 +149,7 @@ describe('LoginComponent', () => {
       },
     });
 
-    expect(router.navigate).toHaveBeenCalledWith(['/usuarios']);
+    expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
   });
 
   it('tras login con must_change_password navega a /cambiar-contrasena', () => {

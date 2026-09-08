@@ -28,9 +28,24 @@ describe('roleGuard', () => {
     });
   });
 
-  it('redirige admin_sistema fuera del dashboard a /usuarios', () => {
+  it('permite admin_sistema en el dashboard propio', () => {
     auth.hasRole.mockImplementation((role: string) => role === AppRoles.ADMIN_SISTEMA);
-    auth.homePath.mockReturnValue('/usuarios');
+
+    const route = {
+      data: { roles: [AppRoles.SOCIO_GERENCIA, AppRoles.ADMINISTRADOR, AppRoles.ADMIN_SISTEMA] },
+    } as unknown as ActivatedRouteSnapshot;
+
+    const allowed = TestBed.runInInjectionContext(() =>
+      roleGuard(route, {} as RouterStateSnapshot),
+    );
+
+    expect(allowed).toBe(true);
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('redirige admin_sistema fuera de contratos a /dashboard', () => {
+    auth.hasRole.mockImplementation((role: string) => role === AppRoles.ADMIN_SISTEMA);
+    auth.homePath.mockReturnValue('/dashboard');
 
     const route = {
       data: { roles: [AppRoles.SOCIO_GERENCIA, AppRoles.ADMINISTRADOR] },
@@ -41,6 +56,6 @@ describe('roleGuard', () => {
     );
 
     expect(allowed).toBe(false);
-    expect(router.navigate).toHaveBeenCalledWith(['/usuarios']);
+    expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
   });
 });

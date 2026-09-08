@@ -6,6 +6,7 @@ import { roleGuard } from './core/guards/role.guard';
 import { AppRoles } from './core/models/app-roles';
 
 const businessViewerRoles = [AppRoles.SOCIO_GERENCIA, AppRoles.ADMINISTRADOR];
+const dashboardRoles = [AppRoles.SOCIO_GERENCIA, AppRoles.ADMINISTRADOR, AppRoles.ADMIN_SISTEMA];
 const administradorOnly = [AppRoles.ADMINISTRADOR];
 const adminSistemaOnly = [AppRoles.ADMIN_SISTEMA];
 
@@ -27,8 +28,8 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         canActivate: [roleGuard],
-        data: { roles: businessViewerRoles },
-        loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent)
+        data: { roles: dashboardRoles },
+        loadComponent: () => import('./features/dashboard/dashboard-page.component').then(m => m.DashboardPageComponent)
       },
       {
         path: 'bank-accounts',

@@ -49,4 +49,8 @@ export class DashboardService {
   getProyectosActivos(): Observable<any> {
     return this.http.get(`${this.apiUrl}/proyectos-activos`);
   }
+
+  getSystemUsers(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/system-users`);
+  }
 }

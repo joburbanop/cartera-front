@@ -4,7 +4,7 @@ import { RouterModule, RouterOutlet, Router, NavigationEnd, ActivatedRoute } fro
 import { filter } from 'rxjs/operators';
 import { AuthService } from '../../../core/services/auth.service';
 import { PageTitleService } from '../../../core/services/page-title.service';
-import { AppRoles } from '../../../core/models/app-roles';
+import { AppRoles, roleDisplayName } from '../../../core/models/app-roles';
 import { ToastComponent } from '../toast/toast.component';
 import { GlobalSearchComponent } from '../global-search/global-search.component';
 
@@ -250,6 +250,18 @@ export class MainLayoutComponent implements OnInit {
     return this.authService.hasRole(AppRoles.ADMIN_SISTEMA);
   }
 
+  roleLabel(): string {
+    if (this.authService.hasRole(AppRoles.ADMIN_SISTEMA)) {
+      return roleDisplayName(AppRoles.ADMIN_SISTEMA);
+    }
+
+    if (this.authService.hasRole(AppRoles.ADMINISTRADOR)) {
+      return roleDisplayName(AppRoles.ADMINISTRADOR);
+    }
+
+    return roleDisplayName(AppRoles.SOCIO_GERENCIA);
+  }
+
   hasVisibleItemsInSection(section: 'general' | 'inventario' | 'ventas' | 'finanzas' | 'administracion'): boolean {
     switch (section) {
       case 'general':
@@ -257,7 +269,7 @@ export class MainLayoutComponent implements OnInit {
       case 'inventario':
         return this.canViewBusinessNav();
       case 'ventas':
-        return true;
+        return this.canViewBusinessNav();
       case 'finanzas':
         return this.canViewBusinessNav() && this.canViewClientes();
       case 'administracion':

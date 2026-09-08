@@ -174,7 +174,7 @@
       <div class="user-avatar" [attr.title]="userName()">{{ userInitials() }}</div>
       <div class="user-meta" *ngIf="!isCollapsed">
         <span class="user-name">{{ userName() || 'Usuario' }}</span>
-        <span class="user-role">{{ canViewUsers() ? 'Administrador' : (canViewClientes() ? 'Administrador' : 'Socio') }}</span>
+        <span class="user-role">{{ roleLabel() }}</span>
       </div>
     </div>
   </aside>
