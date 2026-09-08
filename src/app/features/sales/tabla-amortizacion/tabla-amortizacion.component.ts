@@ -80,6 +80,16 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     return this.authService.hasRole(AppRoles.ADMINISTRADOR);
   }
 
+  get lotListPrice(): number | null {
+    const raw = this.contractData?.lot?.list_price;
+    const value = Number(raw);
+    return Number.isFinite(value) && value > 0 ? value : null;
+  }
+
+  get deferredInterestBalance(): number {
+    return Number(this.contractData?.deferred_interest_balance || 0);
+  }
+
   get isSpecialLot(): boolean {
     const value = this.contractData?.is_special_lot;
     return value === true || value === 1 || value === '1';
@@ -109,7 +119,9 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       return true;
     }
 
-    return this.canShowPromiseTab || this.canViewBitacora;
+    // Un lote especial no se puede refinanciar, así que la pestaña de
+    // refinanciaciones del administrador no aportaría nada aquí.
+    return this.canShowPromiseTab || this.canViewFullBitacora;
   }
 
   contractId!: number;
@@ -154,8 +166,18 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   isRefinancing = false;
   isReorderingPromises = false;
 
-  get canViewBitacora(): boolean {
+  /** Socio gerencia ve la bitácora completa del contrato y del cliente. */
+  get canViewFullBitacora(): boolean {
     return this.authService.hasRole(AppRoles.SOCIO_GERENCIA);
+  }
+
+  /** El administrador ve solo las refinanciaciones; el API filtra por permiso. */
+  get canViewBitacora(): boolean {
+    return this.canViewFullBitacora || this.authService.hasRole(AppRoles.ADMINISTRADOR);
+  }
+
+  get bitacoraContratoLabel(): string {
+    return this.canViewFullBitacora ? 'Bitácora del contrato' : 'Refinanciaciones';
   }
 
   get customerId(): number | null {
@@ -258,7 +280,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   }
 
   private loadCustomerActivity(): void {
-    if (!this.canViewBitacora || !this.customerId) {
+    if (!this.canViewFullBitacora || !this.customerId) {
       this.customerActivityEntries = [];
       return;
     }

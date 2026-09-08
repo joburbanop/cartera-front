@@ -499,6 +499,26 @@ describe('AmortizationComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Bitácora del cliente');
   });
 
+  it('muestra al administrador solo la pestaña de refinanciaciones', () => {
+    const auth = TestBed.inject(AuthService);
+    vi.spyOn(auth, 'hasRole').mockImplementation((role) => role === AppRoles.ADMINISTRADOR);
+
+    const fixture = TestBed.createComponent(AmortizationComponent);
+    fixture.componentInstance.contractData = {
+      status: 'activo',
+      customer_id: 7,
+      transactions: [],
+      down_payment_pactada: 2000000,
+    };
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.canViewBitacora).toBe(true);
+    expect(fixture.componentInstance.canViewFullBitacora).toBe(false);
+    expect(fixture.componentInstance.bitacoraContratoLabel).toBe('Refinanciaciones');
+    expect(fixture.nativeElement.textContent).toContain('Refinanciaciones');
+    expect(fixture.nativeElement.textContent).not.toContain('Bitácora del cliente');
+  });
+
   it('activa Refinanciar para administrador y llama el endpoint al confirmar', () => {
     const refinanceSpy = vi.spyOn(component['amortizationService'], 'refinanceContract').mockReturnValue(of({}));
     const toastSpy = vi.spyOn(toastService, 'show');

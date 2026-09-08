@@ -237,10 +237,10 @@
         <path d="M12 6v6h4.5" />
         <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
       </svg>
-      Bitácora del contrato
+      {{ bitacoraContratoLabel }}
     </button>
     <button
-      *ngIf="canViewBitacora"
+      *ngIf="canViewFullBitacora"
       type="button"
       (click)="activeTab = 'bitacora-cliente'"
       [style.border-bottom]="activeTab === 'bitacora-cliente' ? '3px solid #0284c7' : '3px solid transparent'"
@@ -339,7 +339,7 @@
 
   <app-bitacora
     *ngIf="canViewBitacora && activeTab === 'bitacora-contrato'"
-    title="Bitácora del contrato"
+    [title]="bitacoraContratoLabel"
     [entries]="activityEntries"
     [isLoading]="isLoadingActivity"
     emptyMessage="Sin movimientos registrados todavía">
@@ -353,14 +353,14 @@
   </app-pagination>
 
   <app-bitacora
-    *ngIf="canViewBitacora && activeTab === 'bitacora-cliente'"
+    *ngIf="canViewFullBitacora && activeTab === 'bitacora-cliente'"
     title="Bitácora del cliente"
     [entries]="customerActivityEntries"
     [isLoading]="isLoadingCustomerActivity"
     emptyMessage="Sin movimientos registrados todavía">
   </app-bitacora>
   <app-pagination
-    *ngIf="canViewBitacora && activeTab === 'bitacora-cliente'"
+    *ngIf="canViewFullBitacora && activeTab === 'bitacora-cliente'"
     [totalItems]="customerActivityTotal"
     [pageSize]="activityPageSize"
     [currentPage]="customerActivityPage"
@@ -410,6 +410,8 @@
     [isOpen]="isRefinanceModalOpen"
     [isSaving]="isRefinancing"
     [installments]="amortizationPlan"
+    [listPrice]="lotListPrice"
+    [deferredInterestBalance]="deferredInterestBalance"
     (closeModal)="closeRefinanceModal()"
     (confirmRefinance)="confirmRefinance($event)">
   </app-refinance-modal>

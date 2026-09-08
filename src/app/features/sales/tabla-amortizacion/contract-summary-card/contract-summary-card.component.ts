@@ -35,4 +35,8 @@ export class ContractSummaryCardComponent {
     const value = this.contractData?.is_special_lot;
     return value === true || value === 1 || value === '1';
   }
+
+  get deferredInterestBalance(): number {
+    return Number(this.contractData?.deferred_interest_balance || 0);
+  }
 }

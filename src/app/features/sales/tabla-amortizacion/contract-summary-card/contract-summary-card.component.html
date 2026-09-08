@@ -65,6 +65,10 @@
         <span class="label">Precio Base</span>
         <span class="value">$ {{ contractData?.sale_price | number }}</span>
       </div>
+      <div class="data-row" *ngIf="deferredInterestBalance > 0">
+        <span class="label">Interés diferido</span>
+        <span class="value" style="color: #b45309;">$ {{ deferredInterestBalance | number }}</span>
+      </div>
       <div class="data-row" *ngIf="!isSpecialLot">
         <span class="label">Plazo y Tasa</span>
         <span class="value">{{ contractData?.term_months }} meses al {{ contractData?.interest_rate }}%</span>

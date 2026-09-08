@@ -64,6 +64,43 @@
         </div>
 
         <div *ngSwitchCase="'refinanciar_saldo'" class="fields">
+          <label class="modal-label" for="new-sale-price">Precio actualizado del lote *</label>
+          <input
+            id="new-sale-price"
+            class="modal-input"
+            type="text"
+            inputmode="numeric"
+            appCurrencyMask
+            [(ngModel)]="newSalePrice"
+            [disabled]="isSaving"
+            name="newSalePrice"
+          />
+          <p class="modal-note" *ngIf="listPrice != null && listPrice > 0">
+            Precio de lista del lote: $ {{ listPrice | number:'1.0-0' }}
+            <span class="modal-note-muted">(solo referencia; no se carga solo)</span>
+          </p>
+          <p class="modal-note" *ngIf="listPrice == null || listPrice <= 0">
+            Este lote no tiene precio de lista registrado.
+          </p>
+
+          <div class="summary-box" *ngIf="(newSalePrice ?? 0) > 0">
+            <p class="summary-row">
+              <span>Capital ya pagado (nueva inicial)</span>
+              <strong>$ {{ capitalPaidTotal | number:'1.0-0' }}</strong>
+            </p>
+            <p class="summary-row">
+              <span>Nuevo capital a financiar</span>
+              <strong>$ {{ newPrincipal | number:'1.0-0' }}</strong>
+            </p>
+            <p class="summary-row summary-row--quota" *ngIf="resultingMonthlyQuota != null">
+              <span>Cuota mensual resultante</span>
+              <strong>$ {{ resultingMonthlyQuota | number:'1.0-0' }}</strong>
+            </p>
+            <p class="modal-note" *ngIf="newPrincipal <= 0">
+              El capital neto debe ser mayor a cero (precio − capital pagado).
+            </p>
+          </div>
+
           <label class="modal-label" for="new-term">Nuevo plazo (meses) *</label>
           <input
             id="new-term"
@@ -86,6 +123,45 @@
             [disabled]="isSaving"
             name="newInterestRate"
           />
+
+          <div class="deferred-box">
+            <p class="modal-label" style="margin: 0;">Interés corriente causado no pagado</p>
+            <ng-container *ngIf="hasAccruedUnpaidInterest; else noAccrued">
+              <p class="deferred-amount">En juego: $ {{ accruedUnpaidInterest | number:'1.0-0' }}</p>
+              <p class="modal-note">
+                Corresponde a las cuotas que se reemplazan. En ningún caso entra al capital del plan nuevo.
+              </p>
+              <label class="option-card" [class.option-card--active]="deferredInterestAction === 'cobrar_aparte'">
+                <input
+                  type="radio"
+                  name="deferred-action"
+                  value="cobrar_aparte"
+                  [(ngModel)]="deferredInterestAction"
+                  [disabled]="isSaving"
+                />
+                <span>
+                  <strong>Cobrar aparte</strong>
+                  <small>Queda como saldo diferido, separado del capital del lote</small>
+                </span>
+              </label>
+              <label class="option-card" [class.option-card--active]="deferredInterestAction === 'condonar'">
+                <input
+                  type="radio"
+                  name="deferred-action"
+                  value="condonar"
+                  [(ngModel)]="deferredInterestAction"
+                  [disabled]="isSaving"
+                />
+                <span>
+                  <strong>Condonar</strong>
+                  <small>Se perdona; no se cobra ni se capitaliza</small>
+                </span>
+              </label>
+            </ng-container>
+            <ng-template #noAccrued>
+              <p class="modal-note">No hay interés causado pendiente; no aplica decisión.</p>
+            </ng-template>
+          </div>
         </div>
 
         <div *ngSwitchCase="'exoneracion_intereses'" class="fields">
@@ -118,7 +194,55 @@
             <p class="modal-note">No hay cuotas futuras pendientes para exonerar.</p>
           </ng-template>
         </div>
+
+        <div *ngSwitchCase="'liquidacion_contado'" class="fields">
+          <div class="summary-box" *ngIf="hasSettlementWork; else noSettlement">
+            <p class="summary-row">
+              <span>Capital neto insoluto</span>
+              <strong>$ {{ outstandingCapital | number:'1.0-0' }}</strong>
+            </p>
+            <p class="summary-row">
+              <span>Interés causado no pagado (hasta hoy)</span>
+              <strong>$ {{ causedUnpaidInterest | number:'1.0-0' }}</strong>
+            </p>
+            <p class="summary-row">
+              <span>Interés futuro no causado (no se cobra)</span>
+              <strong>$ {{ unaccruedUnpaidInterest | number:'1.0-0' }}</strong>
+            </p>
+            <p class="summary-row summary-row--quota">
+              <span>A pagar para cerrar el lote</span>
+              <strong>$ {{ amountToClose | number:'1.0-0' }}</strong>
+            </p>
+          </div>
+          <ng-template #noSettlement>
+            <p class="modal-note">No hay saldo ni interés futuro para liquidar.</p>
+          </ng-template>
+          <p class="modal-note" *ngIf="deferredInterestBalance > 0.005">
+            Interés diferido pendiente: $ {{ deferredInterestBalance | number:'1.0-0' }}.
+            Se cobra por separado; no entra a esta liquidación.
+          </p>
+          <p class="modal-note">
+            El contrato sigue activo. El cobro se registra después en Pagar.
+          </p>
+        </div>
       </ng-container>
+
+      <div class="fields">
+        <label class="modal-label" for="refinance-motivo">Motivo *</label>
+        <textarea
+          id="refinance-motivo"
+          class="modal-input"
+          rows="3"
+          maxlength="1000"
+          placeholder="Explica por qué se refinancia. Queda en la bitácora del contrato."
+          [(ngModel)]="motivo"
+          [disabled]="isSaving"
+          name="motivo"
+        ></textarea>
+        <p class="modal-note" *ngIf="!isMotivoValid">
+          El motivo es obligatorio y debe tener al menos {{ motivoMinLength }} caracteres.
+        </p>
+      </div>
     </div>
 
     <div class="modal-footer">

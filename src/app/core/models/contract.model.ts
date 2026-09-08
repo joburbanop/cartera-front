@@ -11,6 +11,8 @@ export interface Contract {
   seller_name?: string | null;
   sale_price?: number | string;
   down_payment_pactada?: number | string;
+  /** Interés corriente diferido (se cobra aparte; nunca capitalizado). */
+  deferred_interest_balance?: number | string;
   term_months?: number;
   interest_rate?: number | string;
   start_date?: string | null;
