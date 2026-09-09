@@ -43,9 +43,55 @@
           </div>
         </div>
 
+        <!-- REPARTO ENTRE CUOTA INICIAL Y CUOTA REGULAR -->
+        <div *ngIf="canSplit" class="split-block">
+          <div class="split-block__head">
+            <div>
+              <h5>La cuota inicial tiene saldo</h5>
+              <p>Faltan $ {{ pendingInitialAmount | number:'1.0-0' }} por cubrir.</p>
+            </div>
+            <button type="button" class="split-block__toggle" (click)="toggleSplit()" [class.active]="splitEnabled">
+              {{ splitEnabled ? 'Quitar reparto' : 'Dividir este pago' }}
+            </button>
+          </div>
+
+          <ng-container *ngIf="splitEnabled">
+            <div class="split-block__field">
+              <label class="app-form-label">Va a la cuota inicial *</label>
+              <input class="app-form-input" type="text" formControlName="to_down_payment" appCurrencyMask>
+              <app-field-error [control]="paymentForm.get('to_down_payment')" label="La parte de la cuota inicial"></app-field-error>
+            </div>
+
+            <dl class="split-block__breakdown">
+              <div>
+                <dt>Cuota inicial</dt>
+                <dd>$ {{ splitToDownPayment | number:'1.0-0' }}</dd>
+              </div>
+              <div>
+                <dt>Cuota regular</dt>
+                <dd>$ {{ splitToInstallments | number:'1.0-0' }}</dd>
+              </div>
+              <div class="split-block__total">
+                <dt>Recibido del banco</dt>
+                <dd>$ {{ currentPaymentAmount | number:'1.0-0' }}</dd>
+              </div>
+            </dl>
+
+            <p class="split-block__error" *ngIf="splitError" role="alert">{{ splitError }}</p>
+            <p class="split-block__hint" *ngIf="!splitError">
+              Se registra una sola transacción por $ {{ currentPaymentAmount | number:'1.0-0' }}, que es la cifra que
+              verá el banco. El reparto queda guardado como detalle del pago.
+            </p>
+          </ng-container>
+        </div>
+
         <div *ngIf="hasSurplus" style="background-color: #eff6ff; border: 1px solid #bfdbfe; padding: 1rem; border-radius: 8px;">
           <h5 style="margin: 0 0 0.25rem 0; color: #1e40af; font-size: 0.9rem;">¡Se ha detectado un excedente de $ {{ excessAmount | number:'1.0-0' }}!</h5>
-          <p style="margin: 0; color: #1d4ed8; font-size: 0.8rem;">Por favor, seleccione el destino de este abono extraordinario.</p>
+          <p style="margin: 0; color: #1d4ed8; font-size: 0.8rem;">
+            Por favor, confirme el destino de este abono extraordinario.
+            <span *ngIf="suggestedSurplusAction === 'reducir_plazo'">Sugerido: abono a capital (contrato al día).</span>
+            <span *ngIf="suggestedSurplusAction === 'adelantar_cuotas'">Sugerido: cubrir cuotas vencidas.</span>
+          </p>
         </div>
 
         <div *ngIf="hasSurplus" style="display: flex; flex-direction: column; gap: 0.65rem; background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px;">

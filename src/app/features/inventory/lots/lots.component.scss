@@ -60,8 +60,8 @@
     outline: none;
 
     &:focus {
-      border-color: #347769;
-      box-shadow: 0 0 0 3px rgba(52, 119, 105, 0.1);
+      border-color: var(--brand-primary-text);
+      box-shadow: 0 0 0 3px rgba(var(--brand-primary-rgb), 0.1);
     }
   }
 }
@@ -142,8 +142,8 @@
     outline: none;
 
     &:focus {
-      border-color: #347769;
-      box-shadow: 0 0 0 3px rgba(52, 119, 105, 0.1);
+      border-color: var(--brand-primary-text);
+      box-shadow: 0 0 0 3px rgba(var(--brand-primary-rgb), 0.1);
     }
   }
 }
@@ -283,16 +283,15 @@
       background: #f8fafc;
     }
   }
+
+  tbody tr.clickable-row {
+    cursor: pointer;
+  }
 }
 
 .lot-link {
-  color: #347769;
+  color: var(--brand-primary-text);
   font-weight: 600;
-  text-decoration: none;
-
-  &:hover {
-    text-decoration: underline;
-  }
 }
 
 .table-actions {

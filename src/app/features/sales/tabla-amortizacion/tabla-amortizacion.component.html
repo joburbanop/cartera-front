@@ -3,11 +3,15 @@
   <!-- NAVEGACIÓN SUPERIOR                        -->
   <!-- ========================================== -->
   <div class="top-navigation">
-    <a routerLink="/contracts" class="back-link">
+    <a
+      class="back-link"
+      [routerLink]="backCrumb().url"
+      [queryParams]="backCrumb().queryParams || {}"
+    >
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 16px; height: 16px;">
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
       </svg>
-      Volver a Contratos
+      Volver a {{ backCrumb().label }}
     </a>
 
     <div class="top-nav-right">
@@ -43,7 +47,7 @@
   </div>
 
   <div *ngIf="isHistoryModalOpen" class="modal-overlay" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: flex; align-items: center; justify-content: center; z-index: 1200; padding: 1rem;">
-    <div style="background: white; border-radius: 16px; width: min(900px, 100%); max-height: 80vh; overflow: auto; box-shadow: 0 20px 40px #347769;">
+    <div style="background: white; border-radius: 16px; width: min(900px, 100%); max-height: 80vh; overflow: auto; box-shadow: 0 20px 40px var(--brand-primary);">
       <div style="display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-bottom: 1px solid #e2e8f0;">
         <h3 style="margin: 0; color: #0f172a; font-size: 1.2rem;">Historial de Pagos</h3>
         <button (click)="cerrarHistorialPagos()" style="border: none; background: transparent; font-size: 1.5rem; cursor: pointer; color: #475569;">✕</button>
@@ -51,7 +55,7 @@
 
       <div style="padding: 1.5rem;">
         <div *ngIf="isLoadingHistory" style="display: flex; justify-content: center; align-items: center; gap: 0.75rem; padding: 1.5rem; color: #475569; font-weight: 600;">
-          <span style="display: inline-block; width: 18px; height: 18px; border: 2px solid #cbd5e1; border-top-color: #0f766e; border-radius: 50%; animation: spin 0.8s linear infinite;"></span>
+          <span style="display: inline-block; width: 18px; height: 18px; border: 2px solid #cbd5e1; border-top-color: var(--brand-primary-spin); border-radius: 50%; animation: spin 0.8s linear infinite;"></span>
           Cargando historial...
         </div>
 
@@ -71,16 +75,51 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let t of transactions" style="border-bottom: 1px solid #edf2f7;">
-                <td style="padding: 0.9rem 0.75rem; color: #1e293b;">{{ t.transaction_date || t.created_at || '--' }}</td>
-                <td style="padding: 0.9rem 0.75rem; color: #0f172a; font-weight: 700;">$ {{ t.amount | number:'1.0-0' }}</td>
-                <td style="padding: 0.9rem 0.75rem; color: #334155;">{{ t.transaction_type }}</td>
-                <td style="padding: 0.9rem 0.75rem; color: #334155;">{{ t.payment_method }}</td>
-                <td style="padding: 0.9rem 0.75rem; text-align: right;">
-                  <button *ngIf="t.receipt" type="button" class="btn-outline" (click)="verComprobante(t.receipt)">Ver Recibo</button>
-                  <span *ngIf="!t.receipt" style="color: #94a3b8; font-size: 0.8rem;">Sin recibo</span>
-                </td>
-              </tr>
+              <ng-container *ngFor="let t of transactions">
+                <tr style="border-bottom: 1px solid #edf2f7;">
+                  <td style="padding: 0.9rem 0.75rem; color: #1e293b;">{{ t.transaction_date || t.created_at || '--' }}</td>
+                  <td style="padding: 0.9rem 0.75rem; color: #0f172a; font-weight: 700;">$ {{ t.amount | number:'1.0-0' }}</td>
+                  <td style="padding: 0.9rem 0.75rem; color: #334155;">{{ transactionTypeLabel(t) }}</td>
+                  <td style="padding: 0.9rem 0.75rem; color: #334155;">{{ t.payment_method }}</td>
+                  <td style="padding: 0.9rem 0.75rem; text-align: right; white-space: nowrap;">
+                    <button *ngIf="hasAllocations(t)" type="button" class="tx-details-toggle"
+                            (click)="toggleTransactionDetails(t)">
+                      {{ isTransactionExpanded(t) ? 'Ocultar detalles' : 'Ver detalles' }}
+                    </button>
+                    <button *ngIf="t.receipt" type="button" class="btn-outline" (click)="verComprobante(t.receipt)">Ver Recibo</button>
+                    <span *ngIf="!t.receipt && !hasAllocations(t)" style="color: #94a3b8; font-size: 0.8rem;">Sin recibo</span>
+                  </td>
+                </tr>
+                <tr *ngIf="isTransactionExpanded(t)" class="tx-details-row">
+                  <td colspan="5">
+                    <p class="tx-details-intro">
+                      El banco recibió un solo movimiento de <strong>$ {{ t.amount | number:'1.0-0' }}</strong>.
+                      Así se repartió internamente:
+                    </p>
+                    <table class="tx-details-table">
+                      <thead>
+                        <tr>
+                          <th>Destino</th>
+                          <th class="num">Monto</th>
+                          <th class="num">A capital</th>
+                          <th class="num">A interés</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let alloc of t.allocations">
+                          <td>
+                            {{ alloc.target_label }}
+                            <span *ngIf="alloc.installment_number">· cuota #{{ alloc.installment_number }}</span>
+                          </td>
+                          <td class="num">$ {{ alloc.amount | number:'1.0-0' }}</td>
+                          <td class="num">$ {{ alloc.principal | number:'1.0-0' }}</td>
+                          <td class="num">$ {{ alloc.interest | number:'1.0-0' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </ng-container>
             </tbody>
           </table>
           <app-pagination
@@ -208,54 +247,81 @@
 
   <!-- ========================================== -->
   <!-- VISTA 1: TABLA DE AMORTIZACIÓN (VENTA)     -->
-<div *ngIf="showAmortizationTabBar" style="display: flex; gap: 1.5rem; border-bottom: 2px solid #e2e8f0; margin-bottom: 1.5rem; margin-top: 2rem;">
-    <button (click)="activeTab = 'amortizacion'" [style.border-bottom]="activeTab === 'amortizacion' ? '3px solid #0284c7' : '3px solid transparent'" [style.color]="activeTab === 'amortizacion' ? '#0284c7' : '#64748b'" style="background: none; border: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding: 0.75rem 0.5rem; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.4rem;">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px; flex-shrink: 0;">
-        <path d="M4 20V10M10 20V4M16 20v-7M22 20V13" />
-      </svg>
-      {{ amortizationTabLabel }}
-    </button>
+<div
+  *ngIf="showAmortizationTabBar && prefsReady"
+  class="contract-tab-bar"
+>
+  <div
+    class="contract-tabs"
+    cdkDropList
+    cdkDropListOrientation="horizontal"
+    [cdkDropListData]="orderedTabs"
+    [cdkDropListAutoScrollDisabled]="true"
+    (cdkDropListDropped)="onTabDrop($event)"
+    role="tablist"
+    aria-label="Pestañas del contrato. Arrastra para reordenar. Con teclado, Alt y flecha izquierda o derecha."
+  >
     <button
-      *ngIf="canShowPromiseTab"
-      (click)="activeTab = 'promesa'"
-      [style.border-bottom]="activeTab === 'promesa' ? '3px solid #0284c7' : '3px solid transparent'"
-      [style.color]="activeTab === 'promesa' ? '#0284c7' : '#64748b'"
-      style="background: none; border: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding: 0.75rem 0.5rem; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: all 0.2s;">
-       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px; flex-shrink: 0;">
-        <path d="M4 20V10M10 20V4M16 20v-7M22 20V13" />
-      </svg>
-      Cronograma Pactado en Promesa Comercial
-    </button>
-    <button
-      *ngIf="canViewBitacora"
+      *ngFor="let tab of orderedTabs; trackBy: trackTabId; let i = index"
       type="button"
-      (click)="activeTab = 'bitacora-contrato'"
-      [style.border-bottom]="activeTab === 'bitacora-contrato' ? '3px solid #0284c7' : '3px solid transparent'"
-      [style.color]="activeTab === 'bitacora-contrato' ? '#0284c7' : '#64748b'"
-      style="background: none; border: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding: 0.75rem 0.5rem; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.4rem;">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px; flex-shrink: 0;">
+      class="contract-tab"
+      [class.is-active]="activeTab === tab.id"
+      [attr.data-contract-tab]="tab.id"
+      [attr.aria-selected]="activeTab === tab.id"
+      [attr.tabindex]="activeTab === tab.id ? 0 : -1"
+      [attr.aria-keyshortcuts]="'Alt+ArrowLeft Alt+ArrowRight'"
+      role="tab"
+      cdkDrag
+      cdkDragLockAxis="x"
+      [cdkDragData]="tab"
+      [cdkDragStartDelay]="0"
+      cdkDragPreviewClass="contract-tab-preview"
+      (click)="selectTab(tab.id)"
+      (keydown)="onTabKeydown($event, i)"
+    >
+      <svg *ngIf="tab.id === 'amortizacion'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 20V10M10 20V4M16 20v-7M22 20V13" />
+      </svg>
+      <svg *ngIf="tab.id === 'hoja-vida'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        <path d="M8 7h8M8 11h8M8 15h5" />
+      </svg>
+      <svg *ngIf="tab.id === 'promesa'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 20V10M10 20V4M16 20v-7M22 20V13" />
+      </svg>
+      <svg *ngIf="tab.id === 'bitacora-contrato'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M12 6v6h4.5" />
         <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
       </svg>
-      {{ bitacoraContratoLabel }}
-    </button>
-    <button
-      *ngIf="canViewFullBitacora"
-      type="button"
-      (click)="activeTab = 'bitacora-cliente'"
-      [style.border-bottom]="activeTab === 'bitacora-cliente' ? '3px solid #0284c7' : '3px solid transparent'"
-      [style.color]="activeTab === 'bitacora-cliente' ? '#0284c7' : '#64748b'"
-      style="background: none; border: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding: 0.75rem 0.5rem; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.4rem;">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px; flex-shrink: 0;">
+      <svg *ngIf="tab.id === 'bitacora-cliente'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
       </svg>
-      Bitácora del cliente
+      {{ tab.label }}
     </button>
   </div>
-
-  <h3 *ngIf="isSpecialLot && !showAmortizationTabBar" class="special-lot-section-title">Seguimiento de Abonos</h3>
+  <button
+    *ngIf="canResetTabOrder"
+    type="button"
+    class="contract-tabs-reset"
+    (click)="resetTabOrder()"
+  >
+    Restablecer orden
+  </button>
+  <p class="visually-hidden" aria-live="polite">{{ tabOrderAnnouncement }}</p>
+</div>
 
   <div *ngIf="activeTab === 'amortizacion'">
+    <p *ngIf="amortizationNote" style="margin: 0 0 0.75rem; padding: 0.85rem 1rem; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; color: #475569; font-size: 0.85rem;">
+      {{ amortizationNote }}
+    </p>
+    <div *ngIf="criteriaGap !== null" style="margin: 0 0 1rem; padding: 0.75rem 1rem; border-radius: 10px; background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; font-size: 0.85rem; display: flex; flex-wrap: wrap; gap: 0.35rem 0.75rem;">
+      <strong>{{ criteriaGapLabel }}: $ {{ criteriaGap | number:'1.0-0' }}</strong>
+      <span *ngIf="lifeSheetBalance !== null && outstandingCapital !== null">
+        (hoja de vida $ {{ lifeSheetBalance | number:'1.0-0' }} − capital insoluto $ {{ outstandingCapital | number:'1.0-0' }})
+      </span>
+      <small style="width: 100%; opacity: 0.85;">{{ criteriaGapHint }}</small>
+    </div>
     <div *ngIf="!isLoading && currentView === 'preventa'" style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
       <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
@@ -291,6 +357,9 @@
           <div *ngFor="let tx of initialPaymentTransactions" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 1rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
             <span style="color: #64748b; font-size: 0.9rem; text-transform: capitalize;">
               {{ tx.transaction_date | date:'dd MMM yyyy' }} · {{ tx.payment_method | paymentMethodName }}
+              <small *ngIf="tx.is_split" style="display: block; margin-top: 0.2rem; text-transform: none; color: #94a3b8;">
+                Parte de un pago mixto
+              </small>
             </span>
             <strong style="color: #059669; font-size: 1rem;">$ {{ tx.amount | number:'1.0-0' }}</strong>
           </div>
@@ -321,6 +390,13 @@
       </app-amortization-table-presenter>
     </div>
   </div>
+
+  <app-life-sheet-tab
+    *ngIf="activeTab === 'hoja-vida'"
+    [sheet]="lifeSheet"
+    [isLoading]="isLoadingLifeSheet"
+    (downloadPdf)="downloadLifeSheetPdf()">
+  </app-life-sheet-tab>
 
   <app-payment-promise-tab
     *ngIf="canShowPromiseTab && activeTab === 'promesa'"
@@ -377,8 +453,10 @@
     [prefilledAmount]="drawerSuggestedAmount"
     [amountHint]="drawerAmountHint"
     [amortizationReferenceAmount]="drawerAmortizationReferenceAmount"
-    [overdueTotalAmount]="drawerOverdueTotal"
-    [overdueTotalIsPreventa]="isPreventaLot"
+  [overdueTotalAmount]="drawerOverdueTotal"
+  [overdueTotalIsPreventa]="isPreventaLot"
+  [pendingInitialAmount]="pendingInitialAmount"
+  [regularDueAmount]="regularDueAmount"
     [isProcessing]="isProcessingPayment"
     [bankAccounts]="contractData?.lot?.project?.bank_accounts || contractData?.project?.bank_accounts || []" 
     (closeDrawer)="closeDrawer()"

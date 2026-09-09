@@ -24,6 +24,7 @@ import {
   type ChartType,
   type TooltipItem,
 } from 'chart.js';
+import { ColorTokens } from '../../styles/color-tokens';
 
 Chart.register(
   BarController,
@@ -45,8 +46,13 @@ export interface ChartCardDataset {
   backgroundColor?: string | string[];
 }
 
-const BADGE_COLORS = ['#047857', '#b45309', '#475569', '#b91c1c'];
-const BRAND_COLOR = '#347769';
+const BADGE_COLORS = [
+  ColorTokens.statusCurrent,
+  ColorTokens.statusWarning,
+  ColorTokens.statusNeutral,
+  ColorTokens.statusOverdue,
+];
+const BRAND_COLOR = ColorTokens.brandPrimary;
 
 @Component({
   selector: 'app-chart-card',

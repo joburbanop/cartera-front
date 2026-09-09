@@ -12,6 +12,11 @@ import { FieldErrorComponent } from '../../shared/components/field-error/field-e
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { SkeletonComponent } from '../../shared/components/skeleton/skeleton.component';
 import { markAllAsTouched, scrollToFirstInvalid } from '../../shared/utils/form-utils';
+import {
+  DEFAULT_DOCUMENT_TYPE,
+  DOCUMENT_TYPES,
+  isCompanyDocument,
+} from '../../core/models/document-type';
 
 interface ClienteUI {
   id?: number;
@@ -102,16 +107,41 @@ export class ClientsComponent implements OnInit {
     return this.isInitialLoading;
   }
 
-  // Formulario de nuevo cliente
+  readonly documentTypes = DOCUMENT_TYPES;
+
+  // Formulario de nuevo cliente. Correo, dirección y ciudad son obligatorios:
+  // sin ellos no hay forma de notificar ni de visitar al cliente.
   customerForm = this.fb.group({
     name: ['', Validators.required],
     document: ['', Validators.required],
     phone: ['', Validators.required],
-    email: ['', [Validators.email]],
-    document_type: ['CC'],
-    address: [''],
-    city: ['']
+    email: ['', [Validators.required, Validators.email]],
+    document_type: [DEFAULT_DOCUMENT_TYPE as string, Validators.required],
+    address: ['', Validators.required],
+    city: ['', Validators.required]
   });
+
+  /** El NIT identifica una empresa: la etiqueta del nombre cambia. */
+  get isCompanyCustomer(): boolean {
+    return isCompanyDocument(this.customerForm.controls.document_type.value);
+  }
+
+  /**
+   * Los datos de contacto solo se exigen al dar de alta. Las fichas creadas
+   * antes de esta regla no los tienen, y exigirlos al editar dejaría a esos
+   * clientes sin poder actualizarse.
+   */
+  private setContactValidators(required: boolean): void {
+    const { email, address, city } = this.customerForm.controls;
+
+    email.setValidators(required ? [Validators.required, Validators.email] : [Validators.email]);
+    address.setValidators(required ? [Validators.required] : []);
+    city.setValidators(required ? [Validators.required] : []);
+
+    for (const control of [email, address, city]) {
+      control.updateValueAndValidity({ emitEvent: false });
+    }
+  }
 
   ngOnInit(): void {
     this.cargarClientes();
@@ -185,6 +215,7 @@ this.clientesFiltrados = [...this.clientes];
 
   abrirModalNuevoCliente(): void {
   this.isEditMode = false;
+  this.setContactValidators(true);
   this.selectedCustomer = null;
 
   this.showCustomerModal = true;
@@ -194,7 +225,7 @@ this.clientesFiltrados = [...this.clientes];
     document: '',
     phone: '',
     email: '',
-    document_type: 'CC',
+    document_type: DEFAULT_DOCUMENT_TYPE as string,
     address: '',
     city: ''
   });
@@ -208,6 +239,7 @@ abrirModalEditarCliente(cliente: ClienteUI): void {
   }
 
   this.isEditMode = true;
+  this.setContactValidators(false);
   this.editingCustomerId = cliente.id;
   this.selectedCustomer = null;
 
@@ -282,14 +314,20 @@ abrirModalEditarCliente(cliente: ClienteUI): void {
     this.errorMessage = '';
     this.successMessage = '';
 
+    // Al crear, los tres datos de contacto son obligatorios. Al editar se
+    // envían vacíos como null, porque las fichas históricas se dieron de alta
+    // sin ellos y el API los sigue aceptando nulos en actualización.
+    const optional = (value: string | null | undefined) =>
+      this.isEditMode ? (value || null) : (value || '');
+
     const customerData = {
-      document_type: this.customerForm.value.document_type || 'CC',
+      document_type: this.customerForm.value.document_type || DEFAULT_DOCUMENT_TYPE,
       document_number: this.customerForm.value.document || '',
       name: this.customerForm.value.name || '',
       phone: this.customerForm.value.phone || '',
-      email: this.customerForm.value.email || null,
-      address: this.customerForm.value.address || null,
-      city: this.customerForm.value.city || null
+      email: optional(this.customerForm.value.email),
+      address: optional(this.customerForm.value.address),
+      city: optional(this.customerForm.value.city)
     };
 
     const editingId = this.editingCustomerId ?? this.selectedCustomer?.id ?? null;

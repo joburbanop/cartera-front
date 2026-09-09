@@ -7,6 +7,7 @@ import { of } from 'rxjs';
 import { LotsComponent } from './lots.component';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { NavigationTrailService } from '../../../core/services/navigation-trail.service';
 
 describe('LotsComponent', () => {
   let component: LotsComponent;
@@ -107,6 +108,8 @@ describe('LotsComponent', () => {
     expect(headers).not.toContain('Tipo');
     expect(headers).not.toContain('Contrato');
     expect(headers).toEqual(['Lote', 'Proyecto', 'Precio', 'Estado', 'Acciones']);
+    expect(fixture.nativeElement.querySelector('tr.clickable-row')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('tr.clickable-row a.lot-link')).toBeNull();
   });
 
   it('en disponible muestra Editar y Archivar al administrador', () => {
@@ -203,8 +206,12 @@ describe('LotsComponent', () => {
 
     expect(component.lotResumeCommands(withOne)).toEqual(['/amortization', 54]);
     expect(component.lotResumeQueryParams(withOne)).toEqual({});
+    expect(component.lotResumeState(withOne)).toEqual(
+      TestBed.inject(NavigationTrailService).state([{ label: 'Lotes', url: '/lots' }]),
+    );
     expect(component.lotResumeCommands(empty)).toEqual(['/contracts']);
     expect(component.lotResumeQueryParams(empty)).toEqual({ lotId: 2 });
+    expect(component.lotResumeState(empty)).toEqual({});
     expect(component.lotResumeCommands(withHistory)).toEqual(['/contracts']);
     expect(component.lotResumeQueryParams(withHistory)).toEqual({ lotId: 3 });
     expect(component.hasLotContractActions(withOne)).toBe(true);

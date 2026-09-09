@@ -230,4 +230,100 @@ describe('AmortizationTablePresenterComponent', () => {
 
     expect(emittedInstallment).toEqual(component.installments[0]);
   });
+
+  it('muestra Parcial si hay pago incompleto aunque la fecha ya venció', () => {
+    component.installments = [
+      {
+        installment_number: 4,
+        due_date: '2026-02-05',
+        payment_date: '2026-05-29',
+        installment_value: 2106024.23,
+        extra_payment: 0,
+        interest_value: 911637.25,
+        principal_value: 1194386.98,
+        interest_paid: 911637.25,
+        principal_paid: 520692.06,
+        quota_debt: 673694.92,
+        remaining_balance: 100,
+        status: 'overdue',
+      },
+    ];
+
+    fixture.detectChanges();
+
+    expect(component.displayStatus(component.installments[0])).toBe('partial');
+    expect(fixture.nativeElement.textContent).toContain('Parcial');
+  });
+
+  it('paid manda sobre un pago que ya cerró la cuota', () => {
+    component.installments = [
+      {
+        installment_number: 1,
+        due_date: '2020-01-01',
+        installment_value: 100,
+        extra_payment: 0,
+        interest_paid: 20,
+        principal_paid: 80,
+        quota_debt: 0,
+        remaining_balance: 0,
+        status: 'paid',
+      },
+    ];
+
+    fixture.detectChanges();
+
+    expect(component.displayStatus(component.installments[0])).toBe('paid');
+    expect(fixture.nativeElement.textContent).toContain('Pagada');
+  });
+
+  it('muestra Ver detalles solo cuando la cuota tiene sources', () => {
+    component.installments = [
+      {
+        id: 10,
+        installment_number: 1,
+        due_date: '2026-02-05',
+        installment_value: 100,
+        extra_payment: 0,
+        interest_paid: 20,
+        principal_paid: 80,
+        quota_debt: 0,
+        remaining_balance: 0,
+        status: 'paid',
+        sources: [
+          {
+            transaction_id: 77,
+            transaction_date: '2026-02-06',
+            receipt_number: '0433',
+            amount: 100,
+            also_applied_to: [
+              { target_label: 'Cuota inicial', installment_number: 0, amount: 3000000 },
+            ],
+          },
+        ],
+      },
+      {
+        id: 11,
+        installment_number: 2,
+        due_date: '2026-03-05',
+        installment_value: 100,
+        extra_payment: 0,
+        quota_debt: 100,
+        remaining_balance: 100,
+        status: 'pending',
+        sources: [],
+      },
+    ];
+
+    fixture.detectChanges();
+
+    const buttons = fixture.nativeElement.querySelectorAll('.quota-details-toggle') as NodeListOf<HTMLButtonElement>;
+    expect(buttons.length).toBe(1);
+
+    buttons[0].click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('cuota inicial');
+    expect(fixture.nativeElement.textContent).toContain('0433');
+  });
 });
+

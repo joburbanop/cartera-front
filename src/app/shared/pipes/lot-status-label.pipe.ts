@@ -40,7 +40,7 @@ export function lotStatusBadgeClass(
     case 'disponible':
       return 'badge-pill--success';
     case 'preventa':
-      return 'badge-pill--warning';
+      return 'badge-pill--presale';
     case 'separado':
     case 'reservado':
       return 'badge-pill--accent';

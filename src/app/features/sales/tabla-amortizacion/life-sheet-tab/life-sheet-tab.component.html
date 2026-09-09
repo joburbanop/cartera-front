@@ -1,0 +1,185 @@
+<div class="hv-wrap">
+  <div *ngIf="isLoading" class="hv-card hv-muted">Cargando hoja de vida…</div>
+
+  <ng-container *ngIf="!isLoading && sheet">
+    <p class="hv-note">{{ sheet.header.note }}</p>
+
+    <div class="hv-card hv-consolidated">
+      <div class="hv-consolidated__total">
+        <p class="hv-kicker">Total pagado a la fecha</p>
+        <strong>$ {{ money(sheet.summary.collected) | number:'1.0-0' }}</strong>
+      </div>
+      <dl class="hv-consolidated__split">
+        <div>
+          <dt>A capital</dt>
+          <dd>$ {{ money(sheet.summary.principal_paid) | number:'1.0-0' }}</dd>
+          <small>{{ share(sheet.summary.principal_paid) }}</small>
+        </div>
+        <div>
+          <dt>A interés</dt>
+          <dd>$ {{ money(sheet.summary.interest_paid) | number:'1.0-0' }}</dd>
+          <small>{{ share(sheet.summary.interest_paid) }}</small>
+        </div>
+        <div *ngIf="hasAmount(sheet.summary.unimputed)" class="hv-consolidated__pending">
+          <dt>Sin imputar</dt>
+          <dd>$ {{ money(sheet.summary.unimputed) | number:'1.0-0' }}</dd>
+          <small>Recaudado que aún no se aplicó a cuotas.</small>
+        </div>
+      </dl>
+    </div>
+
+    <div class="hv-gap">
+      <span>{{ sheet.summary.criteria_gap_label }}</span>
+      <strong>$ {{ money(sheet.summary.criteria_gap) | number:'1.0-0' }}</strong>
+      <small>{{ sheet.summary.criteria_gap_hint }}</small>
+    </div>
+
+    <div class="hv-card hv-header">
+      <div class="hv-header__top">
+        <div>
+          <p class="hv-kicker">Lote de vivienda</p>
+          <h3>Lote {{ sheet.header.lot_number || '—' }}</h3>
+        </div>
+        <button type="button" class="hv-pdf" (click)="downloadPdf.emit()">Descargar PDF</button>
+      </div>
+
+      <dl class="hv-grid">
+        <div>
+          <dt>Valor</dt>
+          <dd>$ {{ money(sheet.header.sale_price) | number:'1.0-0' }}</dd>
+        </div>
+        <div>
+          <dt>VALOR LOTE FINANCIADO</dt>
+          <dd>$ {{ money(sheet.header.financed_value) | number:'1.0-0' }}</dd>
+        </div>
+        <div>
+          <dt>Área / vr m²</dt>
+          <dd>
+            {{ sheet.header.area_m2 ? (money(sheet.header.area_m2) | number:'1.0-2') : '—' }}
+            /
+            {{ sheet.header.price_m2 ? ('$ ' + (money(sheet.header.price_m2) | number:'1.0-0')) : '—' }}
+          </dd>
+        </div>
+        <div>
+          <dt>Vr cuota inicial</dt>
+          <dd>$ {{ money(sheet.header.down_payment) | number:'1.0-0' }}</dd>
+        </div>
+        <div>
+          <dt>Vr cuota</dt>
+          <dd>{{ sheet.header.monthly_quota ? ('$ ' + (money(sheet.header.monthly_quota) | number:'1.0-0')) : '—' }}</dd>
+        </div>
+        <div>
+          <dt>Cliente</dt>
+          <dd>{{ sheet.header.customer_name }}</dd>
+        </div>
+        <div>
+          <dt>NIT / CC</dt>
+          <dd>{{ sheet.header.document_number || '—' }}</dd>
+        </div>
+        <div>
+          <dt>Dirección</dt>
+          <dd>{{ sheet.header.address || '—' }}</dd>
+        </div>
+        <div>
+          <dt>Correo</dt>
+          <dd>{{ sheet.header.email || '—' }}</dd>
+        </div>
+        <div>
+          <dt>Celular</dt>
+          <dd>{{ sheet.header.phone || '—' }}</dd>
+        </div>
+        <div>
+          <dt>Plazo</dt>
+          <dd>{{ sheet.header.term_months }} meses</dd>
+        </div>
+        <div>
+          <dt>Vendido por</dt>
+          <dd>{{ sheet.header.seller_name || '—' }}</dd>
+        </div>
+      </dl>
+    </div>
+
+    <div class="hv-card hv-table-card">
+      <table class="hv-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Concepto</th>
+            <th>Recibo #</th>
+            <th class="num">Efectivo</th>
+            <th class="num">Bancolombia</th>
+            <th class="num">Occidente 6391</th>
+            <th class="num">Total pagado</th>
+            <th class="num">Saldo</th>
+            <th class="hv-details-col">Ver detalles</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="hv-initial">
+            <td colspan="6">SALDO INICIAL</td>
+            <td class="num">$ 0</td>
+            <td class="num">$ {{ money(sheet.header.financed_value) | number:'1.0-0' }}</td>
+            <td></td>
+          </tr>
+          <ng-container *ngFor="let row of sheet.rows">
+            <tr>
+              <td>{{ row.date | date:'dd/MM/yyyy' }}</td>
+              <td>
+                {{ row.concept }}
+                <small *ngIf="!isSplit(row) && row.amortization_application.length" class="hv-trace">
+                  En amortización:
+                  <ng-container *ngFor="let app of row.amortization_application; let last = last">
+                    cuota {{ app.installment_number === 0 ? 'inicial' : '#' + app.installment_number }}
+                    (cap. $ {{ money(app.principal_paid) | number:'1.0-0' }},
+                    int. $ {{ money(app.interest_paid) | number:'1.0-0' }}){{ last ? '' : '; ' }}
+                  </ng-container>
+                </small>
+              </td>
+              <td>{{ row.receipt_number || '—' }}</td>
+              <td class="num">{{ hasAmount(row.efectivo) ? ('$ ' + (money(row.efectivo) | number:'1.0-0')) : '' }}</td>
+              <td class="num">{{ hasAmount(row.bancolombia) ? ('$ ' + (money(row.bancolombia) | number:'1.0-0')) : '' }}</td>
+              <td class="num">{{ hasAmount(row.occidente) ? ('$ ' + (money(row.occidente) | number:'1.0-0')) : '' }}</td>
+              <td class="num hv-accumulated">$ {{ money(row.total_paid) | number:'1.0-0' }}</td>
+              <td class="num">$ {{ money(row.balance) | number:'1.0-0' }}</td>
+              <td class="hv-details-col">
+                <button *ngIf="isSplit(row)" type="button" class="hv-details-toggle"
+                        (click)="toggleDetails(row)">
+                  {{ isExpanded(row) ? 'Ocultar detalles' : 'Ver detalles' }}
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="isExpanded(row)" class="hv-details-row">
+              <td colspan="9">
+                <p class="hv-details-intro">
+                  Un solo movimiento de <strong>$ {{ money(row.amount) | number:'1.0-0' }}</strong>,
+                  que es la cifra que vio el banco. Reparto interno:
+                </p>
+                <table class="hv-details-table">
+                  <thead>
+                    <tr>
+                      <th>Destino</th>
+                      <th class="num">Monto</th>
+                      <th class="num">A capital</th>
+                      <th class="num">A interés</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let alloc of row.allocations">
+                      <td>
+                        {{ alloc.target_label }}
+                        <span *ngIf="alloc.installment_number">· cuota #{{ alloc.installment_number }}</span>
+                      </td>
+                      <td class="num">$ {{ money(alloc.amount) | number:'1.0-0' }}</td>
+                      <td class="num">$ {{ money(alloc.principal) | number:'1.0-0' }}</td>
+                      <td class="num">$ {{ money(alloc.interest) | number:'1.0-0' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </ng-container>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+</div>

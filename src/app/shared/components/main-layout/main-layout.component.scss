@@ -1,7 +1,4 @@
 :host {
-  --brand-primary: #347769;
-  --brand-dark: #22544a;
-  --brand-light: #eef7f5;
   --sidebar-bg: #0f172a;
   --sidebar-hover: #1e293b;
   --text-muted: #94a3b8;
@@ -66,8 +63,8 @@
     background: rgba(148, 163, 184, 0.08);
 
     &::before {
-      background: rgba(52, 119, 105, 0.8);
-      box-shadow: 0 0 0 1px rgba(52, 119, 105, 0.18);
+      background: rgba(var(--brand-primary-rgb), 0.8);
+      box-shadow: 0 0 0 1px rgba(var(--brand-primary-rgb), 0.18);
     }
   }
 }
@@ -109,7 +106,7 @@
 
   &:hover {
     background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(52, 119, 105, 0.6);
+    border-color: rgba(var(--brand-primary-rgb), 0.6);
     color: white;
   }
 
@@ -207,13 +204,13 @@
   }
 
   &.active {
-    background: #eef7f5;
+    background: var(--brand-primary-soft);
     color: #154b46;
     font-weight: 700;
-    box-shadow: inset 3px 0 0 #347769;
+    box-shadow: inset 3px 0 0 var(--brand-primary);
 
     svg {
-      stroke: #347769;
+      stroke: var(--brand-primary-text);
       opacity: 1;
     }
   }
@@ -280,7 +277,7 @@
   color: #214f49;
   font-weight: 800;
   font-size: 0.82rem;
-  border: 1px solid rgba(52, 119, 105, 0.15);
+  border: 1px solid rgba(var(--brand-primary-rgb), 0.15);
   flex-shrink: 0;
 }
 
@@ -341,10 +338,19 @@
 .breadcrumbs {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
   gap: 0.3rem;
   font-size: 0.9rem;
   color: #64748b;
+}
+
+.breadcrumb-link,
+.breadcrumb-current {
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .breadcrumb-link {
@@ -353,7 +359,7 @@
 
   &:hover {
     text-decoration: underline;
-    color: var(--brand-primary);
+    color: var(--brand-primary-text);
   }
 }
 
@@ -385,9 +391,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--brand-light);
-  color: var(--brand-primary);
-  border: 1px solid rgba(52, 119, 105, 0.24);
+  background: var(--brand-primary-soft);
+  color: var(--brand-primary-text);
+  border: 1px solid rgba(var(--brand-primary-rgb), 0.24);
   font-weight: 700;
   font-size: 0.9rem;
 }
@@ -409,8 +415,8 @@
 
   &:hover {
     background: #f8fafc;
-    border-color: var(--brand-primary);
-    color: var(--brand-dark);
+    border-color: var(--brand-primary-text);
+    color: var(--brand-primary-hover);
   }
 
   &:active {

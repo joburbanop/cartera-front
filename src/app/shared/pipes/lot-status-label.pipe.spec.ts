@@ -15,7 +15,7 @@ describe('lotStatusLabel', () => {
 describe('lotStatusBadgeClass', () => {
   it('asigna un modifier distinto a cada estado de lote', () => {
     expect(lotStatusBadgeClass('disponible')).toBe('badge-pill--success');
-    expect(lotStatusBadgeClass('preventa')).toBe('badge-pill--warning');
+    expect(lotStatusBadgeClass('preventa')).toBe('badge-pill--presale');
     expect(lotStatusBadgeClass('separado')).toBe('badge-pill--accent');
     expect(lotStatusBadgeClass('reservado')).toBe('badge-pill--accent');
     expect(lotStatusBadgeClass('vendido')).toBe('badge-pill--sold');

@@ -6,6 +6,7 @@ import { DashboardService } from '../../core/services/dashboard.service';
 import { ChartCardComponent, ChartCardDataset } from '../../shared/components/chart-card/chart-card.component';
 import { SkeletonComponent } from '../../shared/components/skeleton/skeleton.component';
 import { lotStatusBadgeClass } from '../../shared/pipes/lot-status-label.pipe';
+import { ColorTokens } from '../../shared/styles/color-tokens';
 
 @Component({
   selector: 'app-dashboard',
@@ -63,14 +64,31 @@ export class DashboardComponent implements OnInit {
     { key: 'vendido', label: 'Vendido', modifier: lotStatusBadgeClass('vendido') },
     { key: 'abogado', label: 'Renegociación', modifier: lotStatusBadgeClass('abogado') },
   ];
-  private readonly lotesChartColors = ['#047857', '#b45309', '#22544a', '#0284c7', '#347769'];
+  private readonly lotesChartColors = [
+    ColorTokens.statusCurrent,
+    ColorTokens.statusPresale,
+    ColorTokens.statusSold,
+    ColorTokens.statusInfo,
+    ColorTokens.statusReserved,
+  ];
 
   recaudoLabels: string[] = [];
   recaudoDatasets: ChartCardDataset[] = [{ label: 'Recaudo', data: [] }];
   carteraLabels = ['Al día', 'Vencidas'];
-  carteraDatasets: ChartCardDataset[] = [{ data: [0, 0], backgroundColor: ['#047857', '#b91c1c'] }];
+  carteraDatasets: ChartCardDataset[] = [{
+    data: [0, 0],
+    backgroundColor: [ColorTokens.statusCurrent, ColorTokens.statusOverdue],
+  }];
   contratosLabels = ['Activo', 'Preventa', 'Terminado', 'Rescindido'];
-  contratosDatasets: ChartCardDataset[] = [{ data: [0, 0, 0, 0], backgroundColor: ['#047857', '#b45309', '#475569', '#b91c1c'] }];
+  contratosDatasets: ChartCardDataset[] = [{
+    data: [0, 0, 0, 0],
+    backgroundColor: [
+      ColorTokens.statusCurrent,
+      ColorTokens.statusPresale,
+      ColorTokens.statusNeutral,
+      ColorTokens.statusOverdue,
+    ],
+  }];
   lotesLabels = ['Disponible', 'Preventa', 'Vendido', 'Renegociación', 'Separado'];
   lotesDatasets: ChartCardDataset[] = [{ data: [0, 0, 0, 0, 0], backgroundColor: this.lotesChartColors }];
 
@@ -254,13 +272,16 @@ export class DashboardComponent implements OnInit {
         const payload = this.unwrapPayload(response) as Record<string, number>;
         this.carteraDatasets = [{
           data: [Number(payload['al_dia'] ?? 0), Number(payload['vencidas'] ?? 0)],
-          backgroundColor: ['#047857', '#b91c1c'],
+          backgroundColor: [ColorTokens.statusCurrent, ColorTokens.statusOverdue],
         }];
         this.isLoadingCarteraChart = false;
         this.cdr.detectChanges();
       },
       error: () => {
-        this.carteraDatasets = [{ data: [0, 0], backgroundColor: ['#047857', '#b91c1c'] }];
+        this.carteraDatasets = [{
+          data: [0, 0],
+          backgroundColor: [ColorTokens.statusCurrent, ColorTokens.statusOverdue],
+        }];
         this.isLoadingCarteraChart = false;
         this.cdr.detectChanges();
       },
@@ -280,14 +301,27 @@ export class DashboardComponent implements OnInit {
             Number(payload['terminado'] ?? 0),
             Number(payload['rescindido'] ?? 0),
           ],
-          backgroundColor: ['#047857', '#b45309', '#475569', '#b91c1c'],
+          backgroundColor: [
+            ColorTokens.statusCurrent,
+            ColorTokens.statusPresale,
+            ColorTokens.statusNeutral,
+            ColorTokens.statusOverdue,
+          ],
         }];
         this.cdr.detectChanges();
       },
       error: () => {
         this.contratosActivos = 0;
         this.kpiReady.contratos = true;
-        this.contratosDatasets = [{ data: [0, 0, 0, 0], backgroundColor: ['#047857', '#b45309', '#475569', '#b91c1c'] }];
+        this.contratosDatasets = [{
+          data: [0, 0, 0, 0],
+          backgroundColor: [
+            ColorTokens.statusCurrent,
+            ColorTokens.statusPresale,
+            ColorTokens.statusNeutral,
+            ColorTokens.statusOverdue,
+          ],
+        }];
         this.cdr.detectChanges();
       },
     });

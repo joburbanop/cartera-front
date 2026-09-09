@@ -53,61 +53,96 @@
       </tr>
     </thead>
     <tbody>
-      <tr *ngFor="let fee of pagedInstallments" [ngClass]="{'row-disabled': !isFeeSelectable(fee)}">
-        <td style="text-align: center;">
-          <input
-            type="checkbox"
-            class="custom-checkbox"
-            [checked]="isSelected(fee)"
-            [disabled]="isBloqueada(fee)"
-            (change)="toggleFeeSelection(fee, $event)"
-          />
-        </td>
+      <ng-container *ngFor="let fee of pagedInstallments">
+        <tr [ngClass]="{'row-disabled': !isFeeSelectable(fee)}">
+          <td style="text-align: center;">
+            <input
+              type="checkbox"
+              class="custom-checkbox"
+              [checked]="isSelected(fee)"
+              [disabled]="isBloqueada(fee)"
+              (change)="toggleFeeSelection(fee, $event)"
+            />
+          </td>
 
-        <td style="font-weight: 700; color: #1e293b;">{{ fee.installment_number === 0 ? 'Inicial' : '#' + fee.installment_number }}</td>
-        <td>
-          <div class="due-date-cell">
-            <span>{{ fee.due_date | date:'dd/MM/yyyy' }}</span>
+          <td style="font-weight: 700; color: #1e293b;">{{ fee.installment_number === 0 ? 'Inicial' : '#' + fee.installment_number }}</td>
+          <td>
+            <div class="due-date-cell">
+              <span>{{ fee.due_date | date:'dd/MM/yyyy' }}</span>
+              <button
+                *ngIf="canEditDueDate(fee)"
+                type="button"
+                class="due-date-edit-btn"
+                aria-label="Editar fecha de vencimiento"
+                (click)="emitEditDueDate(fee, $event)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                </svg>
+              </button>
+            </div>
+          </td>
+          <td>
+            <div class="due-date-cell">
+              <span>{{ fee.payment_date ? (fee.payment_date | date:'dd/MM/yyyy') : '--' }}</span>
+              <button
+                *ngIf="canEditPaymentDate(fee)"
+                type="button"
+                class="due-date-edit-btn"
+                aria-label="Editar fecha de pago"
+                (click)="emitEditPaymentDate(fee, $event)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                </svg>
+              </button>
+            </div>
+          </td>
+          <td style="font-weight: 600; color: #1e293b;">$ {{ fee.installment_value | number:'1.2-2' }}</td>
+          <td style="font-weight: 600; color: #0f172a;">$ {{ (fee.extra_payment ?? 0) | number:'1.2-2' }}</td>
+          <td style="color: #64748b;">$ {{ displayedInterest(fee) | number:'1.2-2' }}</td>
+          <td style="color: #059669;">$ {{ displayedAmortization(fee) | number:'1.2-2' }}</td>
+          <td style="font-weight: 600; color: #0f172a;">$ {{ (fee.remaining_balance ?? 0) | number:'1.2-2' }}</td>
+          <td>
+            <span class="badge-status" [ngClass]="statusBadgeClass(fee)">
+              {{ displayStatus(fee) | amortizationStatusLabel }}
+            </span>
             <button
-              *ngIf="canEditDueDate(fee)"
+              *ngIf="hasSources(fee)"
               type="button"
-              class="due-date-edit-btn"
-              aria-label="Editar fecha de vencimiento"
-              (click)="emitEditDueDate(fee, $event)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-              </svg>
+              class="quota-details-toggle"
+              (click)="toggleDetails(fee, $event)">
+              {{ isDetailsExpanded(fee) ? 'Ocultar detalles' : 'Ver detalles' }}
             </button>
-          </div>
-        </td>
-        <td>
-          <div class="due-date-cell">
-            <span>{{ fee.payment_date ? (fee.payment_date | date:'dd/MM/yyyy') : '--' }}</span>
-            <button
-              *ngIf="canEditPaymentDate(fee)"
-              type="button"
-              class="due-date-edit-btn"
-              aria-label="Editar fecha de pago"
-              (click)="emitEditPaymentDate(fee, $event)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-              </svg>
-            </button>
-          </div>
-        </td>
-        <td style="font-weight: 600; color: #1e293b;">$ {{ fee.installment_value | number:'1.2-2' }}</td>
-        <td style="font-weight: 600; color: #0f172a;">$ {{ (fee.extra_payment ?? 0) | number:'1.2-2' }}</td>
-        <td style="color: #64748b;">$ {{ displayedInterest(fee) | number:'1.2-2' }}</td>
-        <td style="color: #059669;">$ {{ displayedAmortization(fee) | number:'1.2-2' }}</td>
-        <td style="font-weight: 600; color: #0f172a;">$ {{ (fee.remaining_balance ?? 0) | number:'1.2-2' }}</td>
-        <td>
-          <span class="badge-status" [ngClass]="statusBadgeClass(fee)">
-            {{ displayStatus(fee) | amortizationStatusLabel }}
-          </span>
-        </td>
-      </tr>
+          </td>
+        </tr>
+        <tr *ngIf="isDetailsExpanded(fee)" class="quota-details-row">
+          <td colspan="10">
+            <p class="quota-details-intro">
+              Cubierto $ {{ coveredAmount(fee) | number:'1.0-0' }}
+              · Falta $ {{ remainingAmount(fee) | number:'1.0-0' }}
+            </p>
+            <table class="quota-details-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Recibo</th>
+                  <th class="num">Aportó a esta cuota</th>
+                  <th>También cubrió</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let source of fee.sources">
+                  <td>{{ source.transaction_date | date:'dd/MM/yyyy' }}</td>
+                  <td>{{ source.receipt_number || '—' }}</td>
+                  <td class="num">$ {{ source.amount | number:'1.0-0' }}</td>
+                  <td>{{ alsoAppliedLabel(source) || 'Solo esta cuota' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+      </ng-container>
     </tbody>
   </table>
 

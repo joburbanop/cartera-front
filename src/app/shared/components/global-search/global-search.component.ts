@@ -6,6 +6,8 @@ import { debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
 import { catchError, finalize, tap } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SearchLotHit, SearchResults, SearchService } from '../../../core/services/search.service';
+import { NavigationTrailService } from '../../../core/services/navigation-trail.service';
+import { contractsHub, lotsHub } from '../../../core/utils/navigation-trail';
 
 @Component({
   selector: 'app-global-search',
@@ -17,6 +19,7 @@ import { SearchLotHit, SearchResults, SearchService } from '../../../core/servic
 export class GlobalSearchComponent implements OnInit {
   private searchService = inject(SearchService);
   private router = inject(Router);
+  private trail = inject(NavigationTrailService);
   private host = inject(ElementRef<HTMLElement>);
   private destroyRef = inject(DestroyRef);
   private cdr = inject(ChangeDetectorRef);
@@ -81,13 +84,13 @@ export class GlobalSearchComponent implements OnInit {
   }
 
   goToContract(id: number): void {
-    void this.router.navigate(['/amortization', id]);
+    void this.router.navigate(['/amortization', id], this.trail.extras([contractsHub()]));
     this.close();
   }
 
   goToLot(lot: SearchLotHit): void {
     if (lot.contract_id) {
-      void this.router.navigate(['/amortization', lot.contract_id]);
+      void this.router.navigate(['/amortization', lot.contract_id], this.trail.extras([lotsHub()]));
       this.close();
       return;
     }

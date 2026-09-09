@@ -39,4 +39,175 @@ describe('DrawerPagoComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('Total vencido a la fecha');
   });
+
+  describe('pago dividido entre cuota inicial y cuota regular', () => {
+    // El caso real: la inicial quedó con $200.000 abiertos y el cliente manda
+    // una sola consignación de $2.100.000 que cubre eso más la cuota del mes.
+    function abrirConInicialPendiente(): void {
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.componentRef.setInput('pendingInitialAmount', 200000);
+      fixture.componentRef.setInput('regularDueAmount', 1900000);
+      fixture.detectChanges();
+    }
+
+    it('ofrece dividir cuando la cuota inicial tiene saldo', () => {
+      abrirConInicialPendiente();
+
+      expect(component.canSplit).toBe(true);
+      expect(fixture.nativeElement.textContent).toContain('Dividir este pago');
+    });
+
+    it('no ofrece dividir si la inicial ya está saldada', () => {
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.componentRef.setInput('pendingInitialAmount', 0);
+      fixture.detectChanges();
+
+      expect(component.canSplit).toBe(false);
+      expect(fixture.nativeElement.textContent).not.toContain('Dividir este pago');
+    });
+
+    it('no ofrece dividir cuando el pago es de la propia cuota inicial', () => {
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.componentRef.setInput('pendingInitialAmount', 200000);
+      fixture.componentRef.setInput('selectedFees', [
+        { id: 10, installment_number: 0, quota_debt: 200000 },
+      ]);
+      fixture.detectChanges();
+
+      expect(component.canSplit).toBe(false);
+    });
+
+    it('propone el faltante de la inicial y deja el resto a la cuota', () => {
+      abrirConInicialPendiente();
+      component.paymentForm.patchValue({ amount: 2100000 });
+      component.toggleSplit();
+
+      expect(component.splitToDownPayment).toBe(200000);
+      expect(component.splitToInstallments).toBe(1900000);
+      expect(component.splitError).toBeNull();
+    });
+
+    it('rechaza que la parte de la inicial supere su saldo', () => {
+      abrirConInicialPendiente();
+      component.paymentForm.patchValue({ amount: 2100000 });
+      component.toggleSplit();
+      component.paymentForm.patchValue({ to_down_payment: 500000 });
+
+      expect(component.splitError).toContain('saldo pendiente');
+    });
+
+    it('rechaza que no quede nada para la cuota regular', () => {
+      abrirConInicialPendiente();
+      component.paymentForm.patchValue({ amount: 200000 });
+      component.toggleSplit();
+
+      expect(component.splitError).toContain('No queda nada para la cuota regular');
+    });
+
+    it('mide el excedente sobre la parte regular, no sobre el total', () => {
+      abrirConInicialPendiente();
+      // $200.000 a la inicial y $2.900.000 contra una cuota de $1.900.000.
+      component.paymentForm.patchValue({ amount: 3100000 });
+      component.toggleSplit();
+
+      expect(component.excessAmount).toBe(1000000);
+    });
+
+    it('emite el reparto junto al total recibido', () => {
+      abrirConInicialPendiente();
+      component.paymentForm.patchValue({
+        amount: 2100000,
+        payment_method: 'cash',
+      });
+      component.toggleSplit();
+      component['selectedFile'] = new File(['x'], 'recibo.pdf', { type: 'application/pdf' });
+
+      const emitted: any[] = [];
+      component.confirmPayment.subscribe((data: any) => emitted.push(data));
+      component.submit();
+
+      expect(emitted.length).toBe(1);
+      // El banco ve un solo movimiento: el reparto viaja aparte.
+      expect(emitted[0].amount).toBe(2100000);
+      expect(emitted[0].split).toEqual({
+        to_down_payment: 200000,
+        to_installments: 1900000,
+      });
+    });
+
+    it('no manda reparto cuando el cobrador no lo pidió', () => {
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.componentRef.setInput('pendingInitialAmount', 200000);
+      // Abono a la inicial por su saldo exacto: no hay excedente que destinar.
+      fixture.componentRef.setInput('prefilledAmount', 200000);
+      fixture.detectChanges();
+      component.paymentForm.patchValue({ amount: 200000, payment_method: 'cash' });
+      component['selectedFile'] = new File(['x'], 'recibo.pdf', { type: 'application/pdf' });
+
+      const emitted: any[] = [];
+      component.confirmPayment.subscribe((data: any) => emitted.push(data));
+      component.submit();
+
+      expect(emitted[0].split).toBeNull();
+    });
+
+    it('preselecciona abono a capital si el contrato está al día y hay excedente', async () => {
+      fixture.componentRef.setInput('pendingInitialAmount', 0);
+      fixture.componentRef.setInput('overdueTotalAmount', 0);
+      fixture.componentRef.setInput('selectedFees', [
+        { id: 1, installment_number: 1, quota_debt: 1000000 },
+      ]);
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      component.paymentForm.patchValue({ amount: 1500000 });
+
+      expect(component.hasSurplus).toBe(true);
+      expect(component.isContractCurrent).toBe(true);
+      expect(component.paymentForm.get('surplus_action')?.value).toBe('reducir_plazo');
+    });
+
+    it('preselecciona cubrir vencidas si hay mora y hay excedente', async () => {
+      fixture.componentRef.setInput('pendingInitialAmount', 0);
+      fixture.componentRef.setInput('overdueTotalAmount', 1000000);
+      fixture.componentRef.setInput('selectedFees', [
+        { id: 1, installment_number: 1, quota_debt: 1000000 },
+      ]);
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      component.paymentForm.patchValue({ amount: 1500000 });
+
+      expect(component.hasSurplus).toBe(true);
+      expect(component.isContractCurrent).toBe(false);
+      expect(component.paymentForm.get('surplus_action')?.value).toBe('adelantar_cuotas');
+    });
+
+    it('no pisa la elección del operador si ya eligió un destino', async () => {
+      fixture.componentRef.setInput('pendingInitialAmount', 0);
+      fixture.componentRef.setInput('overdueTotalAmount', 0);
+      fixture.componentRef.setInput('selectedFees', [
+        { id: 1, installment_number: 1, quota_debt: 1000000 },
+      ]);
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      component.paymentForm.patchValue({ amount: 1500000, surplus_action: 'adelantar_cuotas' });
+
+      expect(component.paymentForm.get('surplus_action')?.value).toBe('adelantar_cuotas');
+    });
+
+    it('olvida el reparto si la inicial deja de tener saldo', () => {
+      abrirConInicialPendiente();
+      component.paymentForm.patchValue({ amount: 2100000 });
+      component.toggleSplit();
+      expect(component.splitEnabled).toBe(true);
+
+      fixture.componentRef.setInput('pendingInitialAmount', 0);
+      fixture.detectChanges();
+
+      expect(component.splitEnabled).toBe(false);
+      expect(component.paymentForm.get('to_down_payment')?.value).toBe('');
+    });
+  });
 });

@@ -3,6 +3,8 @@ import { provideRouter } from '@angular/router';
 
 import { AppRoles } from '../../../core/models/app-roles';
 import { AuthService } from '../../../core/services/auth.service';
+import { NavigationTrailService } from '../../../core/services/navigation-trail.service';
+import { PageTitleService } from '../../../core/services/page-title.service';
 import { MainLayoutComponent } from './main-layout.component';
 
 describe('MainLayoutComponent', () => {
@@ -90,5 +92,37 @@ describe('MainLayoutComponent', () => {
     expect(component.canViewClientes()).toBe(false);
     expect(component.canViewUsers()).toBe(false);
     expect(component.roleLabel()).toBe('Socio gerencia');
+  });
+
+  it('arma migas reales y no deja Panel como único destino', () => {
+    expect(component.breadcrumbs()).toEqual([
+      { label: 'Panel', url: '/dashboard' },
+    ]);
+  });
+
+  it('actualiza el último segmento cuando llega el título de la página', () => {
+    component['currentUrl'].set('/amortization/507');
+    TestBed.inject(PageTitleService).set('SM-LOTE-49');
+    fixture.detectChanges();
+
+    expect(component.breadcrumbs()).toEqual([
+      { label: 'Panel', url: '/dashboard' },
+      { label: 'Contratos', url: '/contracts' },
+      { label: 'SM-LOTE-49', url: '/amortization/507' },
+    ]);
+  });
+
+  it('en amortización usa el rastro de la visita cuando el sello coincide', () => {
+    const trail = TestBed.inject(NavigationTrailService);
+    trail.capture(trail.state([{ label: 'Lotes', url: '/lots' }]));
+    component['currentUrl'].set('/amortization/507');
+    TestBed.inject(PageTitleService).set('SM-LOTE-49');
+    fixture.detectChanges();
+
+    expect(component.breadcrumbs()).toEqual([
+      { label: 'Panel', url: '/dashboard' },
+      { label: 'Lotes', url: '/lots' },
+      { label: 'SM-LOTE-49', url: '/amortization/507' },
+    ]);
   });
 });

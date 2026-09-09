@@ -1,0 +1,229 @@
+.hv-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.hv-note,
+.hv-gap {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 0.85rem;
+}
+
+.hv-gap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+  background: #fff7ed;
+  border-color: #fed7aa;
+
+  span { font-weight: 700; color: #9a3412; }
+  strong { font-size: 1.05rem; color: #9a3412; }
+  small { width: 100%; color: #9a3412; opacity: 0.85; }
+}
+
+.hv-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+}
+
+.hv-muted { color: #64748b; }
+
+.hv-consolidated {
+  display: grid;
+  grid-template-columns: minmax(200px, 260px) 1fr;
+  gap: 1rem 2rem;
+  align-items: center;
+}
+
+.hv-consolidated__total {
+  strong {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 1.75rem;
+    line-height: 1.1;
+    color: #0f172a;
+  }
+}
+
+.hv-consolidated__split {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.85rem 1.25rem;
+
+  dt {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #64748b;
+  }
+
+  dd {
+    margin: 0.15rem 0 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  small {
+    display: block;
+    margin-top: 0.1rem;
+    font-size: 0.72rem;
+    color: #64748b;
+  }
+}
+
+.hv-consolidated__pending {
+  dt, dd, small { color: #9a3412; }
+}
+
+@media (max-width: 720px) {
+  .hv-consolidated { grid-template-columns: 1fr; }
+}
+
+.hv-header__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.hv-kicker {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.hv-header h3 {
+  margin: 0.15rem 0 0;
+  color: #0f172a;
+}
+
+.hv-pdf {
+  background: #0f172a;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hv-grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.85rem 1.25rem;
+}
+
+.hv-grid dt {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #64748b;
+}
+
+.hv-grid dd {
+  margin: 0.15rem 0 0;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.hv-table-card { padding: 0; overflow-x: auto; }
+
+.hv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.hv-table th,
+.hv-table td {
+  padding: 0.7rem 0.85rem;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  vertical-align: top;
+}
+
+.hv-table th {
+  background: #f8fafc;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.hv-table .num { text-align: right; white-space: nowrap; }
+.hv-accumulated { font-weight: 600; color: #334155; }
+.hv-initial td { font-weight: 700; background: #f8fafc; }
+
+.hv-trace {
+  display: block;
+  margin-top: 0.25rem;
+  color: #64748b;
+  font-weight: 400;
+}
+
+.hv-details-col {
+  text-align: center;
+  white-space: nowrap;
+  width: 1%;
+}
+
+.hv-details-toggle {
+  margin-left: 0;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover { background: #eef2f7; }
+}
+
+.hv-details-row {
+  > td { background: #f8fafc; }
+}
+
+.hv-details-intro {
+  margin: 0 0 0.55rem;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.hv-details-table {
+  width: 100%;
+  max-width: 620px;
+  border-collapse: collapse;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+
+  th,
+  td {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.78rem;
+    border-bottom: 1px solid #edf2f7;
+    text-align: left;
+  }
+
+  th { background: #f1f5f9; color: #64748b; font-weight: 700; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .num { text-align: right; white-space: nowrap; }
+}

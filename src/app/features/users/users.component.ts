@@ -161,16 +161,18 @@ export class UsersComponent implements OnInit {
     this.errorMessage = '';
     const value = this.userForm.getRawValue();
 
+    const email = value.email.trim().toLowerCase();
+
     const request$ = this.isEditing && this.editingUserId
       ? this.userService.updateUser(this.editingUserId, {
           name: value.name,
-          email: value.email,
+          email,
           role: value.role,
           ...(value.password.trim() ? { password: value.password } : {}),
         })
       : this.userService.createUser({
           name: value.name,
-          email: value.email,
+          email,
           password: value.password,
           role: value.role,
         });

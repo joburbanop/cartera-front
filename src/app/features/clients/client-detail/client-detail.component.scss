@@ -30,7 +30,7 @@
   }
 
   &:hover {
-    color: #347769;
+    color: var(--brand-primary-text);
   }
 }
 
@@ -61,9 +61,9 @@
   padding: 1.5rem 1.6rem;
   border-radius: 16px;
   border: 1px solid #e2e8f0;
-  border-top: 4px solid #347769;
+  border-top: 4px solid var(--brand-primary);
   background:
-    radial-gradient(720px 180px at 0% 0%, rgba(52, 119, 105, 0.08), transparent 55%),
+    radial-gradient(720px 180px at 0% 0%, rgba(var(--brand-primary-rgb), 0.08), transparent 55%),
     linear-gradient(180deg, #f7fbfa 0%, #ffffff 48%);
   box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
 }
@@ -83,12 +83,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #eef7f5;
-  color: #347769;
+  background: var(--brand-primary-soft);
+  color: var(--brand-primary-text);
   font-weight: 700;
   font-size: 1.15rem;
   letter-spacing: 0.04em;
-  border: 1px solid rgba(52, 119, 105, 0.2);
+  border: 1px solid rgba(var(--brand-primary-rgb), 0.2);
 }
 
 .header-copy {
@@ -167,7 +167,7 @@
     width: 18px;
     height: 18px;
     margin-top: 2px;
-    color: #347769;
+    color: var(--brand-primary-text);
   }
 }
 
@@ -249,8 +249,8 @@
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: #eef7f5;
-  color: #347769;
+  background: var(--brand-primary-soft);
+  color: var(--brand-primary-text);
 
   svg {
     width: 20px;
@@ -309,9 +309,9 @@
   }
 
   &:hover {
-    background: #eef7f5;
-    border-color: #347769;
-    color: #22544a;
+    background: var(--brand-primary-soft);
+    border-color: var(--brand-primary-text);
+    color: var(--brand-primary-hover);
   }
 
   &:active {
@@ -342,9 +342,9 @@
 }
 
 .badge-warning {
-  background: #fff7ed;
-  color: #b45309;
-  border-color: #fed7aa;
+  background: var(--status-presale-bg);
+  color: var(--status-presale-fg);
+  border-color: var(--status-presale-border);
 }
 
 .badge-success {

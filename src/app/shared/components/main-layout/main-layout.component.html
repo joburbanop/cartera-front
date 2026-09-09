@@ -190,12 +190,12 @@
       </button>
 
       <nav class="breadcrumbs">
-        <ng-container *ngFor="let crumb of breadcrumbs; let last = last">
-          <a *ngIf="!last" [routerLink]="crumb.url" class="breadcrumb-link">
+        <ng-container *ngFor="let crumb of breadcrumbs(); let last = last">
+          <a *ngIf="!last" [routerLink]="crumb.url" [queryParams]="crumb.queryParams || {}" class="breadcrumb-link" [attr.title]="crumb.label">
             {{ crumb.label }}
           </a>
           <span *ngIf="!last" class="breadcrumb-separator">/</span>
-          <span *ngIf="last" class="breadcrumb-current">{{ crumb.label }}</span>
+          <span *ngIf="last" class="breadcrumb-current" [attr.title]="crumb.label">{{ crumb.label }}</span>
         </ng-container>
       </nav>
 

@@ -1,3 +1,5 @@
+import { PaymentSource } from './payment-source.model';
+
 export type PaymentPromiseStatus = 'pagada' | 'parcial' | 'vencida' | 'pendiente';
 
 export interface PaymentPromise {
@@ -10,4 +12,6 @@ export interface PaymentPromise {
   is_paid: boolean;
   status?: PaymentPromiseStatus | string;
   remaining_amount?: number | string;
+  sources?: PaymentSource[];
+  covered_amount?: number | string;
 }

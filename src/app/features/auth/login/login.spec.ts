@@ -39,8 +39,23 @@ describe('LoginComponent', () => {
     localStorage.clear();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  it('envía el correo en minúsculas aunque el usuario lo escriba con mayúsculas', () => {
+    component.loginForm.setValue({
+      email: 'Santiago@Empresa.TEST',
+      password: 'password',
+    });
+
+    component.onSubmit();
+    const req = httpMock.expectOne((request) => request.url.includes('/login'));
+
+    expect(req.request.body.email).toBe('santiago@empresa.test');
+    req.flush({
+      data: {
+        access_token: 'tok-case',
+        roles: ['administrador'],
+        user: { id: 1, name: 'Santiago' },
+      },
+    });
   });
 
   it('should stop loading and show the backend error on invalid login without logging out', () => {

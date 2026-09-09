@@ -1,9 +1,15 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { catchError, finalize, map, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { AppRole, AppRoles } from '../models/app-roles';
+import {
+  ContractTabId,
+  DEFAULT_CONTRACT_TAB_IDS,
+  extractContractTabs,
+  normalizeContractTabOrder,
+} from '../utils/contract-tabs';
 
 @Injectable({
   providedIn: 'root'
@@ -19,8 +25,14 @@ export class AuthService {
   private readonly passwordChangedAtKey = 'auth_password_changed_at';
   private roles: string[] = this.readStoredRoles();
   private loggingOut = false;
+  private profileSyncStarted = false;
   private readonly userNameState = signal<string | null>(this.readStoredName());
   readonly userName = this.userNameState.asReadonly();
+  private readonly uiPreferencesState = signal<{ contractTabs: ContractTabId[] }>({
+    contractTabs: [...DEFAULT_CONTRACT_TAB_IDS],
+  });
+  readonly uiPreferences = this.uiPreferencesState.asReadonly();
+  readonly uiPreferencesReady = signal(false);
 
   login(credentials: { email: string; password: string }): Observable<any> {
     return this.http.post(`${this.apiUrl}/login`, credentials).pipe(
@@ -38,6 +50,8 @@ export class AuthService {
           }
           this.persistUserName(payload?.user?.name);
           this.persistPasswordFlags(payload?.user);
+          this.persistUiPreferences(payload?.user?.ui_preferences);
+          this.profileSyncStarted = true;
           return;
         }
 
@@ -164,17 +178,49 @@ export class AuthService {
   }
 
   ensureProfile(): void {
-    if (this.getUserName() || !this.getToken()) {
+    if (!this.getToken() || this.profileSyncStarted) {
       return;
     }
 
+    this.profileSyncStarted = true;
     this.http.get(`${this.apiUrl}/me`).subscribe({
       next: (response: any) => {
         const payload = response?.data ?? response;
-        this.persistUserName(payload?.user?.name ?? payload?.name);
-        this.persistPasswordFlags(payload?.user ?? payload);
-      }
+        const user = payload?.user ?? payload;
+        this.persistUserName(user?.name ?? payload?.name);
+        this.persistPasswordFlags(user);
+        this.persistUiPreferences(user?.ui_preferences);
+      },
+      error: () => {
+        this.uiPreferencesReady.set(true);
+      },
     });
+  }
+
+  contractTabOrder(): ContractTabId[] {
+    return this.uiPreferencesState().contractTabs;
+  }
+
+  updateContractTabs(order: readonly string[]): Observable<void> {
+    const previous = this.contractTabOrder();
+    const contractTabs = normalizeContractTabOrder(order);
+    this.uiPreferencesState.set({ contractTabs });
+
+    return this.http.patch(`${this.apiUrl}/me/preferences`, { contractTabs }).pipe(
+      tap((response: any) => {
+        const payload = response?.data ?? response;
+        this.persistUiPreferences(payload?.ui_preferences ?? { contractTabs });
+      }),
+      catchError((error) => {
+        this.uiPreferencesState.set({ contractTabs: previous });
+        return throwError(() => error);
+      }),
+      map(() => undefined),
+    );
+  }
+
+  resetContractTabs(): Observable<void> {
+    return this.updateContractTabs(DEFAULT_CONTRACT_TAB_IDS);
   }
 
   private setRoles(roles: string[]): void {
@@ -200,12 +246,22 @@ export class AuthService {
   private clearSession(): void {
     this.roles = [];
     this.userNameState.set(null);
+    this.uiPreferencesState.set({ contractTabs: [...DEFAULT_CONTRACT_TAB_IDS] });
+    this.uiPreferencesReady.set(false);
+    this.profileSyncStarted = false;
     localStorage.removeItem(this.tokenKey);
     localStorage.removeItem(this.rolesKey);
     localStorage.removeItem(this.userIdKey);
     localStorage.removeItem(this.userNameKey);
     localStorage.removeItem(this.mustChangePasswordKey);
     localStorage.removeItem(this.passwordChangedAtKey);
+  }
+
+  private persistUiPreferences(raw: unknown): void {
+    this.uiPreferencesState.set({
+      contractTabs: extractContractTabs(raw),
+    });
+    this.uiPreferencesReady.set(true);
   }
 
   private persistPasswordFlags(user: { must_change_password?: boolean; password_changed_at?: string | null } | null | undefined): void {

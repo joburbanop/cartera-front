@@ -78,7 +78,7 @@
         <span class="value" style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem;">
           <span *ngIf="isSpecialLot" class="badge-pill"
                 [ngClass]="{
-                  'badge-pill--warning': contractData?.status === 'preventa_inactiva',
+                  'badge-pill--presale': contractData?.status === 'preventa_inactiva',
                   'badge-pill--success': contractData?.status === 'activo',
                   'badge-pill--neutral': contractData?.status === 'terminado',
                   'badge-pill--danger': contractData?.status === 'rescindido'
@@ -87,7 +87,7 @@
           </span>
           <span *ngIf="!isSpecialLot" class="badge-pill"
                 [ngClass]="{
-                  'badge-pill--warning': contractData?.status === 'preventa_inactiva',
+                  'badge-pill--presale': contractData?.status === 'preventa_inactiva',
                   'badge-pill--success': contractData?.status === 'activo',
                   'badge-pill--neutral': contractData?.status === 'terminado',
                   'badge-pill--danger': contractData?.status === 'rescindido'

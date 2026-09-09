@@ -72,9 +72,9 @@
 }
 
 .due-date-edit-btn:hover {
-  background: #eef7f5;
-  border-color: #347769;
-  color: #2d6c5e;
+  background: var(--brand-primary-soft);
+  border-color: var(--brand-primary-text);
+  color: var(--brand-primary-mid);
 }
 
 .custom-table tbody tr:last-child td {
@@ -111,9 +111,9 @@
 
 .badge-unpaid,
 .badge-pending {
-  background: #dbeafe;
-  color: #1d4ed8;
-  border: 1px solid #93c5fd;
+  background: var(--brand-link-soft);
+  color: var(--brand-link);
+  border: 1px solid rgba(3, 105, 161, 0.2);
 }
 
 .badge-paid {
@@ -123,15 +123,63 @@
 }
 
 .badge-partial {
-  background: #dbeafe;
-  color: #1d4ed8;
-  border: 1px solid #93c5fd;
+  background: var(--brand-link-soft);
+  color: var(--brand-link);
+  border: 1px solid rgba(3, 105, 161, 0.2);
 }
 
 .badge-overdue {
   background: #fee2e2;
   color: #b91c1c;
   border: 1px solid #fca5a5;
+}
+
+.quota-details-toggle {
+  display: block;
+  margin-top: 0.45rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.quota-details-row {
+  background: #f8fafc;
+
+  > td { padding: 0.75rem 1.5rem 1.1rem; }
+}
+
+.quota-details-intro {
+  margin: 0 0 0.65rem;
+  font-size: 0.82rem;
+  color: #475569;
+}
+
+.quota-details-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+
+  th,
+  td {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    text-align: left;
+    border-bottom: 1px solid #edf2f7;
+  }
+
+  th { color: #64748b; font-weight: 700; background: #f8fafc; }
+  td { color: #0f172a; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody tr:last-child td { border-bottom: none; }
 }
 
 @keyframes fadeIn {

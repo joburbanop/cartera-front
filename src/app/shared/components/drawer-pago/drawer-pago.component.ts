@@ -47,7 +47,8 @@ export class DrawerPagoComponent implements OnInit {
     payment_method: ['transfer', Validators.required],
     bank_account_id: ['', Validators.required], // Inicia requerido porque por defecto es 'transfer'
     transaction_date: [this.todayIsoDate(), Validators.required],
-    surplus_action: ['']
+    surplus_action: [''],
+    to_down_payment: ['']
   });
 
   private todayIsoDate(): string {
@@ -83,18 +84,47 @@ export class DrawerPagoComponent implements OnInit {
     return String(value).substring(0, 10);
   }
 
+  /**
+   * Deuda regular contra la que se mide el excedente. En el flujo general con
+   * inicial pendiente, el monto sugerido es el saldo de la inicial; si el pago
+   * se reparte, la referencia pasa a ser lo que deben las cuotas regulares.
+   */
+  private get surplusReference(): number {
+    if (this.splitEnabled && this._selectedFees.length === 0 && this.regularDueAmount > 0) {
+      return this.regularDueAmount;
+    }
+
+    return this.montoSugeridoTotal;
+  }
+
   get excessAmount(): number {
-    return Math.max(0, (Number(this.paymentForm.get('amount')?.value) || 0) - this.montoSugeridoTotal);
+    // Con reparto, lo que puede sobrar es la parte destinada a cuotas: lo que
+    // va a la inicial nunca es excedente.
+    const available = this.splitEnabled
+      ? this.splitToInstallments
+      : (Number(this.paymentForm.get('amount')?.value) || 0);
+
+    return Math.max(0, available - this.surplusReference);
   }
 
   get excedenteCalculado(): number {
-    const montoIngresado = Number(this.paymentForm.get('amount')?.value) || 0;
-    const diferencia = montoIngresado - this.montoSugeridoTotal;
-    return diferencia > 0 ? diferencia : 0;
+    return this.excessAmount;
   }
 
   get hasSurplus(): boolean {
     return this.excessAmount > FinancialRules.absorbedSurplus;
+  }
+
+  /**
+   * Al día: inicial saldada y ninguna regular vencida.
+   * Ahí el excedente se sugiere a capital; con mora, a cubrir vencidas.
+   */
+  get isContractCurrent(): boolean {
+    return this.pendingInitialAmount <= 0 && Number(this.overdueTotalAmount ?? 0) <= 0;
+  }
+
+  get suggestedSurplusAction(): 'reducir_plazo' | 'adelantar_cuotas' {
+    return this.isContractCurrent ? 'reducir_plazo' : 'adelantar_cuotas';
   }
 
   private syncSurplusValidation(): void {
@@ -102,6 +132,9 @@ export class DrawerPagoComponent implements OnInit {
 
     if (this.hasSurplus) {
       surplusControl?.setValidators([Validators.required]);
+      if (!surplusControl?.value) {
+        surplusControl?.setValue(this.suggestedSurplusAction, { emitEvent: false });
+      }
     } else {
       surplusControl?.clearValidators();
       surplusControl?.setValue('');
@@ -125,6 +158,10 @@ export class DrawerPagoComponent implements OnInit {
     });
 
     this.paymentForm.get('amount')?.valueChanges.subscribe(() => {
+      this.syncSurplusValidation();
+    });
+
+    this.paymentForm.get('to_down_payment')?.valueChanges.subscribe(() => {
       this.syncSurplusValidation();
     });
   }
@@ -178,6 +215,110 @@ export class DrawerPagoComponent implements OnInit {
   @Input() overdueTotalAmount: number | null = null;
   @Input() overdueTotalIsPreventa = false;
 
+  /**
+   * Saldo pendiente de la cuota inicial. Cuando hay saldo, el pago se puede
+   * repartir entre la inicial y la cuota del mes: es lo que pasa cuando el
+   * cliente manda una sola consignación para cubrir las dos cosas.
+   */
+  private _pendingInitialAmount = 0;
+  @Input() set pendingInitialAmount(value: number | null) {
+    this._pendingInitialAmount = Math.max(0, Math.round(Number(value) || 0));
+
+    if (!this.canSplit) {
+      this.splitEnabled = false;
+      this.syncSplitValidation();
+    }
+  }
+  get pendingInitialAmount(): number { return this._pendingInitialAmount; }
+
+  /**
+   * Deuda de cuotas regulares a la fecha. Solo se usa como referencia del
+   * excedente cuando el pago se reparte.
+   */
+  @Input() regularDueAmount = 0;
+
+  /** El reparto solo tiene sentido si la inicial debe algo y no es el pago de la inicial. */
+  get canSplit(): boolean {
+    if (this._pendingInitialAmount <= 0) {
+      return false;
+    }
+
+    return !this._selectedFees.some((fee: any) => Number(fee?.installment_number) === 0);
+  }
+
+  splitEnabled = false;
+
+  toggleSplit(): void {
+    if (!this.canSplit) {
+      return;
+    }
+
+    this.splitEnabled = !this.splitEnabled;
+
+    if (this.splitEnabled) {
+      // Arranca con el faltante exacto de la inicial, que es el reparto que el
+      // cobrador quiere el 90% de las veces.
+      const suggested = Math.min(this._pendingInitialAmount, this.currentPaymentAmount);
+      this.paymentForm.patchValue({ to_down_payment: suggested });
+    } else {
+      this.paymentForm.patchValue({ to_down_payment: '' });
+    }
+
+    this.syncSplitValidation();
+  }
+
+  /** Lo que queda para las cuotas regulares después de apartar la inicial. */
+  get splitToInstallments(): number {
+    return Math.max(0, this.currentPaymentAmount - this.splitToDownPayment);
+  }
+
+  get splitToDownPayment(): number {
+    return Math.max(0, Number(this.paymentForm.get('to_down_payment')?.value) || 0);
+  }
+
+  get splitExceedsPayment(): boolean {
+    return this.splitEnabled && this.splitToDownPayment > this.currentPaymentAmount;
+  }
+
+  get splitExceedsPendingInitial(): boolean {
+    return this.splitEnabled && this.splitToDownPayment > this._pendingInitialAmount;
+  }
+
+  get splitLeavesNothingForInstallments(): boolean {
+    return this.splitEnabled
+      && this.currentPaymentAmount > 0
+      && this.splitToInstallments <= 0;
+  }
+
+  get splitError(): string | null {
+    if (this.splitExceedsPendingInitial) {
+      return 'La parte de la cuota inicial no puede superar su saldo pendiente.';
+    }
+
+    if (this.splitExceedsPayment) {
+      return 'La parte de la cuota inicial no puede superar el monto recibido.';
+    }
+
+    if (this.splitLeavesNothingForInstallments) {
+      return 'No queda nada para la cuota regular. Si todo el pago va a la inicial, regístralo como abono a cuota inicial.';
+    }
+
+    return null;
+  }
+
+  private syncSplitValidation(): void {
+    const control = this.paymentForm.get('to_down_payment');
+
+    if (this.splitEnabled) {
+      control?.setValidators([Validators.required, Validators.min(1)]);
+    } else {
+      control?.clearValidators();
+      control?.setValue('');
+    }
+
+    control?.updateValueAndValidity();
+  }
+
   get currentPaymentAmount(): number {
     return Number(this.paymentForm.get('amount')?.value) || 0;
   }
@@ -211,25 +352,33 @@ export class DrawerPagoComponent implements OnInit {
   updateFormAmount() {
     this.calculateDebt();
     setTimeout(() => {
+      this.splitEnabled = false;
+      this.syncSplitValidation();
       this.paymentForm.patchValue({
         amount: this.montoSugeridoTotal,
         payment_method: 'transfer',
         bank_account_id: '',
-        surplus_action: ''
+        surplus_action: '',
+        to_down_payment: ''
       });
+      this.syncSurplusValidation();
     });
   }
 
   private resetState() {
     this.selectedFile = null;
     this.receiptMissing = false;
+    this.splitEnabled = false;
     this.paymentForm.reset({
       amount: this.montoSugeridoTotal,
       payment_method: 'transfer',
       bank_account_id: '',
       transaction_date: this.todayIsoDate(),
-      surplus_action: ''
+      surplus_action: '',
+      to_down_payment: ''
     });
+    this.syncSplitValidation();
+    this.syncSurplusValidation();
     this.paymentForm.markAsPristine();
     this.paymentForm.markAsUntouched();
   }
@@ -270,6 +419,13 @@ export class DrawerPagoComponent implements OnInit {
       return;
     }
 
+    const splitError = this.splitError;
+    if (splitError) {
+      scrollToFirstInvalid(this.host.nativeElement);
+      this.toast.show('Reparto inválido', 'error', splitError);
+      return;
+    }
+
     this._isProcessing = true;
 
     const selectedDate = this.paymentForm.get('transaction_date')?.value;
@@ -280,7 +436,15 @@ export class DrawerPagoComponent implements OnInit {
       transaction_date: normalizedDate,
       payment_date: normalizedDate,
       receipt: this.selectedFile,
-      payment_option: this.paymentForm.get('surplus_action')?.value || ''
+      payment_option: this.paymentForm.get('surplus_action')?.value || '',
+      // El reparto solo viaja cuando el cobrador lo pidió. Sin él, el pago
+      // sigue el camino de siempre.
+      split: this.splitEnabled
+        ? {
+            to_down_payment: this.splitToDownPayment,
+            to_installments: this.splitToInstallments
+          }
+        : null
     };
 
     this.confirmPayment.emit(paymentData);

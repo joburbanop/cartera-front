@@ -4,6 +4,8 @@ import { of, delay } from 'rxjs';
 
 import { GlobalSearchComponent } from './global-search.component';
 import { SearchResults, SearchService } from '../../../core/services/search.service';
+import { NavigationTrailService } from '../../../core/services/navigation-trail.service';
+import { contractsHub, lotsHub } from '../../../core/utils/navigation-trail';
 
 const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -81,6 +83,7 @@ describe('GlobalSearchComponent', () => {
   });
 
   it('navega a amortización si el lote tiene contrato y a /lots con filtro si no', () => {
+    const trail = TestBed.inject(NavigationTrailService);
     component.goToLot({
       id: 4,
       number: '6',
@@ -88,7 +91,7 @@ describe('GlobalSearchComponent', () => {
       project_id: 2,
       contract_id: 88,
     });
-    expect(navigations[0]).toEqual([['/amortization', 88]]);
+    expect(navigations[0]).toEqual([['/amortization', 88], trail.extras([lotsHub()])]);
 
     navigations.length = 0;
     component.goToLot({
@@ -102,6 +105,7 @@ describe('GlobalSearchComponent', () => {
   });
 
   it('al hacer clic en un resultado navega y cierra el dropdown', async () => {
+    const trail = TestBed.inject(NavigationTrailService);
     component.query.setValue('ana');
     await wait(400);
     await fixture.whenStable();
@@ -111,7 +115,7 @@ describe('GlobalSearchComponent', () => {
     (hits[1] as HTMLButtonElement).click();
     fixture.detectChanges();
 
-    expect(navigations[0]).toEqual([['/amortization', 11]]);
+    expect(navigations[0]).toEqual([['/amortization', 11], trail.extras([contractsHub()])]);
     expect(component.isOpen).toBeFalsy();
   });
 });

@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiListResponse, ApiResourceResponse } from '../models/api-response';
 import { AmortizationInstallment } from '../models/amortization-installment.model';
+import { LifeSheet } from '../models/life-sheet.model';
 
 @Injectable({
   providedIn: 'root'
@@ -23,6 +24,16 @@ export class AmortizationService {
   downloadPdf(contractId: number, type: 'internal' | 'client' = 'internal'): Observable<Blob> {
     return this.http.get(`${this.apiUrl}/${contractId}/download-pdf?type=${type}`, {
       responseType: 'blob'
+    });
+  }
+
+  getLifeSheet(contractId: number): Observable<ApiResourceResponse<LifeSheet>> {
+    return this.http.get<ApiResourceResponse<LifeSheet>>(`${this.apiUrl}/${contractId}/life-sheet`);
+  }
+
+  downloadLifeSheetPdf(contractId: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${contractId}/life-sheet/download-pdf`, {
+      responseType: 'blob',
     });
   }
 

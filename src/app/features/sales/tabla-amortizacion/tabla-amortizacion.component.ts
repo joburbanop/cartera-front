@@ -1,6 +1,7 @@
-import { Component, OnDestroy, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, ChangeDetectorRef, ElementRef, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { CdkDrag, CdkDragDrop, CdkDropList, CDK_DRAG_CONFIG, moveItemInArray } from '@angular/cdk/drag-drop';
 import { AmortizationService } from '../../../core/services/amortization.service';
 import { ContractService } from '../../../core/services/contract.service';
 import { FinancialService } from '../../../core/services/financial.service';
@@ -19,9 +20,13 @@ import { PaymentPromiseTabComponent } from './payment-promise-tab/payment-promis
 import { EditDueDateModalComponent, DueDateAdjustMode, DueDateCadence } from './edit-due-date-modal/edit-due-date-modal.component';
 import { EditPaymentDateModalComponent } from './edit-payment-date-modal/edit-payment-date-modal.component';
 import { RefinanceModalComponent, RefinanceConfirmPayload } from './refinance-modal/refinance-modal.component';
+import { LifeSheetTabComponent } from './life-sheet-tab/life-sheet-tab.component';
+import { LifeSheet } from '../../../core/models/life-sheet.model';
+import { Transaction, TRANSACTION_TYPE_LABELS } from '../../../core/models/transaction.model';
 import { PaymentPromiseService } from '../../../core/services/payment-promise.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { PageTitleService } from '../../../core/services/page-title.service';
+import { NavigationTrailService } from '../../../core/services/navigation-trail.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { BitacoraComponent } from '../../../shared/components/bitacora/bitacora.component';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
@@ -29,9 +34,16 @@ import { SkeletonComponent } from '../../../shared/components/skeleton/skeleton.
 import { PaymentPromise } from '../../../core/models/payment-promise.model';
 import { AmortizationInstallment } from '../../../core/models/amortization-installment.model';
 import { AppRoles } from '../../../core/models/app-roles';
-import { unwrapListItems, unwrapPaginator } from '../../../core/models/api-response';
+import { unwrapListItems, unwrapPaginator, unwrapResource } from '../../../core/models/api-response';
 import { isPaidStatus, isVencida } from '../../../core/models/amortization-status';
 import { FinancialRules } from '../../../core/constants/financial-rules';
+import {
+  applyVisibleReorder,
+  ContractTabId,
+  isDefaultContractTabOrder,
+  visibleContractTabs,
+} from '../../../core/utils/contract-tabs';
+import { buildAppBreadcrumbs, penultimateBreadcrumb } from '../../../core/utils/breadcrumbs';
 @Component({
   selector: 'app-tabla-amortizacion',
   standalone: true,
@@ -48,13 +60,27 @@ import { FinancialRules } from '../../../core/constants/financial-rules';
     EditDueDateModalComponent,
     EditPaymentDateModalComponent,
     RefinanceModalComponent,
+    LifeSheetTabComponent,
     BitacoraComponent,
     PaginationComponent,
     SkeletonComponent,
+    CdkDropList,
+    CdkDrag,
   ],
   templateUrl: './tabla-amortizacion.component.html',
   styleUrl: './tabla-amortizacion.component.scss',
-  providers: [AmortizationSelectionService],
+  providers: [
+    AmortizationSelectionService,
+    {
+      provide: CDK_DRAG_CONFIG,
+      useValue: {
+        dragStartThreshold: 1,
+        pointerDirectionChangeThreshold: 2,
+        zIndex: 40,
+        previewClass: 'contract-tab-preview',
+      },
+    },
+  ],
 })
 export class AmortizationComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
@@ -70,7 +96,27 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   private paymentPromiseService = inject(PaymentPromiseService);
   private authService = inject(AuthService);
   private pageTitle = inject(PageTitleService);
+  private trail = inject(NavigationTrailService);
   private toast = inject(ToastService);
+  private host = inject(ElementRef<HTMLElement>);
+  readonly backCrumb = computed(() => penultimateBreadcrumb(buildAppBreadcrumbs(
+    this.router.url.split('?')[0],
+    {},
+    this.pageTitle.title(),
+    this.trail.hubs(),
+  )));
+  tabOrderAnnouncement = '';
+  visibleTabs: { id: ContractTabId; label: string }[] = [];
+  private tabsSyncKey = '';
+  private skipNextTabClick = false;
+
+  constructor() {
+    effect(() => {
+      this.authService.uiPreferences();
+      this.authService.uiPreferencesReady();
+      this.cdr.markForCheck();
+    });
+  }
 
   get canRegisterPayments(): boolean {
     return this.authService.hasRole(AppRoles.ADMINISTRADOR);
@@ -115,17 +161,37 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   }
 
   get showAmortizationTabBar(): boolean {
-    if (!this.isSpecialLot) {
-      return true;
-    }
+    return true;
+  }
 
-    // Un lote especial no se puede refinanciar, así que la pestaña de
-    // refinanciaciones del administrador no aportaría nada aquí.
-    return this.canShowPromiseTab || this.canViewFullBitacora;
+  get amortizationNote(): string | null {
+    return this.lifeSheet?.summary.amortization_note ?? null;
+  }
+
+  get criteriaGapLabel(): string | null {
+    return this.lifeSheet?.summary.criteria_gap_label ?? null;
+  }
+
+  get criteriaGapHint(): string | null {
+    return this.lifeSheet?.summary.criteria_gap_hint ?? null;
+  }
+
+  get criteriaGap(): number | null {
+    return this.lifeSheet ? Number(this.lifeSheet.summary.criteria_gap) : null;
+  }
+
+  get lifeSheetBalance(): number | null {
+    return this.lifeSheet ? Number(this.lifeSheet.summary.life_sheet_balance) : null;
+  }
+
+  get outstandingCapital(): number | null {
+    return this.lifeSheet ? Number(this.lifeSheet.summary.outstanding_capital) : null;
   }
 
   contractId!: number;
-  activeTab: 'amortizacion' | 'promesa' | 'bitacora-contrato' | 'bitacora-cliente' = 'amortizacion';
+  activeTab: 'amortizacion' | 'hoja-vida' | 'promesa' | 'bitacora-contrato' | 'bitacora-cliente' = 'amortizacion';
+  lifeSheet: LifeSheet | null = null;
+  isLoadingLifeSheet = false;
   contractData: any = null;
   amortizationPlan: any[] = [];
   totalWithInterest = 0;
@@ -178,6 +244,154 @@ export class AmortizationComponent implements OnInit, OnDestroy {
 
   get bitacoraContratoLabel(): string {
     return this.canViewFullBitacora ? 'Bitácora del contrato' : 'Refinanciaciones';
+  }
+
+  get prefsReady(): boolean {
+    return this.authService.uiPreferencesReady();
+  }
+
+  get availableTabIds(): ContractTabId[] {
+    const ids: ContractTabId[] = ['amortizacion', 'hoja-vida'];
+    if (this.canShowPromiseTab) {
+      ids.push('promesa');
+    }
+    if (this.canViewBitacora) {
+      ids.push('bitacora-contrato');
+    }
+    if (this.canViewFullBitacora) {
+      ids.push('bitacora-cliente');
+    }
+    return ids;
+  }
+
+  get orderedTabs(): { id: ContractTabId; label: string }[] {
+    return this.ensureVisibleTabs();
+  }
+
+  trackTabId(_index: number, tab: { id: ContractTabId }): ContractTabId {
+    return tab.id;
+  }
+
+  get canResetTabOrder(): boolean {
+    return !isDefaultContractTabOrder(this.authService.contractTabOrder());
+  }
+
+  tabLabel(id: ContractTabId): string {
+    switch (id) {
+      case 'amortizacion':
+        return this.amortizationTabLabel;
+      case 'hoja-vida':
+        return 'Hoja de vida';
+      case 'promesa':
+        return 'Cronograma Pactado en Promesa Comercial';
+      case 'bitacora-contrato':
+        return this.bitacoraContratoLabel;
+      case 'bitacora-cliente':
+        return 'Bitácora del cliente';
+    }
+  }
+
+  selectTab(id: ContractTabId): void {
+    if (this.skipNextTabClick) {
+      this.skipNextTabClick = false;
+      return;
+    }
+
+    this.activeTab = id;
+  }
+
+  onTabDrop(event: CdkDragDrop<{ id: ContractTabId; label: string }[]>): void {
+    if (event.previousIndex === event.currentIndex) {
+      return;
+    }
+
+    this.skipNextTabClick = true;
+    const tabs = this.ensureVisibleTabs();
+    moveItemInArray(tabs, event.previousIndex, event.currentIndex);
+    const visible = tabs.map((tab) => tab.id);
+    this.tabsSyncKey = this.tabsKey(applyVisibleReorder(this.authService.contractTabOrder(), visible));
+    this.commitTabOrder(visible);
+  }
+
+  onTabKeydown(event: KeyboardEvent, index: number): void {
+    const tabs = this.orderedTabs;
+    if (event.altKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+      event.preventDefault();
+      this.moveTab(index, event.key === 'ArrowLeft' ? -1 : 1);
+      return;
+    }
+
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      event.preventDefault();
+      const next = index + (event.key === 'ArrowLeft' ? -1 : 1);
+      if (next < 0 || next >= tabs.length) {
+        return;
+      }
+      this.selectTab(tabs[next].id);
+      this.focusTab(tabs[next].id);
+    }
+  }
+
+  resetTabOrder(): void {
+    this.authService.resetContractTabs().subscribe({
+      next: () => {
+        this.tabOrderAnnouncement = 'Orden de pestañas restablecido.';
+        this.cdr.markForCheck();
+      },
+      error: () => this.toast.show('No se pudo restablecer el orden de pestañas', 'error'),
+    });
+  }
+
+  private moveTab(index: number, delta: number): void {
+    const tabs = this.ensureVisibleTabs();
+    const next = index + delta;
+    if (next < 0 || next >= tabs.length) {
+      return;
+    }
+
+    const moved = tabs[index].id;
+    moveItemInArray(tabs, index, next);
+    const visible = tabs.map((tab) => tab.id);
+    this.tabsSyncKey = this.tabsKey(applyVisibleReorder(this.authService.contractTabOrder(), visible));
+    this.commitTabOrder(visible, moved);
+    this.focusTab(moved);
+  }
+
+  private ensureVisibleTabs(): { id: ContractTabId; label: string }[] {
+    const key = this.tabsKey(this.authService.contractTabOrder());
+    if (key !== this.tabsSyncKey) {
+      this.tabsSyncKey = key;
+      this.visibleTabs = visibleContractTabs(this.authService.contractTabOrder(), this.availableTabIds)
+        .map((id) => ({ id, label: this.tabLabel(id) }));
+    }
+
+    return this.visibleTabs;
+  }
+
+  private tabsKey(savedOrder: readonly string[]): string {
+    return `${this.availableTabIds.join('|')}::${savedOrder.join('|')}`;
+  }
+
+  private commitTabOrder(visible: ContractTabId[], movedId?: ContractTabId): void {
+    const next = applyVisibleReorder(this.authService.contractTabOrder(), visible);
+    this.authService.updateContractTabs(next).subscribe({
+      next: () => {
+        if (movedId) {
+          const position = this.orderedTabs.findIndex((tab) => tab.id === movedId) + 1;
+          this.tabOrderAnnouncement = `${this.tabLabel(movedId)} ahora está en la posición ${position} de ${this.orderedTabs.length}.`;
+        }
+        this.cdr.markForCheck();
+      },
+      error: () => this.toast.show('No se pudo guardar el orden de pestañas', 'error'),
+    });
+    this.cdr.markForCheck();
+  }
+
+  private focusTab(id: ContractTabId): void {
+    queueMicrotask(() => {
+      const el = this.host.nativeElement.querySelector(`[data-contract-tab="${id}"]`) as HTMLElement | null;
+      el?.focus();
+    });
   }
 
   get customerId(): number | null {
@@ -318,6 +532,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   }
 
   cargarTablaAmortizacion(): void {
+    this.loadLifeSheet();
     this.amortizationService.getPlan(this.contractId).subscribe({
       next: (response) => {
         const payload = Array.isArray(response)
@@ -339,6 +554,40 @@ export class AmortizationComponent implements OnInit, OnDestroy {
         this.isLoading = false;
         this.cdr.markForCheck();
       },
+    });
+  }
+
+  loadLifeSheet(): void {
+    if (!this.contractId) {
+      return;
+    }
+
+    this.isLoadingLifeSheet = true;
+    this.amortizationService.getLifeSheet(this.contractId).subscribe({
+      next: (response) => {
+        this.lifeSheet = unwrapResource<LifeSheet>(response);
+        this.isLoadingLifeSheet = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.lifeSheet = null;
+        this.isLoadingLifeSheet = false;
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  downloadLifeSheetPdf(): void {
+    this.amortizationService.downloadLifeSheetPdf(this.contractId).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `hoja-de-vida-contrato-${this.contractId}.pdf`;
+        anchor.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => undefined,
     });
   }
 
@@ -791,6 +1040,25 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     return this.overdueRegularInstallmentsAmount();
   }
 
+  /**
+   * Lo que deben las cuotas regulares a la fecha, sin la supresión que aplica
+   * la preventa. El drawer lo necesita para medir el excedente cuando el pago
+   * se reparte entre inicial y cuota regular.
+   */
+  get regularDueAmount(): number {
+    const pendientes = this.getRegularPendingInstallmentsSorted();
+    if (pendientes.length === 0) {
+      return 0;
+    }
+
+    const vencidas = pendientes.filter((fee: any) => this.isVencida(fee?.due_date));
+    const base = vencidas.length > 0 ? vencidas : [pendientes[0]];
+
+    return Math.round(
+      base.reduce((sum: number, fee: any) => sum + this.financials.getFeeDebtValue(fee), 0)
+    );
+  }
+
   get overdueRegularCount(): number {
     return this.overdueRegularInstallments().length;
   }
@@ -916,6 +1184,35 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     return this.financials.activationThreshold(this.contractData);
   }
 
+  /** Transacciones cuyo reparto está desplegado en el historial. */
+  private expandedTransactionIds = new Set<number>();
+
+  hasAllocations(transaction: Transaction): boolean {
+    return (transaction.allocations?.length ?? 0) > 0;
+  }
+
+  isTransactionExpanded(transaction: Transaction): boolean {
+    return transaction.id != null && this.expandedTransactionIds.has(transaction.id);
+  }
+
+  toggleTransactionDetails(transaction: Transaction): void {
+    if (transaction.id == null) {
+      return;
+    }
+
+    if (this.expandedTransactionIds.has(transaction.id)) {
+      this.expandedTransactionIds.delete(transaction.id);
+    } else {
+      this.expandedTransactionIds.add(transaction.id);
+    }
+  }
+
+  transactionTypeLabel(transaction: Transaction): string {
+    return TRANSACTION_TYPE_LABELS[String(transaction.transaction_type)]
+      ?? String(transaction.transaction_type ?? '--');
+  }
+
+
   getFeeStatus(fee: any): string {
     return this.financials.getFeeStatus(fee, this.amortizationPlan, this.contractData);
   }
@@ -1001,11 +1298,48 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   });
 }
 
-  get initialPaymentTransactions(): any[] {
-    return (this.contractData?.transactions ?? []).filter((tx: any) => {
+  /**
+   * Abonos que tocaron la cuota inicial: down_payment puros y la parte a
+   * inicial de un pago mixto. El monto es lo que fue a la inicial, no el total
+   * que vio el banco.
+   */
+  get initialPaymentTransactions(): Array<{
+    id?: number;
+    transaction_date?: string | null;
+    payment_method?: string;
+    amount: number;
+    is_split: boolean;
+  }> {
+    type InitialPaymentRow = {
+      id?: number;
+      transaction_date?: string | null;
+      payment_method?: string;
+      amount: number;
+      is_split: boolean;
+    };
+
+    const rows: InitialPaymentRow[] = [];
+
+    for (const tx of (this.contractData?.transactions ?? []) as Transaction[]) {
+      const allocated = (Array.isArray(tx.allocations) ? tx.allocations : [])
+        .filter((allocation) => String(allocation.target ?? '').toLowerCase() === 'down_payment')
+        .reduce((sum, allocation) => sum + Number(allocation.amount || 0), 0);
       const type = String(tx.transaction_type ?? tx.type ?? '').toLowerCase();
-      return type === 'down_payment' || type === 'down-payment';
-    });
+      const isDown = type === 'down_payment' || type === 'down-payment';
+      const amount = allocated > 0 ? allocated : (isDown ? Number(tx.amount || 0) : 0);
+
+      if (amount > 0) {
+        rows.push({
+          id: tx.id,
+          transaction_date: tx.transaction_date,
+          payment_method: tx.payment_method,
+          amount,
+          is_split: allocated > 0 && !isDown,
+        });
+      }
+    }
+
+    return rows;
   }
 
   get overdueFees(): any[] {
@@ -1137,6 +1471,15 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       formData.append('payment_option', String(paymentOption));
     }
 
+    // Pago dividido: un solo movimiento bancario que cubre parte de la inicial
+    // y parte de la cuota del mes. Va por su propia ruta porque el reparto no
+    // se puede deducir del monto.
+    const split = paymentData.split;
+    if (split) {
+      formData.append('to_down_payment', String(split.to_down_payment ?? 0));
+      formData.append('to_installments', String(split.to_installments ?? 0));
+    }
+
     if (!this.isGeneralPaymentFlow && this.selectedFees.length) {
       this.selectedFees.forEach((fee: any) => {
         // El plan persistido siempre trae id; installment_number no se usa como fallback.
@@ -1153,7 +1496,11 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       formData.append('receipt', paymentData.receipt);
     }
 
-    this.recaudoService.registerPayment(this.contractId, formData, transactionType).subscribe({
+    const request = split
+      ? this.recaudoService.registerSplitPayment(this.contractId, formData)
+      : this.recaudoService.registerPayment(this.contractId, formData, transactionType);
+
+    request.subscribe({
       next: () => {
         this.isProcessingPayment = false;
         this.isDrawerOpen = false;
@@ -1162,7 +1509,9 @@ export class AmortizationComponent implements OnInit, OnDestroy {
         this.toast.show(
           'Pago registrado',
           'success',
-          'El abono se aplicó correctamente a la cuota seleccionada.',
+          split
+            ? 'Se registró un solo movimiento y quedó guardado el reparto entre cuota inicial y cuota regular.'
+            : 'El abono se aplicó correctamente a la cuota seleccionada.',
         );
         this.cdr.detectChanges();
 
@@ -1196,18 +1545,10 @@ export class AmortizationComponent implements OnInit, OnDestroy {
 
   private buildContractTitle(contract: any): string {
     const contractNumber = contract?.contract_number;
-    const number = contractNumber
+
+    return contractNumber
       ? String(contractNumber)
-      : `#${contract?.id || this.contractId}`;
-    const holders = contract?.customers?.length
-      ? contract.customers
-      : (contract?.customer ? [contract.customer] : []);
-    const customerName = holders
-      .map((holder: { name?: string; nombre?: string }) => holder.name || holder.nombre)
-      .filter(Boolean)
-      .sort((a: string, b: string) => a.localeCompare(b, 'es'))
-      .join(', ') || contract?.customer_name || '';
-    return customerName ? `Contrato ${number} — ${customerName}` : `Contrato ${number}`;
+      : `Contrato #${contract?.id || this.contractId}`;
   }
 
   getContractStatusLabel(status: string): string {

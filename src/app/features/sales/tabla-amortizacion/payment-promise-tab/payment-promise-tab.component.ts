@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PaymentPromise, PaymentPromiseStatus } from '../../../../core/models/payment-promise.model';
+import { PaymentSource } from '../../../../core/models/payment-source.model';
 
 @Component({
   selector: 'app-payment-promise-tab',
@@ -24,6 +25,7 @@ export class PaymentPromiseTabComponent {
   @Output() reorderPromises = new EventEmitter<Array<{ id: number; expected_date: string }>>();
 
   private dragIndex: number | null = null;
+  private expandedPromiseIds = new Set<number>();
 
   statusLabel(promise: PaymentPromise): string {
     const status = this.statusOf(promise);
@@ -53,6 +55,19 @@ export class PaymentPromiseTabComponent {
 
   isPaid(promise: PaymentPromise): boolean {
     return this.statusOf(promise) === 'pagada';
+  }
+
+  quotaDebt(promise: PaymentPromise): number {
+    if (this.isPaid(promise)) {
+      return 0;
+    }
+
+    const remaining = Number(promise.remaining_amount);
+    if (Number.isFinite(remaining)) {
+      return Math.max(0, remaining);
+    }
+
+    return Number(promise.expected_amount) || 0;
   }
 
   canDrag(promise: PaymentPromise): boolean {
@@ -117,6 +132,49 @@ export class PaymentPromiseTabComponent {
 
   onDragEnd(): void {
     this.dragIndex = null;
+  }
+
+  hasSources(promise: PaymentPromise): boolean {
+    return (promise.sources?.length ?? 0) > 0;
+  }
+
+  isDetailsExpanded(promise: PaymentPromise): boolean {
+    return this.expandedPromiseIds.has(promise.id);
+  }
+
+  toggleDetails(promise: PaymentPromise, event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (this.expandedPromiseIds.has(promise.id)) {
+      this.expandedPromiseIds.delete(promise.id);
+    } else {
+      this.expandedPromiseIds.add(promise.id);
+    }
+  }
+
+  coveredAmount(promise: PaymentPromise): number {
+    if (promise.covered_amount != null && promise.covered_amount !== '') {
+      return Number(promise.covered_amount);
+    }
+
+    return Math.max(0, Number(promise.expected_amount || 0) - this.quotaDebt(promise));
+  }
+
+  alsoAppliedLabel(source: PaymentSource): string {
+    const others = source.also_applied_to ?? [];
+    if (others.length === 0) {
+      return '';
+    }
+
+    return others
+      .map((item) => {
+        const dest = item.installment_number === 0
+          ? 'cuota inicial'
+          : (item.installment_number != null ? `${item.target_label}` : item.target_label);
+        return `${dest} ($ ${Number(item.amount || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 })})`;
+      })
+      .join(', ');
   }
 
   private statusOf(promise: PaymentPromise): PaymentPromiseStatus {

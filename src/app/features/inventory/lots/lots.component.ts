@@ -60,6 +60,8 @@ import {
 } from '../../../core/models/api-response';
 
 import { Lot } from '../../../core/models/lot.model';
+import { NavigationTrailService } from '../../../core/services/navigation-trail.service';
+import { lotsHub } from '../../../core/utils/navigation-trail';
 
 
 @Component({
@@ -93,6 +95,8 @@ export class LotsComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   private router = inject(Router);
+
+  private trail = inject(NavigationTrailService);
 
   private cdr = inject(ChangeDetectorRef);
 
@@ -1209,6 +1213,22 @@ export class LotsComponent implements OnInit {
       : {
           lotId: Number(lot.id)
         };
+  }
+
+
+  lotResumeState(
+    lot: {
+      id?: number;
+      contracts_count?: number;
+      contracts?: {
+        id?: number
+      }[]
+    }
+  ): Record<string, unknown> {
+
+    return this.singleContractId(lot)
+      ? this.trail.state([lotsHub()])
+      : {};
   }
 
 

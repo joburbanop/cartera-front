@@ -11,6 +11,7 @@ import { AmortizationInstallment } from '../../../core/models/amortization-insta
 import { AmortizationFinancialsService } from '../../../core/services/amortization-financials.service';
 import { AmortizationStatusLabelPipe } from '../../pipes/amortization-status-label.pipe';
 import { PaginationComponent } from '../pagination/pagination.component';
+import { PaymentSource } from '../../../core/models/payment-source.model';
 
 @Component({
   selector: 'app-amortization-table-presenter',
@@ -36,6 +37,7 @@ export class AmortizationTablePresenterComponent {
   selectedInstallments: any[] = [];
   pageSize = 10;
   currentPage = 1;
+  private expandedInstallmentIds = new Set<number>();
 
   get pagedInstallments(): any[] {
     const start = (this.currentPage - 1) * this.pageSize;
@@ -60,11 +62,22 @@ export class AmortizationTablePresenterComponent {
       return 'paid';
     }
 
+    if (status === 'partial' || this.hasIncompletePayment(fee)) {
+      return 'partial';
+    }
+
     if (status === 'overdue' || isVencida(fee?.due_date)) {
       return 'overdue';
     }
 
     return status;
+  }
+
+  private hasIncompletePayment(fee: any): boolean {
+    const debt = this.financials.getFeeDebtValue(fee);
+    const alreadyPaid = Number(fee?.interest_paid ?? 0) + Number(fee?.principal_paid ?? 0);
+
+    return debt > 0 && alreadyPaid > 0;
   }
 
   statusBadgeClass(fee: any): string {
@@ -204,5 +217,65 @@ export class AmortizationTablePresenterComponent {
     }
 
     this.editPaymentDate.emit(fee);
+  }
+
+  hasSources(fee: AmortizationInstallment): boolean {
+    return (fee.sources?.length ?? 0) > 0;
+  }
+
+  isDetailsExpanded(fee: AmortizationInstallment): boolean {
+    const id = this.sourceKey(fee);
+    return id != null && this.expandedInstallmentIds.has(id);
+  }
+
+  toggleDetails(fee: AmortizationInstallment, event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const id = this.sourceKey(fee);
+    if (id == null) {
+      return;
+    }
+
+    if (this.expandedInstallmentIds.has(id)) {
+      this.expandedInstallmentIds.delete(id);
+    } else {
+      this.expandedInstallmentIds.add(id);
+    }
+  }
+
+  coveredAmount(fee: AmortizationInstallment): number {
+    if (fee.covered_amount != null && fee.covered_amount !== '') {
+      return Number(fee.covered_amount);
+    }
+
+    return (fee.sources ?? []).reduce((sum, source) => sum + Number(source.amount || 0), 0);
+  }
+
+  remainingAmount(fee: AmortizationInstallment): number {
+    return this.financials.getFeeDebtValue(fee);
+  }
+
+  alsoAppliedLabel(source: PaymentSource): string {
+    const others = source.also_applied_to ?? [];
+    if (others.length === 0) {
+      return '';
+    }
+
+    return others
+      .map((item) => {
+        const dest = item.installment_number === 0
+          ? 'cuota inicial'
+          : (item.installment_number != null ? `cuota #${item.installment_number}` : item.target_label);
+        return `${dest} ($ ${Number(item.amount || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 })})`;
+      })
+      .join(', ');
+  }
+
+  private sourceKey(fee: AmortizationInstallment): number | null {
+    if (fee.id != null) {
+      return Number(fee.id);
+    }
+
+    return fee.installment_number != null ? Number(fee.installment_number) : null;
   }
 }

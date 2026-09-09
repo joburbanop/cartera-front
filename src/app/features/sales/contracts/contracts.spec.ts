@@ -6,6 +6,8 @@ import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angul
 import { of } from 'rxjs';
 
 import { ContractsComponent } from './contracts.component';
+import { NavigationTrailService } from '../../../core/services/navigation-trail.service';
+import { PageTitleService } from '../../../core/services/page-title.service';
 
 describe('ContractsComponent', () => {
   let component: ContractsComponent;
@@ -359,6 +361,49 @@ describe('ContractsComponent', () => {
     expect(req.request.params.get('customer')).toBeNull();
     req.flush({ data: { data: [], total: 1, current_page: 1, last_page: 1, per_page: 100 } });
   });
+
+  it('al abrir amortización desde el lote lleva el rastro de cuatro niveles', () => {
+    component.selectedLotId = 12;
+    component.selectedLot = { number: '49' };
+    TestBed.inject(PageTitleService).set('Lote 49');
+
+    expect(component.amortizationNavState()).toEqual(
+      TestBed.inject(NavigationTrailService).state([
+        { label: 'Lotes', url: '/lots' },
+        { label: 'Lote 49', url: '/contracts', queryParams: { lotId: 12 } },
+      ]),
+    );
+
+    component.selectedLotId = null;
+    expect(component.amortizationNavState()).toEqual(
+      TestBed.inject(NavigationTrailService).state([{ label: 'Contratos', url: '/contracts' }]),
+    );
+  });
+
+  it('con plazo de 6 meses deja la tasa en 0 en el formulario, preview y POST', () => {
+    component.openModal();
+    fixture.detectChanges();
+    component.contractForm.controls.sale_price.setValue(8000000 as never);
+    component.contractForm.controls.down_payment_pactada.setValue(2000000 as never);
+    component.contractForm.controls.interest_rate.setValue(1);
+    component.contractForm.controls.term_months.setValue(6 as never);
+    fixture.detectChanges();
+
+    expect(component.contractForm.controls.interest_rate.value).toBe(0);
+    expect(component.effectiveInterestRate(6, 1)).toBe(0);
+    expect(component.projectedQuota).toBe(1000000);
+  });
+
+  it('con plazo de 13 meses conserva la tasa del formulario', () => {
+    component.openModal();
+    fixture.detectChanges();
+    component.contractForm.controls.interest_rate.setValue(1);
+    component.contractForm.controls.term_months.setValue(13 as never);
+    fixture.detectChanges();
+
+    expect(component.contractForm.controls.interest_rate.value).toBe(1);
+    expect(component.effectiveInterestRate(13, 1)).toBe(1);
+  });
 });
 
 describe('ContractsComponent hoja de vida', () => {
@@ -426,6 +471,7 @@ describe('ContractsComponent hoja de vida', () => {
     expect(fixture.nativeElement.textContent).toContain('Precio de lista');
     expect(fixture.nativeElement.textContent).toContain('Total recaudado');
     expect(fixture.nativeElement.textContent).toContain('Saldo pendiente');
+    expect(fixture.nativeElement.querySelector('tr.clickable-row')).toBeTruthy();
   });
 });
 

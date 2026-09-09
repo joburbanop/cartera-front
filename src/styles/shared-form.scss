@@ -50,8 +50,8 @@
 
   &:focus {
     outline: none;
-    border-color: #347769;
-    box-shadow: 0 0 0 3px rgba(52, 119, 105, 0.1);
+    border-color: var(--brand-primary-text);
+    box-shadow: 0 0 0 3px rgba(var(--brand-primary-rgb), 0.1);
   }
 
   &:read-only,
@@ -200,8 +200,8 @@ html body select:not([multiple]) {
     color: #334155;
 
     &.active {
-      background: #347769;
-      color: #ffffff;
+      background: var(--brand-primary);
+      color: var(--brand-on-primary);
     }
   }
 }

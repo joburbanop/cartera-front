@@ -1,3 +1,5 @@
+import { PaymentSource } from './payment-source.model';
+
 export interface AmortizationInstallment {
   id?: number;
   contract_id?: number;
@@ -18,4 +20,6 @@ export interface AmortizationInstallment {
   status?: string;
   overdue_balance?: number;
   amount_paid?: number;
+  sources?: PaymentSource[];
+  covered_amount?: number | string;
 }

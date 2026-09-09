@@ -74,8 +74,8 @@
 }
 
 .option-card--active {
-  border-color: #2f7262;
-  background: #f0fdf9;
+  border-color: var(--brand-primary-edge);
+  background: var(--brand-primary-mist);
 }
 
 .option-card strong {
@@ -168,7 +168,7 @@
 }
 
 .summary-row--quota strong {
-  color: #1d4ed8;
+  color: var(--brand-link);
   font-size: 1.05rem;
 }
 
@@ -208,9 +208,9 @@
 }
 
 .btn-save {
-  border: 1px solid #2f7262;
-  background: #347769;
-  color: #ffffff;
+  border: 1px solid var(--brand-primary-edge);
+  background: var(--brand-primary);
+  color: var(--brand-on-primary);
   border-radius: 8px;
   padding: 0.55rem 0.95rem;
   font-weight: 700;

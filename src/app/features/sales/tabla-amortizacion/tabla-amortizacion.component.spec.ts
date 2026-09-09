@@ -1,6 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { of, throwError, Observable } from 'rxjs';
+import { signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+
+import { CDK_DRAG_CONFIG } from '@angular/cdk/drag-drop';
 
 import { AmortizationComponent } from './tabla-amortizacion.component';
 import { AppRoles } from '../../../core/models/app-roles';
@@ -12,7 +15,11 @@ import { RecaudoService } from '../../../core/services/recaudo.service';
 import { PaymentPromiseService } from '../../../core/services/payment-promise.service';
 import { ActivityService } from '../../../core/services/activity.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { NavigationTrailService } from '../../../core/services/navigation-trail.service';
+import { PageTitleService } from '../../../core/services/page-title.service';
 import { ToastService } from '../../../shared/services/toast.service';
+import { DEFAULT_CONTRACT_TAB_IDS } from '../../../core/utils/contract-tabs';
+import { lotContractsHub, lotsHub } from '../../../core/utils/navigation-trail';
 
 describe('AmortizationComponent', () => {
   let component: AmortizationComponent;
@@ -23,6 +30,7 @@ describe('AmortizationComponent', () => {
     formData: FormData;
     transactionType: string;
   } | null = null;
+  let lastSplitPaymentArgs: { contractId: number; formData: FormData } | null = null;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -76,7 +84,9 @@ describe('AmortizationComponent', () => {
   beforeEach(async () => {
     const amortizationServiceMock = {
       getPlan: () => of({ data: [] }),
+      getLifeSheet: () => of({ data: undefined }),
       downloadPdf: () => of(new Blob()),
+      downloadLifeSheetPdf: () => of(new Blob()),
       generatePlan: () => of({}),
       refinanceContract: () => of({}),
       updateInstallmentDueDate: () => of({}),
@@ -98,6 +108,10 @@ describe('AmortizationComponent', () => {
         lastRegisterPaymentArgs = { contractId, formData, transactionType };
         return registerPaymentResult;
       },
+      registerSplitPayment: (contractId: number, formData: FormData) => {
+        lastSplitPaymentArgs = { contractId, formData };
+        return registerPaymentResult;
+      },
       getTransactionsByContract: () => of({ data: [] }),
       getAllTransactions: () => of({ data: [] }),
     } as Partial<RecaudoService> as RecaudoService;
@@ -115,10 +129,16 @@ describe('AmortizationComponent', () => {
       hasRole: () => true,
       getRole: () => 'administrador',
       isLoggedIn: () => true,
-    } as Partial<AuthService> as AuthService;
+      uiPreferences: signal({ contractTabs: [...DEFAULT_CONTRACT_TAB_IDS] }),
+      uiPreferencesReady: signal(true),
+      contractTabOrder: () => [...DEFAULT_CONTRACT_TAB_IDS],
+      updateContractTabs: () => of(undefined),
+      resetContractTabs: () => of(undefined),
+    } as unknown as AuthService;
 
     const routerMock = {
       navigate: () => Promise.resolve(true),
+      url: '/amortization/1',
     } as Partial<Router> as Router;
 
     await TestBed.configureTestingModule({
@@ -147,6 +167,7 @@ describe('AmortizationComponent', () => {
 
     registerPaymentResult = of({});
     lastRegisterPaymentArgs = null;
+    lastSplitPaymentArgs = null;
 
     component.contractData = {
       status: 'activo',
@@ -254,6 +275,98 @@ describe('AmortizationComponent', () => {
     expect(toasts.length).toBe(1);
     expect(toasts[0].type).toBe('success');
     expect(toasts[0].title).toBe('Pago registrado');
+  });
+
+  it('Un pago dividido va a la ruta de reparto con las dos partes', () => {
+    component.contractId = 1;
+    component.selectedFees = [];
+    vi.spyOn(component, 'cargarTablaAmortizacion').mockImplementation(() => undefined);
+    vi.spyOn(component, 'loadContractData').mockImplementation(() => undefined);
+
+    component.procesarPago({
+      amount: 2100000,
+      payment_method: 'transfer',
+      transaction_date: '2026-08-30',
+      receipt: new Blob(),
+      split: { to_down_payment: 200000, to_installments: 1900000 },
+    });
+
+    // El pago normal no se dispara: el reparto necesita su propio endpoint.
+    expect(lastRegisterPaymentArgs).toBeNull();
+    expect(lastSplitPaymentArgs).not.toBeNull();
+    expect(lastSplitPaymentArgs!.formData.get('amount')).toBe('2100000');
+    expect(lastSplitPaymentArgs!.formData.get('to_down_payment')).toBe('200000');
+    expect(lastSplitPaymentArgs!.formData.get('to_installments')).toBe('1900000');
+  });
+
+  it('Un pago sin reparto sigue por la ruta de siempre', () => {
+    component.contractId = 1;
+    component.selectedFees = [{ ...cuota3 }];
+    vi.spyOn(component, 'cargarTablaAmortizacion').mockImplementation(() => undefined);
+    vi.spyOn(component, 'loadContractData').mockImplementation(() => undefined);
+
+    component.procesarPago({
+      amount: 1000000,
+      payment_method: 'transfer',
+      transaction_date: '2026-08-30',
+      receipt: new Blob(),
+      split: null,
+    });
+
+    expect(lastSplitPaymentArgs).toBeNull();
+    expect(lastRegisterPaymentArgs).not.toBeNull();
+    expect(lastRegisterPaymentArgs!.formData.get('to_down_payment')).toBeNull();
+  });
+
+  it('El historial despliega el reparto de un pago dividido', () => {
+    const split = {
+      id: 77,
+      transaction_type: 'pago_mixto',
+      amount: 2100000,
+      allocations: [
+        { target: 'down_payment', target_label: 'Cuota inicial', installment_number: null, amount: 200000, principal: 200000, interest: 0 },
+        { target: 'installment', target_label: 'Cuota regular', installment_number: 1, amount: 1900000, principal: 1000000, interest: 900000 },
+      ],
+    } as any;
+
+    expect(component.hasAllocations(split)).toBe(true);
+    expect(component.transactionTypeLabel(split)).toBe('Inicial + cuota');
+    expect(component.isTransactionExpanded(split)).toBe(false);
+
+    component.toggleTransactionDetails(split);
+    expect(component.isTransactionExpanded(split)).toBe(true);
+
+    component.toggleTransactionDetails(split);
+    expect(component.isTransactionExpanded(split)).toBe(false);
+
+    // Un pago de un solo destino no ofrece desglose.
+    expect(component.hasAllocations({ id: 78, allocations: [] } as any)).toBe(false);
+  });
+
+  it('Preventa lista la parte a inicial de un pago mixto, no el total del banco', () => {
+    component.contractData = {
+      transactions: [
+        { id: 1, transaction_type: 'down_payment', amount: 10500000, transaction_date: '2026-01-05', payment_method: 'cash' },
+        {
+          id: 2,
+          transaction_type: 'pago_mixto',
+          amount: 5577970,
+          transaction_date: '2026-09-09',
+          payment_method: 'cash',
+          allocations: [
+            { target: 'down_payment', target_label: 'Cuota inicial', installment_number: 0, amount: 3000000, principal: 3000000, interest: 0 },
+            { target: 'installment', target_label: 'Cuota regular', installment_number: 1, amount: 2577970, principal: 1130952.7, interest: 1447017.3 },
+          ],
+        },
+      ],
+    } as any;
+
+    const rows = component.initialPaymentTransactions;
+    expect(rows.length).toBe(2);
+    expect(rows[0].amount).toBe(10500000);
+    expect(rows[0].is_split).toBe(false);
+    expect(rows[1].amount).toBe(3000000);
+    expect(rows[1].is_split).toBe(true);
   });
 
   it('Debe registrar un toast de error en el servicio si el pago falla', () => {
@@ -580,12 +693,13 @@ describe('AmortizationComponent', () => {
     const text = fixture.nativeElement.textContent as string;
     expect(instance.isSpecialLot).toBe(true);
     expect(instance.currentView).toBe('preventa');
-    expect(instance.showAmortizationTabBar).toBe(false);
+    expect(instance.showAmortizationTabBar).toBe(true);
     expect(text).not.toContain('Refinanciar');
     expect(text).toContain('Desistimiento');
     expect(fixture.nativeElement.querySelector('.view-switch')).toBeNull();
     expect(fixture.nativeElement.querySelector('.top-nav-action-btn--pay')).toBeNull();
     expect(text).toContain('Seguimiento de Abonos');
+    expect(text).toContain('Hoja de vida');
     expect(text).not.toContain('Amortización Financiera');
     expect(text).toContain('Lote Especial · Preventa');
     expect(text).toContain('+ Registrar abono');
@@ -612,6 +726,7 @@ describe('AmortizationComponent', () => {
     expect(text).toContain('Venta');
     expect(text).toContain('Preventa');
     expect(text).toContain('Amortización Financiera');
+    expect(text).toContain('Hoja de vida');
     expect(text).not.toContain('Seguimiento de Abonos');
     expect(text).not.toContain('Lote Especial ·');
     expect(fixture.nativeElement.querySelector('.view-switch')).toBeTruthy();
@@ -619,14 +734,65 @@ describe('AmortizationComponent', () => {
     expect(fixture.nativeElement.querySelector('.btn-refinance')).toBeTruthy();
   });
 
+  it('en la pestaña de amortización muestra la brecha entre criterios', () => {
+    const fixture = TestBed.createComponent(AmortizationComponent);
+    const instance = fixture.componentInstance;
+    instance.isLoading = false;
+    instance.activeTab = 'amortizacion';
+    instance.lifeSheet = {
+      header: {
+        lot_number: '49',
+        sale_price: '122148000.00',
+        financed_value: '158938999.00',
+        financed_value_basis: 'french_pmt',
+        area_m2: null,
+        price_m2: null,
+        down_payment: '12214800.00',
+        monthly_quota: '2445403.00',
+        customer_name: 'Cliente Demo',
+        document_number: null,
+        address: null,
+        email: null,
+        phone: null,
+        term_months: 60,
+        seller_name: null,
+        is_special_lot: false,
+        is_custom_plan: false,
+        note: 'Saldo calculado sobre el valor total del plan.',
+      },
+      rows: [],
+      summary: {
+        collected: '0.00',
+        interest_paid: '0.00',
+        principal_paid: '0.00',
+        unimputed: '0.00',
+        life_sheet_balance: '157938999.00',
+        outstanding_capital: '121148000.00',
+        criteria_gap: '36790999.00',
+        criteria_gap_label: 'Brecha entre criterios',
+        criteria_gap_hint: 'Saldo de la hoja de vida − capital insoluto.',
+        amortization_note: 'Saldo de capital del plan francés.',
+        life_sheet_note: 'Saldo calculado sobre el valor total del plan.',
+      },
+    };
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('Saldo de capital del plan francés.');
+    expect(text).toContain('Brecha entre criterios');
+    expect(text).toContain('capital insoluto');
+  });
+
   it('con plan vacío muestra el aviso y no genera automáticamente', () => {
     const getPlanSpy = vi.spyOn(component['amortizationService'], 'getPlan').mockReturnValue(of({ data: [] }));
+    const getLifeSheetSpy = vi.spyOn(component['amortizationService'], 'getLifeSheet').mockReturnValue(of({ data: undefined }));
     const generatePlanSpy = vi.spyOn(component['amortizationService'], 'generatePlan').mockReturnValue(of({}));
 
     component.contractId = 42;
     component.loadAmortizationPlan();
 
     expect(getPlanSpy).toHaveBeenCalledTimes(1);
+    expect(getLifeSheetSpy).toHaveBeenCalledTimes(1);
     expect(generatePlanSpy).not.toHaveBeenCalled();
     expect(component.amortizationPlan).toEqual([]);
     expect(component.isLoading).toBe(false);
@@ -663,5 +829,86 @@ describe('AmortizationComponent', () => {
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('Este contrato aún no tiene tabla de amortización');
     expect(text).toContain('Generar Tabla Definitiva');
+  });
+
+  it('respeta el orden guardado y oculta pestañas que no aplican', () => {
+    const auth = TestBed.inject(AuthService);
+    vi.spyOn(auth, 'hasRole').mockImplementation((role) => role === AppRoles.ADMINISTRADOR);
+    vi.spyOn(auth, 'contractTabOrder').mockReturnValue([
+      'hoja-vida',
+      'bitacora-contrato',
+      'promesa',
+      'amortizacion',
+      'bitacora-cliente',
+    ]);
+
+    const fixture = TestBed.createComponent(AmortizationComponent);
+    fixture.componentInstance.contractData = {
+      status: 'activo',
+      customer_id: 7,
+      transactions: [],
+      down_payment_pactada: 2000000,
+    };
+    fixture.componentInstance.isLoading = false;
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.orderedTabs.map((tab) => tab.id)).toEqual([
+      'hoja-vida',
+      'bitacora-contrato',
+      'amortizacion',
+    ]);
+    expect(fixture.nativeElement.textContent).toContain('Restablecer orden');
+    expect(fixture.nativeElement.textContent).not.toContain('Bitácora del cliente');
+  });
+
+  it('con Alt y flecha reordena la pestaña enfocada', () => {
+    const auth = TestBed.inject(AuthService);
+    const update = vi.spyOn(auth, 'updateContractTabs').mockReturnValue(of(undefined));
+    const fixture = TestBed.createComponent(AmortizationComponent);
+    fixture.componentInstance.contractData = {
+      status: 'activo',
+      customer_id: 7,
+      transactions: [],
+      down_payment_pactada: 2000000,
+    };
+    fixture.componentInstance.isLoading = false;
+    fixture.detectChanges();
+
+    fixture.componentInstance.onTabKeydown(
+      new KeyboardEvent('keydown', { key: 'ArrowRight', altKey: true }),
+      0,
+    );
+
+    expect(update).toHaveBeenCalledWith([
+      'hoja-vida',
+      'amortizacion',
+      'promesa',
+      'bitacora-contrato',
+      'bitacora-cliente',
+    ]);
+  });
+
+  it('arranca el arrastre al primer pixel para que la pestaña siga el cursor', () => {
+    const fixture = TestBed.createComponent(AmortizationComponent);
+    const config = fixture.debugElement.injector.get(CDK_DRAG_CONFIG);
+
+    expect(config.dragStartThreshold).toBe(1);
+    expect(config.zIndex).toBe(40);
+    expect(config.previewClass).toBe('contract-tab-preview');
+  });
+
+  it('el botón volver sigue el penúltimo segmento de la miga', () => {
+    const fixture = TestBed.createComponent(AmortizationComponent);
+    const trail = TestBed.inject(NavigationTrailService);
+    TestBed.inject(PageTitleService).set('SM-LOTE-49');
+    trail.capture(trail.state([lotsHub(), lotContractsHub(12, 'Lote 49')]));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.backCrumb()).toEqual({
+      label: 'Lote 49',
+      url: '/contracts',
+      queryParams: { lotId: 12 },
+    });
+    expect(fixture.nativeElement.textContent).toContain('Volver a Lote 49');
   });
 });

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { ActivityEntry } from '../../../core/models/activity-entry.model';
@@ -6,6 +6,9 @@ import { AppRoles } from '../../../core/models/app-roles';
 import { ActivityService } from '../../../core/services/activity.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { CustomerDetail, CustomerService } from '../../../core/services/customer.service';
+import { PageTitleService } from '../../../core/services/page-title.service';
+import { NavigationTrailService } from '../../../core/services/navigation-trail.service';
+import { clientHub, clientesHub } from '../../../core/utils/navigation-trail';
 import { unwrapPaginator } from '../../../core/models/api-response';
 import { Contract } from '../../../core/models/contract.model';
 import { BitacoraComponent } from '../../../shared/components/bitacora/bitacora.component';
@@ -19,11 +22,13 @@ import { ContractStatusLabelPipe } from '../../../shared/pipes/contract-status-l
   templateUrl: './client-detail.component.html',
   styleUrl: './client-detail.component.scss',
 })
-export class ClientDetailComponent implements OnInit {
+export class ClientDetailComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private customerService = inject(CustomerService);
   private activityService = inject(ActivityService);
   private authService = inject(AuthService);
+  private pageTitle = inject(PageTitleService);
+  private trail = inject(NavigationTrailService);
   private cdr = inject(ChangeDetectorRef);
 
   customer: CustomerDetail | null = null;
@@ -57,6 +62,7 @@ export class ClientDetailComponent implements OnInit {
             : response;
 
         this.customer = (payload ?? null) as CustomerDetail | null;
+        this.pageTitle.set(this.displayName);
         this.isLoading = false;
         this.loadActivity();
         this.cdr.detectChanges();
@@ -70,6 +76,10 @@ export class ClientDetailComponent implements OnInit {
         this.cdr.detectChanges();
       },
     });
+  }
+
+  ngOnDestroy(): void {
+    this.pageTitle.clear();
   }
 
   loadActivity(): void {
@@ -102,6 +112,11 @@ export class ClientDetailComponent implements OnInit {
 
   get displayName(): string {
     return this.customer?.nombre || this.customer?.name || 'Cliente';
+  }
+
+  amortizationNavState(): Record<string, unknown> {
+    const id = Number(this.customer?.id ?? this.route.snapshot.paramMap.get('id'));
+    return this.trail.state([clientesHub(), clientHub(id, this.displayName)]);
   }
 
   get documentLabel(): string {

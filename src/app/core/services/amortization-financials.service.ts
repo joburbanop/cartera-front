@@ -85,17 +85,26 @@ export class AmortizationFinancialsService {
   }
 
   initialFeePaid(plan: AmortizationInstallment[] = [], contractData?: Contract | null): number {
-    const transactions = contractData?.transactions ?? [];
+    const transactions = Array.isArray(contractData?.transactions) ? contractData.transactions : [];
 
-    const downPaymentTotal = (Array.isArray(transactions) ? transactions : [])
-      .filter((tx: Transaction) => {
-        const type = String(tx.transaction_type ?? tx.type ?? '').toLowerCase();
-        return type === 'down_payment' || type === 'down-payment';
-      })
-      .reduce((sum: number, tx: Transaction) => sum + Number(tx.amount || 0), 0);
+    const collected = transactions.reduce((sum: number, tx: Transaction) => {
+      const allocated = (Array.isArray(tx.allocations) ? tx.allocations : [])
+        .filter((allocation) => String(allocation.target ?? '').toLowerCase() === 'down_payment')
+        .reduce((inner, allocation) => inner + Number(allocation.amount || 0), 0);
 
-    if (downPaymentTotal > 0) {
-      return downPaymentTotal;
+      if (allocated > 0) {
+        return sum + allocated;
+      }
+
+      const type = String(tx.transaction_type ?? tx.type ?? '').toLowerCase();
+      if (type === 'down_payment' || type === 'down-payment') {
+        return sum + Number(tx.amount || 0);
+      }
+
+      return sum;
+    }, 0);
+    if (collected > 0) {
+      return collected;
     }
 
     const fee = this.initialFee(plan, contractData);

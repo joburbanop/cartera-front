@@ -8,6 +8,83 @@
   --motion-flash: 1000ms;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+  /*
+   * Marca. Un solo sitio: cambiar estos valores cambia botones, focos,
+   * pestañas y tintes. --brand-primary es el relleno; --brand-primary-text
+   * es el color sobre fondos claros (pueden divergir cuando el relleno no
+   * tenga contraste suficiente como texto).
+   */
+  --naranja-50: #fef4ef;
+  --naranja-100: #fbdcc9;
+  --naranja-500: #ed7337;
+  --naranja-600: #c2410c;
+  --naranja-700: #9a3412;
+  --naranja-900: #622916;
+
+  --azul-50: #eff8fe;
+  --azul-400: #37b0ed;
+  --azul-600: #0369a1;
+  --azul-700: #075985;
+
+  --tinta: #0f172a;
+  --gris-600: #475569;
+  --gris-400: #94a3b8;
+  --gris-300: #cbd5e1;
+  --gris-100: #f1f5f9;
+  --gris-50: #f8fafc;
+
+  --brand-primary: var(--naranja-500);
+  --brand-primary-text: var(--naranja-600);
+  --brand-primary-hover: var(--naranja-700);
+  --brand-primary-soft: var(--naranja-50);
+  --brand-primary-border: var(--naranja-100);
+  --brand-primary-mid: var(--naranja-600);
+  --brand-primary-deep: var(--naranja-900);
+  --brand-primary-bright: #f4a06a;
+  --brand-primary-ink: var(--naranja-900);
+  --brand-primary-alt: var(--naranja-700);
+  --brand-primary-spin: var(--naranja-600);
+  --brand-primary-edge: var(--naranja-600);
+  --brand-primary-lift: #f08a54;
+  --brand-primary-lift-end: var(--naranja-600);
+  --brand-primary-mist: var(--naranja-50);
+  --brand-link: var(--azul-600);
+  --brand-link-hover: var(--azul-700);
+  --brand-link-soft: var(--azul-50);
+  --brand-accent: var(--azul-400);
+  --brand-glow-rgb: 237, 115, 55;
+  --brand-hero-0: var(--naranja-600);
+  --brand-hero-1: var(--naranja-700);
+  --brand-hero-2: #7c2d12;
+  --brand-hero-3: #431407;
+  --brand-on-hero: #ffffff;
+  --brand-on-primary: var(--tinta);
+  --brand-primary-rgb: 237, 115, 55;
+
+  /* Estados de inventario: propios, no prestados de la marca. */
+  --status-sold-bg: #22544a;
+  --status-sold-fg: #ffffff;
+  --status-reserved-bg: #ecfdf5;
+  --status-reserved-fg: #0f766e;
+  --status-reserved-border: #99f6e4;
+  --status-presale-fg: #a16207;
+  --status-presale-bg: #fff7ed;
+  --status-presale-border: #fed7aa;
+
+  /* Cartera y semántica genérica. */
+  --status-current-fg: #047857;
+  --status-current-bg: #ecfdf5;
+  --status-current-border: #a7f3d0;
+  --status-overdue-fg: #b91c1c;
+  --status-overdue-bg: #fef2f2;
+  --status-overdue-border: #fecaca;
+  --status-info-fg: #6d28d9;
+  --status-info-bg: #f5f3ff;
+  --status-info-border: #ddd6fe;
+  --status-warning-fg: #b45309;
+  --status-warning-bg: #fff7ed;
+  --status-warning-border: #fed7aa;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -39,7 +116,7 @@
 
 @keyframes row-flash {
   from {
-    background-color: rgba(52, 119, 105, 0.16);
+    background-color: rgba(var(--brand-primary-rgb), 0.16);
   }
   to {
     background-color: transparent;
@@ -109,8 +186,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #347769;
-  color: #ffffff;
+  background: var(--brand-primary);
+  color: var(--brand-on-primary);
   border: none;
   border-radius: 10px;
   padding: 0.7rem 1.2rem;
@@ -118,15 +195,16 @@
   font-size: 0.92rem;
   cursor: pointer;
   text-decoration: none;
-  box-shadow: 0 8px 18px rgba(52, 119, 105, 0.22);
+  box-shadow: 0 8px 18px rgba(var(--brand-primary-rgb), 0.22);
   transition:
     background var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
     opacity var(--motion-fast) var(--ease-out),
     transform var(--motion-fast) var(--ease-out),
     box-shadow var(--motion-fast) var(--ease-out);
 
   &:hover:not(:disabled) {
-    background: #22544a;
+    background: var(--brand-primary-hover);
   }
 
   &:active:not(:disabled) {
@@ -189,12 +267,12 @@
     transition: color var(--motion-enter) var(--ease-out), border-color var(--motion-enter) var(--ease-out);
 
     &:hover {
-      color: #347769;
+      color: var(--brand-primary-text);
     }
 
     &.active {
-      color: #347769;
-      border-bottom-color: #347769;
+      color: var(--brand-primary-text);
+      border-bottom-color: var(--brand-primary);
     }
   }
 }
@@ -225,8 +303,8 @@
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: #eef7f5;
-  color: #347769;
+  background: var(--brand-primary-soft);
+  color: var(--brand-primary-text);
 
   svg {
     width: 22px;
@@ -251,34 +329,34 @@
 
 .kpi-card--danger {
   .kpi-card__icon {
-    background: #fef2f2;
-    color: #b91c1c;
+    background: var(--status-overdue-bg);
+    color: var(--status-overdue-fg);
   }
 
   .kpi-card__value {
-    color: #b91c1c;
+    color: var(--status-overdue-fg);
   }
 }
 
 .kpi-card--success {
   .kpi-card__icon {
-    background: #ecfdf5;
-    color: #047857;
+    background: var(--status-current-bg);
+    color: var(--status-current-fg);
   }
 
   .kpi-card__value {
-    color: #047857;
+    color: var(--status-current-fg);
   }
 }
 
 .kpi-card--warning {
   .kpi-card__icon {
-    background: #fff7ed;
-    color: #b45309;
+    background: var(--status-warning-bg);
+    color: var(--status-warning-fg);
   }
 
   .kpi-card__value {
-    color: #b45309;
+    color: var(--status-warning-fg);
   }
 }
 
@@ -314,15 +392,21 @@
 }
 
 .badge-pill--success {
-  background: #ecfdf5;
-  color: #047857;
-  border-color: #a7f3d0;
+  background: var(--status-current-bg);
+  color: var(--status-current-fg);
+  border-color: var(--status-current-border);
 }
 
 .badge-pill--warning {
-  background: #fff7ed;
-  color: #b45309;
-  border-color: #fed7aa;
+  background: var(--status-warning-bg);
+  color: var(--status-warning-fg);
+  border-color: var(--status-warning-border);
+}
+
+.badge-pill--presale {
+  background: var(--status-presale-bg);
+  color: var(--status-presale-fg);
+  border-color: var(--status-presale-border);
 }
 
 .badge-pill--neutral,
@@ -333,27 +417,27 @@
 }
 
 .badge-pill--danger {
-  background: #fef2f2;
-  color: #b91c1c;
-  border-color: #fecaca;
+  background: var(--status-overdue-bg);
+  color: var(--status-overdue-fg);
+  border-color: var(--status-overdue-border);
 }
 
 .badge-pill--accent {
-  background: #eef7f5;
-  color: #347769;
-  border-color: #b7d4cd;
+  background: var(--status-reserved-bg);
+  color: var(--status-reserved-fg);
+  border-color: var(--status-reserved-border);
 }
 
 .badge-pill--sold {
-  background: #22544a;
-  color: #ffffff;
-  border-color: #22544a;
+  background: var(--status-sold-bg);
+  color: var(--status-sold-fg);
+  border-color: var(--status-sold-bg);
 }
 
 .badge-pill--info {
-  background: #e0f2fe;
-  color: #0284c7;
-  border-color: #bae6fd;
+  background: var(--status-info-bg);
+  color: var(--status-info-fg);
+  border-color: var(--status-info-border);
 }
 
 .action-buttons,
@@ -404,11 +488,11 @@
   justify-content: center;
   flex-shrink: 0;
   border-radius: 50%;
-  background: #eef7f5;
-  color: #347769;
+  background: var(--brand-primary-soft);
+  color: var(--brand-primary-text);
   font-weight: 700;
   letter-spacing: 0.04em;
-  border: 1px solid rgba(52, 119, 105, 0.2);
+  border: 1px solid rgba(var(--brand-primary-rgb), 0.2);
   text-transform: uppercase;
 }
 
@@ -500,6 +584,10 @@
     transition: background var(--motion-fast) var(--ease-out);
   }
 
+  tbody tr.clickable-row {
+    cursor: pointer;
+  }
+
   tbody tr:hover:not(.empty-row) {
     background: #f8fafc;
   }
@@ -536,9 +624,9 @@
     transform var(--motion-fast) var(--ease-out);
 
   &:hover:not(:disabled) {
-    background: #eef7f5;
-    color: #347769;
-    border-color: #347769;
+    background: var(--brand-primary-soft);
+    color: var(--brand-primary-text);
+    border-color: var(--brand-primary-text);
   }
 
   &:active:not(:disabled) {

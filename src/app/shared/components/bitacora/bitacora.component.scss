@@ -84,8 +84,8 @@
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: #eef7f5;
-  color: #347769;
+  background: var(--brand-primary-soft);
+  color: var(--brand-primary-text);
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
 
   svg {
@@ -104,8 +104,8 @@
   }
 
   &--creacion {
-    background: #eef7f5;
-    color: #347769;
+    background: var(--brand-primary-soft);
+    color: var(--brand-primary-text);
   }
 
   &--edicion {
@@ -168,7 +168,7 @@
 
 .bitacora-details summary {
   cursor: pointer;
-  color: #347769;
+  color: var(--brand-primary-text);
   font-size: 0.82rem;
   font-weight: 700;
   list-style: none;

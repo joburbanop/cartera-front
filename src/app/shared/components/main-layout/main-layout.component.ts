@@ -1,17 +1,14 @@
-import { Component, ElementRef, OnInit, ViewChild, computed, effect, inject } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, RouterOutlet, Router, NavigationEnd, ActivatedRoute } from '@angular/router';
+import { RouterModule, RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { AuthService } from '../../../core/services/auth.service';
+import { NavigationTrailService } from '../../../core/services/navigation-trail.service';
 import { PageTitleService } from '../../../core/services/page-title.service';
 import { AppRoles, roleDisplayName } from '../../../core/models/app-roles';
 import { ToastComponent } from '../toast/toast.component';
 import { GlobalSearchComponent } from '../global-search/global-search.component';
-
-interface Breadcrumb {
-  label: string;
-  url: string;
-}
+import { AppBreadcrumb, buildAppBreadcrumbs } from '../../../core/utils/breadcrumbs';
 
 @Component({
   selector: 'app-main-layout',
@@ -25,14 +22,14 @@ export class MainLayoutComponent implements OnInit {
 
   private authService = inject(AuthService);
   private pageTitle = inject(PageTitleService);
+  private trail = inject(NavigationTrailService);
   private router = inject(Router);
-  private activatedRoute = inject(ActivatedRoute);
 
-  breadcrumbs: Breadcrumb[] = [];
   isCollapsed = false;
   isMobileMenuOpen = false;
   isResizing = false;
   sidebarWidth = 260;
+  private readonly currentUrl = signal(this.router.url);
 
   private readonly collapsedSidebarKey = 'sidebar_collapsed';
   private readonly sidebarWidthKey = 'sidebar_width';
@@ -41,33 +38,23 @@ export class MainLayoutComponent implements OnInit {
   private resizeMoveListener?: (event: MouseEvent) => void;
   private resizeStopListener?: () => void;
 
-  private routeLabels: Record<string, string> = {
-    'dashboard': 'Dashboard',
-    'projects': 'Proyectos',
-    'lots': 'Lotes',
-    'clientes': 'Clientes',
-    'usuarios': 'Usuarios',
-    'bank-accounts': 'Cuentas bancarias',
-    'contracts': 'Contratos'
-  };
-
-  constructor() {
-    effect(() => {
-      this.pageTitle.title();
-      this.breadcrumbs = this.buildBreadcrumbs();
-    });
-  }
+  readonly breadcrumbs = computed(() => {
+    this.currentUrl();
+    this.pageTitle.title();
+    this.trail.hubs();
+    return this.buildBreadcrumbs(this.currentUrl());
+  });
 
   ngOnInit() {
     this.authService.ensureProfile();
     this.readSidebarState();
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
-    ).subscribe(() => {
-      this.breadcrumbs = this.buildBreadcrumbs();
+    ).subscribe((event: NavigationEnd) => {
+      this.trail.captureFromRouter();
+      this.currentUrl.set(event.urlAfterRedirects);
       this.closeMobileMenu();
     });
-    this.breadcrumbs = this.buildBreadcrumbs();
   }
 
   readonly userName = computed(() => this.authService.getUserName() ?? '');
@@ -195,42 +182,11 @@ export class MainLayoutComponent implements OnInit {
     this.isMobileMenuOpen = false;
   }
 
-  private buildBreadcrumbs(): Breadcrumb[] {
-    const root: ActivatedRoute = this.activatedRoute.root;
-    const crumbs: Breadcrumb[] = [{ label: 'Panel', url: '/' }];
-    let currentUrl = '';
+  private buildBreadcrumbs(url: string = this.currentUrl()): AppBreadcrumb[] {
+    const tree = this.router.parseUrl(url);
+    const path = '/' + (tree.root.children['primary']?.segments.map((segment) => segment.path).join('/') ?? '');
 
-    const getChild = (route: ActivatedRoute): void => {
-      if (!route.firstChild) return;
-
-      const child = route.firstChild;
-      const segment = child.snapshot.url.map(s => s.path).join('/');
-
-      if (segment) {
-        currentUrl += '/' + segment;
-
-        let label = this.routeLabels[segment] || segment;
-
-        if (child.snapshot.data && child.snapshot.data['title']) {
-          label = child.snapshot.data['title'];
-        } else if (segment.startsWith('amortization')) {
-          label = this.pageTitle.title() || 'Contrato';
-        } else if (child.snapshot.queryParams['projectName']) {
-          const rawName = decodeURIComponent(child.snapshot.queryParams['projectName']);
-          label = `${this.routeLabels[segment] || segment}: ${rawName}`;
-        } else if (child.snapshot.queryParams['search']) {
-          const rawSearch = decodeURIComponent(child.snapshot.queryParams['search']);
-          label = `${label} (${rawSearch})`;
-        }
-
-        crumbs.push({ label, url: currentUrl });
-      }
-
-      getChild(child);
-    };
-
-    getChild(root);
-    return crumbs;
+    return buildAppBreadcrumbs(path, tree.queryParams, this.pageTitle.title(), this.trail.hubs());
   }
 
   canViewSearch(): boolean {

@@ -452,20 +452,21 @@
 
             @for (lot of pagedLots; track lot.id) {
 
-              <tr [class.row-just-changed]="isJustChanged(lot.id)" [class.row-leaving]="isLeaving(lot.id)">
+              <tr
+                class="clickable-row"
+                [class.row-just-changed]="isJustChanged(lot.id)"
+                [class.row-leaving]="isLeaving(lot.id)"
+                [routerLink]="lotResumeCommands(lot)"
+                [queryParams]="lotResumeQueryParams(lot)"
+                [state]="lotResumeState(lot)"
+              >
 
                 <!-- LOTE -->
 
                 <td>
-
-                  <a
-                    [routerLink]="lotResumeCommands(lot)"
-                    [queryParams]="lotResumeQueryParams(lot)"
-                    class="lot-link"
-                  >
+                  <span class="lot-link">
                     {{ lot.number }}
-                  </a>
-
+                  </span>
                 </td>
 
 
@@ -512,7 +513,7 @@
 
                 <!-- ACCIONES -->
 
-                <td>
+                <td (click)="$event.stopPropagation()">
 
                   <div class="table-actions">
 
@@ -551,6 +552,7 @@
                       <a
                         [routerLink]="lotResumeCommands(lot)"
                         [queryParams]="lotResumeQueryParams(lot)"
+                        [state]="lotResumeState(lot)"
                         class="action-btn"
                         [title]="lotContractActionTitle(lot)"
                         [attr.aria-label]="lotContractActionTitle(lot)"

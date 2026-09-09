@@ -38,9 +38,9 @@
     &:focus {
       outline: none;
       background: #ffffff;
-      border-color: #347769;
+      border-color: var(--brand-primary-text);
       width: 280px;
-      box-shadow: 0 0 0 3px rgba(52, 119, 105, 0.1);
+      box-shadow: 0 0 0 3px rgba(var(--brand-primary-rgb), 0.1);
     }
   }
 }
@@ -53,7 +53,7 @@
   height: 14px;
   margin-top: -7px;
   border: 2px solid #d1d5db;
-  border-top-color: #347769;
+  border-top-color: var(--brand-primary-text);
   border-radius: 50%;
   animation: search-spin 0.7s linear infinite;
 }
@@ -101,7 +101,7 @@
   transition: background var(--motion-fast) var(--ease-out);
 
   &:hover {
-    background: #eef7f5;
+    background: var(--brand-primary-soft);
   }
 }
 

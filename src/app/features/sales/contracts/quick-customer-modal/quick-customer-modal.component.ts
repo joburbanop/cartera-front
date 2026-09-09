@@ -3,6 +3,11 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CustomerService } from '../../../../core/services/customer.service';
 import { Customer } from '../../../../core/models/customer.model';
+import {
+  DEFAULT_DOCUMENT_TYPE,
+  DOCUMENT_TYPES,
+  isCompanyDocument,
+} from '../../../../core/models/document-type';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { FieldErrorComponent } from '../../../../shared/components/field-error/field-error.component';
 import { markAllAsTouched, scrollToFirstInvalid } from '../../../../shared/utils/form-utils';
@@ -35,12 +40,22 @@ export class QuickCustomerModalComponent {
     this.closed.emit();
   }
 
+  readonly documentTypes = DOCUMENT_TYPES;
+
   customerForm = this.fb.group({
     name: ['', Validators.required],
+    document_type: [DEFAULT_DOCUMENT_TYPE, Validators.required],
     document: ['', Validators.required],
     phone: ['', Validators.required],
-    email: ['', [Validators.pattern(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/)]],
+    email: ['', [Validators.required, Validators.email]],
+    address: ['', Validators.required],
+    city: ['', Validators.required],
   });
+
+  /** El NIT identifica una empresa: la etiqueta del nombre cambia. */
+  get isCompany(): boolean {
+    return isCompanyDocument(this.customerForm.controls.document_type.value);
+  }
 
   saveQuickCustomer() {
     if (this.customerForm.invalid) {
@@ -55,10 +70,12 @@ export class QuickCustomerModalComponent {
 
     const payload = {
       name: String(rawCustomer.name ?? '').trim(),
-      document_type: 'CC',
+      document_type: rawCustomer.document_type ?? DEFAULT_DOCUMENT_TYPE,
       document_number: documentValue,
       phone: String(rawCustomer.phone ?? '').trim(),
-      email: rawCustomer.email?.trim() || null,
+      email: String(rawCustomer.email ?? '').trim(),
+      address: String(rawCustomer.address ?? '').trim(),
+      city: String(rawCustomer.city ?? '').trim(),
     };
 
     this.isSaving = true;
@@ -74,7 +91,7 @@ export class QuickCustomerModalComponent {
 
         const customer = customerPayload as Customer;
 
-        this.customerForm.reset();
+        this.customerForm.reset({ document_type: DEFAULT_DOCUMENT_TYPE });
         this.toast.show('Cliente registrado', 'success', 'El cliente se creó y quedó seleccionado en el contrato.');
         this.customerCreated.emit(customer);
         this.closed.emit();

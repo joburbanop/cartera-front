@@ -11,13 +11,22 @@
     <form [formGroup]="customerForm" (ngSubmit)="saveQuickCustomer()" class="app-modal-body">
       <div class="app-form-grid">
         <div class="app-form-group app-form-span-2">
-          <label class="app-form-label">Nombre completo *</label>
-          <input class="app-form-input" type="text" formControlName="name" placeholder="Ej: William Rojas">
-          <app-field-error [control]="customerForm.controls.name" label="El nombre"></app-field-error>
+          <label class="app-form-label">{{ isCompany ? 'Razón social *' : 'Nombre completo *' }}</label>
+          <input class="app-form-input" type="text" formControlName="name"
+                 [placeholder]="isCompany ? 'Ej: Constructora del Valle S.A.S.' : 'Ej: William Rojas'">
+          <app-field-error [control]="customerForm.controls.name" [label]="isCompany ? 'La razón social' : 'El nombre'"></app-field-error>
         </div>
         <div class="app-form-group">
-          <label class="app-form-label">Cédula / Documento *</label>
-          <input class="app-form-input" type="text" formControlName="document" placeholder="Ej: 94526871">
+          <label class="app-form-label">Tipo de documento *</label>
+          <select class="app-form-input" formControlName="document_type">
+            <option *ngFor="let type of documentTypes" [value]="type.code">{{ type.label }}</option>
+          </select>
+          <app-field-error [control]="customerForm.controls.document_type" label="El tipo de documento"></app-field-error>
+        </div>
+        <div class="app-form-group">
+          <label class="app-form-label">{{ isCompany ? 'NIT *' : 'Documento *' }}</label>
+          <input class="app-form-input" type="text" formControlName="document"
+                 [placeholder]="isCompany ? 'Ej: 900123456-7' : 'Ej: 94526871'">
           <app-field-error [control]="customerForm.controls.document" label="El documento"></app-field-error>
         </div>
         <div class="app-form-group">
@@ -25,10 +34,20 @@
           <input class="app-form-input" type="text" formControlName="phone" placeholder="Ej: 3150000000">
           <app-field-error [control]="customerForm.controls.phone" label="El teléfono"></app-field-error>
         </div>
-        <div class="app-form-group app-form-span-2">
-          <label class="app-form-label">Correo electrónico</label>
+        <div class="app-form-group">
+          <label class="app-form-label">Correo electrónico *</label>
           <input class="app-form-input" type="email" formControlName="email" placeholder="Ej: correo@ejemplo.com">
           <app-field-error [control]="customerForm.controls.email" label="El correo"></app-field-error>
+        </div>
+        <div class="app-form-group app-form-span-2">
+          <label class="app-form-label">Dirección *</label>
+          <input class="app-form-input" type="text" formControlName="address" placeholder="Ej: Carrera 18G # 7D-60">
+          <app-field-error [control]="customerForm.controls.address" label="La dirección"></app-field-error>
+        </div>
+        <div class="app-form-group app-form-span-2">
+          <label class="app-form-label">Ciudad *</label>
+          <input class="app-form-input" type="text" formControlName="city" placeholder="Ej: Cali">
+          <app-field-error [control]="customerForm.controls.city" label="La ciudad"></app-field-error>
         </div>
       </div>
 

@@ -6,6 +6,8 @@ import { ClientDetailComponent } from './client-detail.component';
 import { ActivityService } from '../../../core/services/activity.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { CustomerService } from '../../../core/services/customer.service';
+import { NavigationTrailService } from '../../../core/services/navigation-trail.service';
+import { clientHub, clientesHub } from '../../../core/utils/navigation-trail';
 
 describe('ClientDetailComponent', () => {
   let component: ClientDetailComponent;
@@ -58,5 +60,14 @@ describe('ClientDetailComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('al abrir amortización lleva el rastro de la ficha del cliente', () => {
+    expect(component.amortizationNavState()).toEqual(
+      TestBed.inject(NavigationTrailService).state([
+        clientesHub(),
+        clientHub(1, 'Ana Pérez'),
+      ]),
+    );
   });
 });

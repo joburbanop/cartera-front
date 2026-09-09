@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, FormArray, FormGroup, FormControl, FormsModule } from '@angular/forms';
 import { ContractListFilters, ContractService } from '../../../core/services/contract.service';
@@ -22,6 +22,9 @@ import { ContractPaymentPromisesComponent, createPaymentPromiseGroup } from './c
 import { unwrapPaginator, unwrapResource } from '../../../core/models/api-response';
 import { JustChangedTracker, insertAtFront } from '../../../shared/utils/list-feedback';
 import { LotStatusBadgePipe, LotStatusLabelPipe } from '../../../shared/pipes/lot-status-label.pipe';
+import { PageTitleService } from '../../../core/services/page-title.service';
+import { NavigationTrailService } from '../../../core/services/navigation-trail.service';
+import { contractsHub, lotContractsHub, lotsHub } from '../../../core/utils/navigation-trail';
 
 @Component({
   selector: 'app-contracts',
@@ -30,7 +33,7 @@ import { LotStatusBadgePipe, LotStatusLabelPipe } from '../../../shared/pipes/lo
   templateUrl: './contracts.component.html',
   styleUrl: './contracts.component.scss'
 })
-export class ContractsComponent implements OnInit {
+export class ContractsComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
   private contractService = inject(ContractService);
   private projectService = inject(ProjectService);
@@ -43,6 +46,8 @@ export class ContractsComponent implements OnInit {
   private authService = inject(AuthService);
   private dashboardService = inject(DashboardService);
   private toast = inject(ToastService);
+  private pageTitle = inject(PageTitleService);
+  private trail = inject(NavigationTrailService);
   private host = inject(ElementRef<HTMLElement>);
 
   get canCreate(): boolean {
@@ -622,6 +627,13 @@ export class ContractsComponent implements OnInit {
       this.updatePlanModeValidators(this.isCustomPlan, this.isSpecialLot);
     });
 
+    this.contractForm.get('term_months')?.valueChanges.subscribe((months) => {
+      const termMonths = Number(months) || 0;
+      if (termMonths > 0 && termMonths <= 12 && !this.isSpecialLot) {
+        this.contractForm.patchValue({ interest_rate: 0 }, { emitEvent: true });
+      }
+    });
+
     if (this.canCreate) {
       this.loadCustomers();
     }
@@ -695,19 +707,46 @@ export class ContractsComponent implements OnInit {
     }
   }
 
-  private loadSelectedLot(): void {
+  ngOnDestroy(): void {
+    this.pageTitle.clear();
+  }
+
+  private syncLotBreadcrumb(): void {
     if (!this.selectedLotId) {
-      this.selectedLot = null;
+      this.pageTitle.clear();
       return;
     }
 
+    const number = this.selectedLot?.number || this.selectedLotId;
+    this.pageTitle.set(`Lote ${number}`);
+  }
+
+  amortizationNavState(): Record<string, unknown> {
+    if (this.selectedLotId) {
+      const label = this.pageTitle.title() || `Lote ${this.selectedLot?.number ?? this.selectedLotId}`;
+      return this.trail.state([lotsHub(), lotContractsHub(this.selectedLotId, label)]);
+    }
+
+    return this.trail.state([contractsHub()]);
+  }
+
+  private loadSelectedLot(): void {
+    if (!this.selectedLotId) {
+      this.selectedLot = null;
+      this.syncLotBreadcrumb();
+      return;
+    }
+
+    this.syncLotBreadcrumb();
     this.lotService.getLot(this.selectedLotId).subscribe({
       next: (response) => {
         this.selectedLot = response?.data ?? response ?? { id: this.selectedLotId };
+        this.syncLotBreadcrumb();
         this.cdr.detectChanges();
       },
       error: () => {
         this.selectedLot = this.selectedLot ?? { id: this.selectedLotId };
+        this.syncLotBreadcrumb();
         this.cdr.detectChanges();
       },
     });
@@ -826,7 +865,7 @@ loadContracts(page = 1) {
     const salePrice = Number(values.sale_price) || 0;
     const downPayment = Number(values.down_payment_pactada) || 0;
     const months = Number(values.term_months) || 0;
-    const interestRate = Number(values.interest_rate) || 0;
+    const interestRate = this.effectiveInterestRate(months, Number(values.interest_rate) || 0, this.isSpecialLot);
 
     const principal = salePrice - downPayment;
 
@@ -990,7 +1029,7 @@ loadContracts(page = 1) {
       sale_price: salePrice,
       down_payment_pactada: isSpecial ? salePrice : formValue.down_payment_pactada,
       term_months: effectiveTermMonths,
-      interest_rate: isSpecial ? 0 : formValue.interest_rate,
+      interest_rate: this.effectiveInterestRate(effectiveTermMonths, Number(formValue.interest_rate) || 0, isSpecial),
       initial_payment_date: isSpecial ? startDate : down_payment_date,
       regular_payment_start_date: isSpecial ? startDate : effectiveFirstInstallmentDate,
       first_installment_date: isSpecial ? startDate : effectiveFirstInstallmentDate,
@@ -1043,6 +1082,14 @@ loadContracts(page = 1) {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  effectiveInterestRate(termMonths: number, requestedRate: number, isSpecial = false): number {
+    if (isSpecial || (termMonths > 0 && termMonths <= 12)) {
+      return 0;
+    }
+
+    return requestedRate;
   }
 
   isJustChanged(id: number | null | undefined): boolean {

@@ -20,11 +20,11 @@
   padding: 3.25rem 3.5rem;
   box-sizing: border-box;
   overflow: hidden;
-  color: #ffffff;
+  color: var(--brand-on-hero);
   background:
-    radial-gradient(1200px 700px at 12% 18%, rgba(86, 176, 164, 0.28), transparent 55%),
+    radial-gradient(1200px 700px at 12% 18%, rgba(var(--brand-glow-rgb), 0.28), transparent 55%),
     radial-gradient(900px 600px at 90% 88%, rgba(20, 70, 90, 0.45), transparent 50%),
-    linear-gradient(160deg, #3d8a7b 0%, #347769 38%, #22544a 72%, #163a45 100%);
+    linear-gradient(160deg, var(--brand-hero-0) 0%, var(--brand-hero-1) 38%, var(--brand-hero-2) 72%, var(--brand-hero-3) 100%);
 }
 
 .brand-pattern {
@@ -116,8 +116,8 @@
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #347769, #22544a);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-hover));
+  color: var(--brand-on-primary);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: -0.04em;
@@ -215,8 +215,8 @@ form {
 
     &:focus {
       outline: none;
-      border-color: #347769;
-      box-shadow: 0 0 0 3px rgba(52, 119, 105, 0.14);
+      border-color: var(--brand-primary-text);
+      box-shadow: 0 0 0 3px rgba(var(--brand-primary-rgb), 0.14);
     }
   }
 }
@@ -247,8 +247,8 @@ form {
   }
 
   &:hover {
-    color: #347769;
-    background: #eef7f5;
+    color: var(--brand-primary-text);
+    background: var(--brand-primary-soft);
   }
 }
 
@@ -263,8 +263,8 @@ button[type="submit"] {
   padding: 0.85rem 1rem;
   border: none;
   border-radius: 10px;
-  background: #347769;
-  color: #ffffff;
+  background: var(--brand-primary);
+  color: var(--brand-on-primary);
   font-family: inherit;
   font-size: 0.98rem;
   font-weight: 700;
@@ -275,7 +275,7 @@ button[type="submit"] {
     transform var(--motion-fast) var(--ease-out);
 
   &:hover:not(:disabled) {
-    background: #22544a;
+    background: var(--brand-primary-hover);
   }
 
   &:active:not(:disabled) {
@@ -291,8 +291,8 @@ button[type="submit"] {
 .spinner {
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  border-top-color: #ffffff;
+  border: 2px solid color-mix(in srgb, var(--brand-on-primary) 35%, transparent);
+  border-top-color: var(--brand-on-primary);
   border-radius: 50%;
   animation: login-spin 700ms linear infinite;
 }

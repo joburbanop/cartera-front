@@ -32,6 +32,19 @@ export class RecaudoService {
     return this.registerPayment(contractId, formData, 'down_payment');
   }
 
+  /**
+   * Registra un pago que cubre a la vez cuota inicial y cuota regular. El
+   * `amount` del FormData es el único movimiento que ve el banco; el reparto
+   * viaja en `to_down_payment` y `to_installments`.
+   */
+  registerSplitPayment(contractId: number, formData: FormData): Observable<ApiResourceResponse<Transaction>> {
+    if (!formData.has('contract_id')) {
+      formData.append('contract_id', contractId.toString());
+    }
+
+    return this.http.post<ApiResourceResponse<Transaction>>(`${this.apiUrl}/collections/split`, formData);
+  }
+
   getTransactionsByContract(contractId: number, page = 1, perPage = 20): Observable<ApiListResponse<Transaction>> {
     return this.http.get<ApiListResponse<Transaction>>(`${this.apiUrl}/contracts/${contractId}/transactions`, {
       params: { page, per_page: perPage },

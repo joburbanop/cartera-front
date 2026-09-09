@@ -122,7 +122,7 @@
 
         <tr
   *ngFor="let cliente of clientesMostrados"
-  class="client-row"
+  class="client-row clickable-row"
   [class.row-just-changed]="isJustChanged(cliente.id)"
   [class.row-leaving]="isLeaving(cliente.id)"
   [routerLink]="cliente.id != null ? ['/clientes', cliente.id] : null"
@@ -154,7 +154,7 @@
               {{ cliente.estadoCartera === 'al_dia' ? 'Al día' : (cliente.estadoCartera === 'vencida' ? 'Vencida' : 'N/A') }}
             </span>
           </td>
-         <td>
+         <td (click)="$event.stopPropagation()">
   <div class="action-buttons">
 
     <!-- Editar cliente -->
@@ -280,12 +280,12 @@
 
       <div class="app-form-grid">
         <div class="app-form-group app-form-span-2">
-          <label class="app-form-label">Nombre completo *</label>
+          <label class="app-form-label">{{ isCompanyCustomer ? 'Razón social *' : 'Nombre completo *' }}</label>
           <input
             type="text"
             formControlName="name"
-            placeholder="Juan Pérez García">
-          <app-field-error [control]="customerForm.controls.name" label="El nombre"></app-field-error>
+            [placeholder]="isCompanyCustomer ? 'Constructora del Valle S.A.S.' : 'Juan Pérez García'">
+          <app-field-error [control]="customerForm.controls.name" [label]="isCompanyCustomer ? 'La razón social' : 'El nombre'"></app-field-error>
         </div>
 
         <div class="app-form-group app-form-span-2">
@@ -293,18 +293,15 @@
             <div class="app-form-group">
               <label class="app-form-label">Tipo *</label>
               <select formControlName="document_type">
-                <option value="CC">CC</option>
-                <option value="CE">CE</option>
-                <option value="NIT">NIT</option>
-                <option value="TI">TI</option>
+                <option *ngFor="let type of documentTypes" [value]="type.code">{{ type.label }}</option>
               </select>
             </div>
             <div class="app-form-group">
-              <label class="app-form-label">Documento *</label>
+              <label class="app-form-label">{{ isCompanyCustomer ? 'NIT *' : 'Documento *' }}</label>
               <input
                 type="text"
                 formControlName="document"
-                placeholder="1234567890">
+                [placeholder]="isCompanyCustomer ? '900123456-7' : '1234567890'">
               <app-field-error [control]="customerForm.controls.document" label="El documento"></app-field-error>
             </div>
           </div>
@@ -320,7 +317,7 @@
         </div>
 
         <div class="app-form-group">
-          <label class="app-form-label">Email</label>
+          <label class="app-form-label">Email{{ isEditMode ? '' : ' *' }}</label>
           <input
             type="email"
             formControlName="email"
@@ -329,19 +326,21 @@
         </div>
 
         <div class="app-form-group">
-          <label class="app-form-label">Dirección</label>
+          <label class="app-form-label">Dirección{{ isEditMode ? '' : ' *' }}</label>
           <input
             type="text"
             formControlName="address"
             placeholder="Calle 123 # 45-67">
+          <app-field-error [control]="customerForm.controls.address" label="La dirección"></app-field-error>
         </div>
 
         <div class="app-form-group">
-          <label class="app-form-label">Ciudad</label>
+          <label class="app-form-label">Ciudad{{ isEditMode ? '' : ' *' }}</label>
           <input
             type="text"
             formControlName="city"
             placeholder="Bogotá">
+          <app-field-error [control]="customerForm.controls.city" label="La ciudad"></app-field-error>
         </div>
       </div>
 

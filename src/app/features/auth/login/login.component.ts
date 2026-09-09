@@ -39,7 +39,10 @@ export class LoginComponent {
     this.isLoading = true;
     this.errorMessage = '';
 
-    this.authService.login(this.loginForm.getRawValue()).subscribe({
+    this.authService.login({
+      email: this.loginForm.controls.email.value.trim().toLowerCase(),
+      password: this.loginForm.controls.password.value,
+    }).subscribe({
       next: () => {
         this.isLoading = false;
         this.cdr.markForCheck();

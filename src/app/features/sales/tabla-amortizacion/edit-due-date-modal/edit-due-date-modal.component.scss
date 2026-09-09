@@ -98,9 +98,9 @@
 }
 
 .btn-save {
-  border: 1px solid #2f7262;
-  background: #347769;
-  color: #ffffff;
+  border: 1px solid var(--brand-primary-edge);
+  background: var(--brand-primary);
+  color: var(--brand-on-primary);
   border-radius: 8px;
   padding: 0.55rem 0.95rem;
   font-weight: 700;
