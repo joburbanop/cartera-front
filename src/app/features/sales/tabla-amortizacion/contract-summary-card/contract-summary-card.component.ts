@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ContractStatusLabelPipe } from '../../../../shared/pipes/contract-status-label.pipe';
 import { Contract } from '../../../../core/models/contract.model';
 import { Customer } from '../../../../core/models/customer.model';
+import { ResidualBalanceRules } from '../../../../core/constants/residual-balance-rules';
 
 @Component({
   selector: 'app-contract-summary-card',
@@ -38,5 +39,24 @@ export class ContractSummaryCardComponent {
 
   get deferredInterestBalance(): number {
     return Number(this.contractData?.deferred_interest_balance || 0);
+  }
+
+  get pendingResidualBalance(): number {
+    return Number(this.contractData?.pending_residual_balance || 0);
+  }
+
+  get residualBalanceCollectible(): boolean {
+    if (this.contractData?.residual_balance_collectible === true) {
+      return true;
+    }
+
+    return this.pendingResidualBalance >= ResidualBalanceRules.collectibleThreshold;
+  }
+
+  get residualCollectibleThreshold(): number {
+    const fromApi = Number(this.contractData?.residual_collectible_threshold);
+    return Number.isFinite(fromApi) && fromApi > 0
+      ? fromApi
+      : ResidualBalanceRules.collectibleThreshold;
   }
 }

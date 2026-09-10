@@ -86,12 +86,19 @@
               </svg>
             </button>
           </div>
+          <div class="password-strength" *ngIf="loginForm.controls.password.value?.length || loginForm.controls.password.dirty || loginForm.controls.password.touched">
+            <div class="strength-bar" [attr.data-strength]="passwordStrength.className" aria-live="polite">
+              <span *ngFor="let segment of passwordStrengthSegments; let i = index" [class.active]="segment" [attr.data-index]="i"></span>
+            </div>
+            <small>{{ passwordStrength.label }}</small>
+          </div>
           <app-field-error [control]="loginForm.controls.password" label="La contraseña"></app-field-error>
         </div>
 
-        <button type="submit" [disabled]="isLoading">
+        <button type="submit" [disabled]="isLoading" [class.is-loading]="isLoading">
           <span class="spinner" *ngIf="isLoading" aria-hidden="true"></span>
           <span *ngIf="!isLoading">Iniciar sesión</span>
+          <span *ngIf="isLoading">Ingresando...</span>
           <span class="sr-only" *ngIf="isLoading">Ingresando...</span>
         </button>
       </form>

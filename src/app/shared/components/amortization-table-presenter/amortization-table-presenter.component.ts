@@ -11,7 +11,7 @@ import { AmortizationInstallment } from '../../../core/models/amortization-insta
 import { AmortizationFinancialsService } from '../../../core/services/amortization-financials.service';
 import { AmortizationStatusLabelPipe } from '../../pipes/amortization-status-label.pipe';
 import { PaginationComponent } from '../pagination/pagination.component';
-import { PaymentSource } from '../../../core/models/payment-source.model';
+import { PaymentSource, PaymentSourceAlsoApplied } from '../../../core/models/payment-source.model';
 
 @Component({
   selector: 'app-amortization-table-presenter',
@@ -256,19 +256,45 @@ export class AmortizationTablePresenterComponent {
   }
 
   alsoAppliedLabel(source: PaymentSource): string {
+    if ((source.came_from?.length ?? 0) > 0) {
+      return '';
+    }
+
     const others = source.also_applied_to ?? [];
     if (others.length === 0) {
       return '';
     }
 
     return others
-      .map((item) => {
-        const dest = item.installment_number === 0
-          ? 'cuota inicial'
-          : (item.installment_number != null ? `cuota #${item.installment_number}` : item.target_label);
-        return `${dest} ($ ${Number(item.amount || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 })})`;
-      })
+      .map((item) => `${this.peerQuotaLabel(item)} ($ ${this.peerAmount(item)})`)
       .join(', ');
+  }
+
+  cameFromLabel(source: PaymentSource): string {
+    const origin = source.came_from ?? [];
+    if (origin.length === 0) {
+      return '';
+    }
+
+    return origin
+      .map((item) => `${this.peerQuotaLabel(item)} (sobrante $ ${this.peerAmount(item)})`)
+      .join(', ');
+  }
+
+  private peerQuotaLabel(item: PaymentSourceAlsoApplied): string {
+    if (item.installment_number === 0) {
+      return 'cuota inicial';
+    }
+
+    if (item.installment_number != null) {
+      return `cuota #${item.installment_number}`;
+    }
+
+    return item.target_label;
+  }
+
+  private peerAmount(item: { amount: number | string }): string {
+    return Number(item.amount || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
   }
 
   private sourceKey(fee: AmortizationInstallment): number | null {

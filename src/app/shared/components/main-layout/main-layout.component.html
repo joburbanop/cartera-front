@@ -7,41 +7,33 @@
   ></div>
 
   <aside
-    #sidebarElement
     class="sidebar"
-    [class.collapsed]="isCollapsed"
+    [class.collapsed]="isSidebarCollapsed"
     [class.mobile-open]="isMobileMenuOpen"
-    [class.is-resizing]="isResizing"
-    [style.width.px]="isCollapsed ? 72 : sidebarWidth"
-    [style.minWidth.px]="isCollapsed ? 72 : sidebarWidth"
+    [style.width.px]="isSidebarCollapsed ? 72 : expandedSidebarWidth"
+    [style.minWidth.px]="isSidebarCollapsed ? 72 : expandedSidebarWidth"
+    (mouseenter)="onSidebarMouseEnter()"
+    (mouseleave)="onSidebarMouseLeave()"
   >
     <div class="sidebar-header">
       <button
         type="button"
         class="sidebar-toggle"
         (click)="toggleSidebar()"
-        [attr.aria-label]="isCollapsed ? 'Expandir menú' : 'Colapsar menú'"
-        [title]="isCollapsed ? 'Expandir menú' : 'Colapsar menú'"
+        [attr.aria-label]="isSidebarCollapsed ? 'Expandir menú' : 'Colapsar menú'"
+        [title]="isSidebarCollapsed ? 'Expandir menú' : 'Colapsar menú'"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M15 18l-6-6 6-6" *ngIf="!isCollapsed"></path>
-          <path d="M9 18l6-6-6-6" *ngIf="isCollapsed"></path>
+          <path d="M15 18l-6-6 6-6" *ngIf="!isSidebarCollapsed"></path>
+          <path d="M9 18l6-6-6-6" *ngIf="isSidebarCollapsed"></path>
         </svg>
       </button>
 
     </div>
 
-    <div
-      *ngIf="!isCollapsed && !isMobileViewport()"
-      class="sidebar-resize-handle"
-      [class.active]="isResizing"
-      (mousedown)="startResize($event)"
-      aria-hidden="true"
-    ></div>
-
     <nav class="nav-menu">
       <div class="section-block" *ngIf="hasVisibleItemsInSection('general')">
-        <div class="category-title" *ngIf="!isCollapsed">General</div>
+        <div class="category-title" *ngIf="!isSidebarCollapsed">General</div>
         <a
           routerLink="/dashboard"
           routerLinkActive="active"
@@ -60,7 +52,7 @@
 
       <ng-container *ngIf="hasVisibleItemsInSection('inventario')">
         <div class="section-block">
-          <div class="category-title" *ngIf="!isCollapsed">Inventario</div>
+          <div class="category-title" *ngIf="!isSidebarCollapsed">Inventario</div>
           <a
             routerLink="/projects"
             routerLinkActive="active"
@@ -91,7 +83,7 @@
       </ng-container>
 
       <div class="section-block" *ngIf="hasVisibleItemsInSection('ventas')">
-        <div class="category-title" *ngIf="!isCollapsed">Ventas</div>
+        <div class="category-title" *ngIf="!isSidebarCollapsed">Ventas</div>
 
         <a *ngIf="canViewClientes()" routerLink="/clientes" routerLinkActive="active" class="menu-link" [title]="'Clientes'">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -117,7 +109,7 @@
 
       <ng-container *ngIf="hasVisibleItemsInSection('finanzas')">
         <div class="section-block">
-          <div class="category-title" *ngIf="!isCollapsed">Finanzas</div>
+          <div class="category-title" *ngIf="!isSidebarCollapsed">Finanzas</div>
           <a *ngIf="canViewClientes()" routerLink="/bank-accounts" routerLinkActive="active" class="menu-link" [title]="'Cuentas bancarias'">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <line x1="3" y1="21" x2="21" y2="21"></line>
@@ -135,7 +127,7 @@
       </ng-container>
 
       <div class="section-block" *ngIf="hasVisibleItemsInSection('administracion')">
-        <div class="category-title" *ngIf="!isCollapsed">Administración</div>
+        <div class="category-title" *ngIf="!isSidebarCollapsed">Administración</div>
         <a routerLink="/usuarios" routerLinkActive="active" class="menu-link" [title]="'Usuarios'">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="3"></circle>
@@ -147,7 +139,7 @@
 
       <ng-container *ngIf="canViewBusinessNav()">
         <div class="section-block upcoming">
-          <div class="category-title" *ngIf="!isCollapsed">Próximamente</div>
+          <div class="category-title" *ngIf="!isSidebarCollapsed">Próximamente</div>
           <a class="menu-link disabled" aria-disabled="true" [title]="'Cartera vencida'">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
@@ -172,7 +164,7 @@
 
     <div class="user-card">
       <div class="user-avatar" [attr.title]="userName()">{{ userInitials() }}</div>
-      <div class="user-meta" *ngIf="!isCollapsed">
+      <div class="user-meta" *ngIf="!isSidebarCollapsed">
         <span class="user-name">{{ userName() || 'Usuario' }}</span>
         <span class="user-role">{{ roleLabel() }}</span>
       </div>

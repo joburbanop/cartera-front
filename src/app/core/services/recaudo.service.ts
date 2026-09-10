@@ -45,6 +45,17 @@ export class RecaudoService {
     return this.http.post<ApiResourceResponse<Transaction>>(`${this.apiUrl}/collections/split`, formData);
   }
 
+  /**
+   * Cobra el acumulado de residuales menores. No toca cuotas ni el allocator.
+   */
+  registerResidualCollection(contractId: number, formData: FormData): Observable<ApiResourceResponse<Transaction>> {
+    if (!formData.has('contract_id')) {
+      formData.append('contract_id', contractId.toString());
+    }
+
+    return this.http.post<ApiResourceResponse<Transaction>>(`${this.apiUrl}/collections/residual`, formData);
+  }
+
   getTransactionsByContract(contractId: number, page = 1, perPage = 20): Observable<ApiListResponse<Transaction>> {
     return this.http.get<ApiListResponse<Transaction>>(`${this.apiUrl}/contracts/${contractId}/transactions`, {
       params: { page, per_page: perPage },

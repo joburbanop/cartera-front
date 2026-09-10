@@ -69,6 +69,18 @@
         <span class="label">Interés diferido</span>
         <span class="value" style="color: #b45309;">$ {{ deferredInterestBalance | number }}</span>
       </div>
+      <div class="data-row residual-row" *ngIf="pendingResidualBalance > 0">
+        <span class="label">Residuales acumulados</span>
+        <span class="value residual-row__value">
+          <strong>$ {{ pendingResidualBalance | number:'1.0-2' }}</strong>
+          <small *ngIf="residualBalanceCollectible" class="residual-row__hint residual-row__hint--ready">
+            Listo para cobrar como ítem aparte
+          </small>
+          <small *ngIf="!residualBalanceCollectible" class="residual-row__hint">
+            Visible desde ahora. Se podrá cobrar al acumular $ {{ residualCollectibleThreshold | number:'1.0-0' }}
+          </small>
+        </span>
+      </div>
       <div class="data-row" *ngIf="!isSpecialLot">
         <span class="label">Plazo y Tasa</span>
         <span class="value">{{ contractData?.term_months }} meses al {{ contractData?.interest_rate }}%</span>

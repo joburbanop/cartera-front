@@ -162,19 +162,45 @@ export class PaymentPromiseTabComponent {
   }
 
   alsoAppliedLabel(source: PaymentSource): string {
+    if ((source.came_from?.length ?? 0) > 0) {
+      return '';
+    }
+
     const others = source.also_applied_to ?? [];
     if (others.length === 0) {
       return '';
     }
 
     return others
-      .map((item) => {
-        const dest = item.installment_number === 0
-          ? 'cuota inicial'
-          : (item.installment_number != null ? `${item.target_label}` : item.target_label);
-        return `${dest} ($ ${Number(item.amount || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 })})`;
-      })
+      .map((item) => `${this.peerPromiseLabel(item)} ($ ${this.peerAmount(item)})`)
       .join(', ');
+  }
+
+  cameFromLabel(source: PaymentSource): string {
+    const origin = source.came_from ?? [];
+    if (origin.length === 0) {
+      return '';
+    }
+
+    return origin
+      .map((item) => `${this.peerPromiseLabel(item)} (sobrante $ ${this.peerAmount(item)})`)
+      .join(', ');
+  }
+
+  private peerPromiseLabel(item: { target_label: string; installment_number?: number | null }): string {
+    if (item.installment_number === 0) {
+      return 'cuota inicial';
+    }
+
+    if (item.target_label) {
+      return item.target_label;
+    }
+
+    return item.installment_number != null ? `Promesa #${item.installment_number}` : 'Otra promesa';
+  }
+
+  private peerAmount(item: { amount: number | string }): string {
+    return Number(item.amount || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
   }
 
   private statusOf(promise: PaymentPromise): PaymentPromiseStatus {

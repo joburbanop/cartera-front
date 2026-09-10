@@ -25,8 +25,48 @@ export class LoginComponent {
     password: ['', [Validators.required]]
   });
 
+  readonly strengthLevels = [
+    { label: 'Muy débil', className: 'weak' },
+    { label: 'Débil', className: 'fair' },
+    { label: 'Buena', className: 'good' },
+    { label: 'Fuerte', className: 'strong' },
+  ];
+
   errorMessage = '';
   isLoading = false;
+
+  constructor() {
+    this.loginForm.controls.password.valueChanges.subscribe(() => {
+      this.cdr.markForCheck();
+    });
+  }
+
+  get passwordStrength() {
+    const value = this.loginForm.controls.password.value ?? '';
+    const trimmed = value.trim();
+
+    if (!trimmed) {
+      return { level: 0, label: 'Sin contraseña', className: 'empty' };
+    }
+
+    let score = 0;
+    if (trimmed.length >= 8) score += 1;
+    if (/[A-Z]/.test(trimmed)) score += 1;
+    if (/[0-9]/.test(trimmed)) score += 1;
+    if (/[^A-Za-z0-9]/.test(trimmed)) score += 1;
+
+    const level = Math.min(score, 4);
+    return {
+      level,
+      label: this.strengthLevels[Math.max(level - 1, 0)].label,
+      className: level === 0 ? 'empty' : this.strengthLevels[Math.max(level - 1, 0)].className,
+    };
+  }
+
+  get passwordStrengthSegments(): number[] {
+    const level = this.passwordStrength.level;
+    return [1, 2, 3, 4].map((segment) => (segment <= level ? 1 : 0));
+  }
 
   onSubmit() {
     if (this.loginForm.invalid) {

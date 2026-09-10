@@ -47,6 +47,7 @@ export class DrawerPagoComponent implements OnInit {
     payment_method: ['transfer', Validators.required],
     bank_account_id: ['', Validators.required], // Inicia requerido porque por defecto es 'transfer'
     transaction_date: [this.todayIsoDate(), Validators.required],
+    receipt_number: [''],
     surplus_action: [''],
     to_down_payment: ['']
   });
@@ -111,36 +112,34 @@ export class DrawerPagoComponent implements OnInit {
     return this.excessAmount;
   }
 
+  pendingDefaultCapitalConfirm = false;
+  readonly defaultSurplusAction = 'abono_capital';
+
   get hasSurplus(): boolean {
     return this.excessAmount > FinancialRules.absorbedSurplus;
   }
 
   /**
    * Al día: inicial saldada y ninguna regular vencida.
-   * Ahí el excedente se sugiere a capital; con mora, a cubrir vencidas.
    */
   get isContractCurrent(): boolean {
     return this.pendingInitialAmount <= 0 && Number(this.overdueTotalAmount ?? 0) <= 0;
   }
 
-  get suggestedSurplusAction(): 'reducir_plazo' | 'adelantar_cuotas' {
-    return this.isContractCurrent ? 'reducir_plazo' : 'adelantar_cuotas';
+  get chosenSurplusAction(): string {
+    return String(this.paymentForm.get('surplus_action')?.value || '').trim();
   }
 
   private syncSurplusValidation(): void {
     const surplusControl = this.paymentForm.get('surplus_action');
 
-    if (this.hasSurplus) {
-      surplusControl?.setValidators([Validators.required]);
-      if (!surplusControl?.value) {
-        surplusControl?.setValue(this.suggestedSurplusAction, { emitEvent: false });
-      }
-    } else {
-      surplusControl?.clearValidators();
+    if (!this.hasSurplus) {
       surplusControl?.setValue('');
+      this.pendingDefaultCapitalConfirm = false;
     }
 
-    surplusControl?.updateValueAndValidity();
+    surplusControl?.clearValidators();
+    surplusControl?.updateValueAndValidity({ emitEvent: false });
   }
 
   ngOnInit() {
@@ -158,11 +157,17 @@ export class DrawerPagoComponent implements OnInit {
     });
 
     this.paymentForm.get('amount')?.valueChanges.subscribe(() => {
+      this.pendingDefaultCapitalConfirm = false;
       this.syncSurplusValidation();
     });
 
     this.paymentForm.get('to_down_payment')?.valueChanges.subscribe(() => {
+      this.pendingDefaultCapitalConfirm = false;
       this.syncSurplusValidation();
+    });
+
+    this.paymentForm.get('surplus_action')?.valueChanges.subscribe(() => {
+      this.pendingDefaultCapitalConfirm = false;
     });
   }
 
@@ -358,6 +363,7 @@ export class DrawerPagoComponent implements OnInit {
         amount: this.montoSugeridoTotal,
         payment_method: 'transfer',
         bank_account_id: '',
+        receipt_number: '',
         surplus_action: '',
         to_down_payment: ''
       });
@@ -369,11 +375,13 @@ export class DrawerPagoComponent implements OnInit {
     this.selectedFile = null;
     this.receiptMissing = false;
     this.splitEnabled = false;
+    this.pendingDefaultCapitalConfirm = false;
     this.paymentForm.reset({
       amount: this.montoSugeridoTotal,
       payment_method: 'transfer',
       bank_account_id: '',
       transaction_date: this.todayIsoDate(),
+      receipt_number: '',
       surplus_action: '',
       to_down_payment: ''
     });
@@ -391,6 +399,12 @@ export class DrawerPagoComponent implements OnInit {
 
     const keyboardEvent = event as KeyboardEvent;
     keyboardEvent.preventDefault();
+
+    if (this.pendingDefaultCapitalConfirm) {
+      this.cancelDefaultCapitalConfirm();
+      return;
+    }
+
     this.close();
   }
 
@@ -426,17 +440,26 @@ export class DrawerPagoComponent implements OnInit {
       return;
     }
 
+    if (this.hasSurplus && !this.chosenSurplusAction && !this.pendingDefaultCapitalConfirm) {
+      this.pendingDefaultCapitalConfirm = true;
+      return;
+    }
+
     this._isProcessing = true;
 
     const selectedDate = this.paymentForm.get('transaction_date')?.value;
     const normalizedDate = this.normalizeSelectedDate(selectedDate);
+    const paymentOption = this.hasSurplus
+      ? (this.chosenSurplusAction || this.defaultSurplusAction)
+      : '';
 
     const paymentData = {
       ...this.paymentForm.value,
       transaction_date: normalizedDate,
       payment_date: normalizedDate,
       receipt: this.selectedFile,
-      payment_option: this.paymentForm.get('surplus_action')?.value || '',
+      surplus_action: paymentOption,
+      payment_option: paymentOption,
       // El reparto solo viaja cuando el cobrador lo pidió. Sin él, el pago
       // sigue el camino de siempre.
       split: this.splitEnabled
@@ -448,5 +471,9 @@ export class DrawerPagoComponent implements OnInit {
     };
 
     this.confirmPayment.emit(paymentData);
+  }
+
+  cancelDefaultCapitalConfirm(): void {
+    this.pendingDefaultCapitalConfirm = false;
   }
 }

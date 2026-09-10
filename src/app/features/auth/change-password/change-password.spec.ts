@@ -60,6 +60,8 @@ describe('ChangePasswordComponent', () => {
   });
 
   it('envía el cambio y navega al home', () => {
+    vi.useFakeTimers();
+
     component.form.setValue({
       current_password: 'password',
       password: 'nuevaClave1',
@@ -72,7 +74,12 @@ describe('ChangePasswordComponent', () => {
     req.flush({ data: { must_change_password: false } });
 
     expect(authService.mustChangePassword()).toBe(false);
+    expect(router.navigate).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(700);
     expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
+
+    vi.useRealTimers();
   });
 
   it('muestra el error de contraseña actual junto al campo', () => {

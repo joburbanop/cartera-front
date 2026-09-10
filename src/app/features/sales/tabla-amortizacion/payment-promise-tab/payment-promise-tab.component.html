@@ -96,6 +96,7 @@
                       <th>Recibo</th>
                       <th class="num">Aportó a esta cuota</th>
                       <th>También cubrió</th>
+                      <th>Viene de</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -103,7 +104,8 @@
                       <td>{{ source.transaction_date | date:'dd/MM/yyyy' }}</td>
                       <td>{{ source.receipt_number || '—' }}</td>
                       <td class="num">$ {{ source.amount | number:'1.0-0' }}</td>
-                      <td>{{ alsoAppliedLabel(source) || 'Solo esta cuota' }}</td>
+                      <td>{{ alsoAppliedLabel(source) || '—' }}</td>
+                      <td>{{ cameFromLabel(source) || '—' }}</td>
                     </tr>
                   </tbody>
                 </table>

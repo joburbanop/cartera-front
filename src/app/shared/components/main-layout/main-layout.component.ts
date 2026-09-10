@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -18,25 +18,19 @@ import { AppBreadcrumb, buildAppBreadcrumbs } from '../../../core/utils/breadcru
   styleUrls: ['./main-layout.component.scss'],
 })
 export class MainLayoutComponent implements OnInit {
-  @ViewChild('sidebarElement') sidebarElement?: ElementRef<HTMLElement>;
-
   private authService = inject(AuthService);
   private pageTitle = inject(PageTitleService);
   private trail = inject(NavigationTrailService);
   private router = inject(Router);
 
+  readonly expandedSidebarWidth = 240;
+
   isCollapsed = false;
+  isHoverExpanded = false;
   isMobileMenuOpen = false;
-  isResizing = false;
-  sidebarWidth = 260;
   private readonly currentUrl = signal(this.router.url);
 
   private readonly collapsedSidebarKey = 'sidebar_collapsed';
-  private readonly sidebarWidthKey = 'sidebar_width';
-  private readonly sidebarMinWidth = 200;
-  private readonly sidebarMaxWidth = 400;
-  private resizeMoveListener?: (event: MouseEvent) => void;
-  private resizeStopListener?: () => void;
 
   readonly breadcrumbs = computed(() => {
     this.currentUrl();
@@ -60,115 +54,42 @@ export class MainLayoutComponent implements OnInit {
   readonly userName = computed(() => this.authService.getUserName() ?? '');
   readonly userInitials = computed(() => this.authService.getUserInitials());
 
+  get isSidebarCollapsed(): boolean {
+    return this.isCollapsed && !this.isHoverExpanded;
+  }
+
   private readSidebarState(): void {
     if (typeof window === 'undefined') {
       return;
     }
 
     const collapsedStored = window.localStorage.getItem(this.collapsedSidebarKey);
-    this.isCollapsed = collapsedStored === null ? false : collapsedStored === 'true';
-
-    const storedWidth = window.localStorage.getItem(this.sidebarWidthKey);
-    if (storedWidth !== null) {
-      const parsed = Number(storedWidth);
-      this.sidebarWidth = this.clampSidebarWidth(Number.isFinite(parsed) ? parsed : 260);
-      return;
-    }
-
-    this.sidebarWidth = 260;
-  }
-
-  private clampSidebarWidth(value: number): number {
-    return Math.min(this.sidebarMaxWidth, Math.max(this.sidebarMinWidth, value));
-  }
-
-  private applySidebarWidth(width: number): void {
-    const clamped = this.clampSidebarWidth(width);
-
-    if (this.sidebarElement?.nativeElement) {
-      this.sidebarElement.nativeElement.style.width = `${clamped}px`;
-      this.sidebarElement.nativeElement.style.minWidth = `${clamped}px`;
-    }
-  }
-
-  isResizeEnabled(): boolean {
-    return !this.isCollapsed && !this.isMobileViewport();
+    this.isCollapsed = collapsedStored === null ? true : collapsedStored === 'true';
   }
 
   isMobileViewport(): boolean {
     return typeof window !== 'undefined' && window.innerWidth < 768;
   }
 
-  startResize(event: MouseEvent): void {
-    if (!this.isResizeEnabled()) {
+  onSidebarMouseEnter(): void {
+    if (this.isMobileViewport()) {
       return;
     }
 
-    event.preventDefault();
-    this.isResizing = true;
-    const sidebarEl = this.sidebarElement?.nativeElement ?? document.querySelector('.sidebar') as HTMLElement | null;
-
-    if (!sidebarEl) {
-      return;
-    }
-
-    const sidebarRect = sidebarEl.getBoundingClientRect();
-    this.resizeMoveListener = (mouseEvent: MouseEvent) => {
-      if (this.isMobileViewport()) {
-        this.stopResize();
-        return;
-      }
-
-      const nextWidth = this.clampSidebarWidth(mouseEvent.clientX - sidebarRect.left);
-      sidebarEl.style.width = `${nextWidth}px`;
-      sidebarEl.style.minWidth = `${nextWidth}px`;
-    };
-
-    this.resizeStopListener = () => this.stopResize();
-
-    document.addEventListener('mousemove', this.resizeMoveListener);
-    document.addEventListener('mouseup', this.resizeStopListener);
-    document.body.style.userSelect = 'none';
+    this.isHoverExpanded = this.isCollapsed;
   }
 
-  private stopResize(): void {
-    if (!this.isResizing && !this.resizeMoveListener && !this.resizeStopListener) {
+  onSidebarMouseLeave(): void {
+    if (this.isMobileViewport()) {
       return;
     }
 
-    const currentWidth = this.sidebarElement?.nativeElement
-      ? Number.parseFloat(this.sidebarElement.nativeElement.style.width || String(this.sidebarWidth))
-      : this.sidebarWidth;
-
-    this.isResizing = false;
-    if (this.resizeMoveListener) {
-      document.removeEventListener('mousemove', this.resizeMoveListener);
-      this.resizeMoveListener = undefined;
-    }
-    if (this.resizeStopListener) {
-      document.removeEventListener('mouseup', this.resizeStopListener);
-      this.resizeStopListener = undefined;
-    }
-    document.body.style.userSelect = '';
-
-    this.sidebarWidth = this.clampSidebarWidth(currentWidth || this.sidebarWidth);
-    if (this.sidebarElement?.nativeElement) {
-      this.sidebarElement.nativeElement.style.width = `${this.sidebarWidth}px`;
-      this.sidebarElement.nativeElement.style.minWidth = `${this.sidebarWidth}px`;
-    }
-    this.saveSidebarWidth();
-  }
-
-  private saveSidebarWidth(): void {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    window.localStorage.setItem(this.sidebarWidthKey, String(this.clampSidebarWidth(this.sidebarWidth)));
+    this.isHoverExpanded = false;
   }
 
   toggleSidebar(): void {
     this.isCollapsed = !this.isCollapsed;
+    this.isHoverExpanded = false;
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(this.collapsedSidebarKey, String(this.isCollapsed));
     }

@@ -5,6 +5,7 @@ export const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   extraordinary_payment: 'Abono extraordinario',
   interes_diferido: 'Interés diferido',
   pago_mixto: 'Inicial + cuota',
+  residual_collection: 'Residuales menores',
   refund: 'Devolución',
 };
 
@@ -28,6 +29,7 @@ export interface Transaction {
   type?: string;
   amount?: number | string;
   payment_method?: string;
+  receipt_number?: string | null;
   transaction_date?: string | null;
   created_at?: string | null;
   receipt?: string | null;

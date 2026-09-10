@@ -6,6 +6,7 @@ import { AmortizationService } from '../../../core/services/amortization.service
 import { ContractService } from '../../../core/services/contract.service';
 import { FinancialService } from '../../../core/services/financial.service';
 import { DrawerPagoComponent } from '../../../shared/components/drawer-pago/drawer-pago.component';
+import { DrawerCobroResidualComponent, ResidualCollectionPayload } from '../../../shared/components/drawer-cobro-residual/drawer-cobro-residual.component';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivityEntry } from '../../../core/models/activity-entry.model';
 import { RecaudoService } from '../../../core/services/recaudo.service';
@@ -37,6 +38,7 @@ import { AppRoles } from '../../../core/models/app-roles';
 import { unwrapListItems, unwrapPaginator, unwrapResource } from '../../../core/models/api-response';
 import { isPaidStatus, isVencida } from '../../../core/models/amortization-status';
 import { FinancialRules } from '../../../core/constants/financial-rules';
+import { ResidualBalanceRules } from '../../../core/constants/residual-balance-rules';
 import {
   applyVisibleReorder,
   ContractTabId,
@@ -53,6 +55,7 @@ import { buildAppBreadcrumbs, penultimateBreadcrumb } from '../../../core/utils/
     FormsModule,
     ReactiveFormsModule,
     DrawerPagoComponent,
+    DrawerCobroResidualComponent,
     PaymentMethodNamePipe,
     AmortizationTablePresenterComponent,
     ContractSummaryCardComponent,
@@ -136,6 +139,25 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     return Number(this.contractData?.deferred_interest_balance || 0);
   }
 
+  get pendingResidualBalance(): number {
+    return Number(this.contractData?.pending_residual_balance || 0);
+  }
+
+  get residualBalanceCollectible(): boolean {
+    if (this.contractData?.residual_balance_collectible === true) {
+      return true;
+    }
+
+    return this.pendingResidualBalance >= ResidualBalanceRules.collectibleThreshold;
+  }
+
+  get residualCollectibleThreshold(): number {
+    const fromApi = Number(this.contractData?.residual_collectible_threshold);
+    return Number.isFinite(fromApi) && fromApi > 0
+      ? fromApi
+      : ResidualBalanceRules.collectibleThreshold;
+  }
+
   get isSpecialLot(): boolean {
     const value = this.contractData?.is_special_lot;
     return value === true || value === 1 || value === '1';
@@ -199,6 +221,8 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   isGenerating = false;
   isDrawerOpen = false;
   isProcessingPayment = false;
+  isResidualDrawerOpen = false;
+  isProcessingResidualCollection = false;
   currentView: 'venta' | 'preventa' = 'venta';
   resetSelectionFlag = false;
   isGeneralPaymentFlow = false;
@@ -1160,6 +1184,67 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     this.clearTableSelection();
   }
 
+  openResidualCollectionDrawer(): void {
+    if (!this.residualBalanceCollectible || !this.canRegisterPayments) {
+      return;
+    }
+    this.isResidualDrawerOpen = true;
+  }
+
+  closeResidualCollectionDrawer(): void {
+    this.isProcessingResidualCollection = false;
+    this.isResidualDrawerOpen = false;
+  }
+
+  procesarCobroResidual(paymentData: ResidualCollectionPayload): void {
+    this.isProcessingResidualCollection = true;
+
+    const formData = new FormData();
+    formData.append('amount', String(paymentData.amount ?? 0));
+    formData.append('payment_method', paymentData.payment_method ?? '');
+    formData.append('transaction_date', paymentData.transaction_date ?? '');
+    formData.append('payment_date', paymentData.payment_date ?? paymentData.transaction_date ?? '');
+    if (paymentData.bank_account_id) {
+      formData.append('bank_account_id', String(paymentData.bank_account_id));
+    }
+    if (paymentData.receipt) {
+      formData.append('receipt', paymentData.receipt);
+    }
+    if (paymentData.receipt_number) {
+      formData.append('receipt_number', paymentData.receipt_number);
+    }
+
+    this.recaudoService.registerResidualCollection(this.contractId, formData).subscribe({
+      next: () => {
+        this.isProcessingResidualCollection = false;
+        this.isResidualDrawerOpen = false;
+        this.toast.show(
+          'Residuales cobrados',
+          'success',
+          'El cobro se registró como ítem aparte. No se modificaron cuotas.',
+        );
+        this.cdr.detectChanges();
+        this.cargarTablaAmortizacion();
+        this.loadContractData();
+      },
+      error: (err) => {
+        this.isProcessingResidualCollection = false;
+        const backendErrors = err?.error?.errors ?? null;
+        const firstMessage = backendErrors
+          ? Object.values(backendErrors)
+              .flat()
+              .find((msg: unknown) => typeof msg === 'string')
+          : null;
+        this.toast.show(
+          'No se pudo cobrar el residual',
+          'error',
+          firstMessage ? String(firstMessage) : undefined,
+        );
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
   get initialFee(): any {
     return this.financials.initialFee(this.amortizationPlan, this.contractData);
   }
@@ -1495,23 +1580,32 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     if (paymentData.receipt) {
       formData.append('receipt', paymentData.receipt);
     }
+    const receiptNumber = String(paymentData.receipt_number ?? '').trim();
+    if (receiptNumber) {
+      formData.append('receipt_number', receiptNumber);
+    }
 
     const request = split
       ? this.recaudoService.registerSplitPayment(this.contractId, formData)
       : this.recaudoService.registerPayment(this.contractId, formData, transactionType);
 
     request.subscribe({
-      next: () => {
+      next: (response) => {
         this.isProcessingPayment = false;
         this.isDrawerOpen = false;
         this.clearTableSelection();
+
+        const payload = unwrapResource<Record<string, unknown>>(response);
+        const notice = typeof payload?.['application_notice'] === 'string'
+          ? payload['application_notice'].trim()
+          : '';
 
         this.toast.show(
           'Pago registrado',
           'success',
           split
             ? 'Se registró un solo movimiento y quedó guardado el reparto entre cuota inicial y cuota regular.'
-            : 'El abono se aplicó correctamente a la cuota seleccionada.',
+            : (notice || 'El abono se aplicó correctamente a la cuota seleccionada.'),
         );
         this.cdr.detectChanges();
 

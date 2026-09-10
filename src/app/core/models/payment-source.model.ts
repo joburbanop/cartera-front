@@ -12,4 +12,6 @@ export interface PaymentSource {
   principal?: number | string;
   interest?: number | string;
   also_applied_to?: PaymentSourceAlsoApplied[];
+  /** Cuota (u origen) de la que llegó este aporte como sobrante. Vacío en el origen del recibo. */
+  came_from?: PaymentSourceAlsoApplied[];
 }

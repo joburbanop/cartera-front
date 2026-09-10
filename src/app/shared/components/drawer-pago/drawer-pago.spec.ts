@@ -21,6 +21,33 @@ describe('DrawerPagoComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('no ofrece Tarjeta y emite Recibo #', () => {
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.componentRef.setInput('prefilledAmount', 100000);
+    fixture.detectChanges();
+
+    const html = fixture.nativeElement.textContent as string;
+    expect(html).toContain('Efectivo');
+    expect(html).toContain('Transferencia');
+    expect(html).toContain('Permuta');
+    expect(html).not.toContain('Tarjeta');
+    expect(html).toContain('Recibo #');
+
+    component.paymentForm.patchValue({
+      amount: 100000,
+      payment_method: 'cash',
+      receipt_number: '0258, 0289',
+    });
+    component['selectedFile'] = new File(['x'], 'recibo.pdf', { type: 'application/pdf' });
+
+    const emitted: any[] = [];
+    component.confirmPayment.subscribe((data: any) => emitted.push(data));
+    component.submit();
+
+    expect(emitted.length).toBe(1);
+    expect(emitted[0].receipt_number).toBe('0258, 0289');
+  });
+
   it('en preventa etiqueta el total como pendiente a la fecha', () => {
     fixture.componentRef.setInput('isOpen', true);
     fixture.componentRef.setInput('overdueTotalAmount', 3000000);
@@ -151,7 +178,7 @@ describe('DrawerPagoComponent', () => {
       expect(emitted[0].split).toBeNull();
     });
 
-    it('preselecciona abono a capital si el contrato está al día y hay excedente', async () => {
+    it('no premarca ningún destino si hay excedente', async () => {
       fixture.componentRef.setInput('pendingInitialAmount', 0);
       fixture.componentRef.setInput('overdueTotalAmount', 0);
       fixture.componentRef.setInput('selectedFees', [
@@ -161,13 +188,20 @@ describe('DrawerPagoComponent', () => {
       fixture.detectChanges();
       await fixture.whenStable();
       component.paymentForm.patchValue({ amount: 1500000 });
+      fixture.detectChanges();
 
       expect(component.hasSurplus).toBe(true);
       expect(component.isContractCurrent).toBe(true);
-      expect(component.paymentForm.get('surplus_action')?.value).toBe('reducir_plazo');
+      expect(component.paymentForm.get('surplus_action')?.value).toBeFalsy();
+      expect(fixture.nativeElement.querySelector('input[value="abono_capital"]:checked')).toBeNull();
+      expect(fixture.nativeElement.textContent).toContain('Abono a capital');
+      expect(fixture.nativeElement.textContent).not.toContain('predeterminado');
+      expect(fixture.nativeElement.textContent).toContain('Reducir Plazo');
+      expect(fixture.nativeElement.textContent).toContain('Reducir Cuota');
+      expect(fixture.nativeElement.textContent).toContain('Adelanto de Cuotas');
     });
 
-    it('preselecciona cubrir vencidas si hay mora y hay excedente', async () => {
+    it('tampoco premarca destino si hay mora y hay excedente', async () => {
       fixture.componentRef.setInput('pendingInitialAmount', 0);
       fixture.componentRef.setInput('overdueTotalAmount', 1000000);
       fixture.componentRef.setInput('selectedFees', [
@@ -180,7 +214,120 @@ describe('DrawerPagoComponent', () => {
 
       expect(component.hasSurplus).toBe(true);
       expect(component.isContractCurrent).toBe(false);
-      expect(component.paymentForm.get('surplus_action')?.value).toBe('adelantar_cuotas');
+      expect(component.paymentForm.get('surplus_action')?.value).toBeFalsy();
+    });
+
+    it('pide confirmación de abono a capital si hay excedente y no eligió destino', async () => {
+      fixture.componentRef.setInput('pendingInitialAmount', 0);
+      fixture.componentRef.setInput('overdueTotalAmount', 0);
+      fixture.componentRef.setInput('selectedFees', [
+        { id: 1, installment_number: 1, quota_debt: 1000000 },
+      ]);
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      component.paymentForm.patchValue({ amount: 1500000, payment_method: 'cash' });
+      component['selectedFile'] = new File(['x'], 'recibo.pdf', { type: 'application/pdf' });
+
+      const emitted: any[] = [];
+      component.confirmPayment.subscribe((data: any) => emitted.push(data));
+      component.submit();
+
+      expect(emitted.length).toBe(0);
+      expect(component.pendingDefaultCapitalConfirm).toBe(true);
+      fixture.detectChanges();
+
+      const modal = fixture.nativeElement.querySelector('.app-modal-backdrop.app-modal-backdrop--stack');
+      expect(modal).toBeTruthy();
+      expect(modal.textContent).toContain('Este pago se aplicará como abono a capital');
+      expect(modal.textContent).toContain('No elegiste otro destino para el excedente');
+      expect(modal.textContent).toContain('Volver');
+      expect(modal.textContent).toContain('Sí, abonar a capital');
+      expect(fixture.nativeElement.querySelector('.panel-footer')?.textContent).toContain('Confirmar pago');
+
+      component.submit();
+
+      expect(emitted.length).toBe(1);
+      expect(emitted[0].payment_option).toBe('abono_capital');
+      expect(emitted[0].surplus_action).toBe('abono_capital');
+    });
+
+    it('Volver cierra el modal sin enviar el pago', async () => {
+      fixture.componentRef.setInput('pendingInitialAmount', 0);
+      fixture.componentRef.setInput('overdueTotalAmount', 0);
+      fixture.componentRef.setInput('selectedFees', [
+        { id: 1, installment_number: 1, quota_debt: 1000000 },
+      ]);
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      component.paymentForm.patchValue({ amount: 1500000, payment_method: 'cash' });
+      component['selectedFile'] = new File(['x'], 'recibo.pdf', { type: 'application/pdf' });
+
+      const emitted: any[] = [];
+      component.confirmPayment.subscribe((data: any) => emitted.push(data));
+      component.submit();
+      fixture.detectChanges();
+
+      expect(component.pendingDefaultCapitalConfirm).toBe(true);
+
+      const volver = fixture.nativeElement.querySelector('.app-modal-body .btn-secondary') as HTMLButtonElement;
+      expect(volver.textContent).toContain('Volver');
+      volver.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(emitted.length).toBe(0);
+      expect(component.pendingDefaultCapitalConfirm).toBe(false);
+      expect(fixture.nativeElement.querySelector('.app-modal-backdrop')).toBeNull();
+    });
+
+    it('emite de una si el operador eligió un destino explícito', async () => {
+      fixture.componentRef.setInput('pendingInitialAmount', 0);
+      fixture.componentRef.setInput('overdueTotalAmount', 0);
+      fixture.componentRef.setInput('selectedFees', [
+        { id: 1, installment_number: 1, quota_debt: 1000000 },
+      ]);
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      component.paymentForm.patchValue({
+        amount: 1500000,
+        payment_method: 'cash',
+        surplus_action: 'adelantar_cuotas',
+      });
+      component['selectedFile'] = new File(['x'], 'recibo.pdf', { type: 'application/pdf' });
+
+      const emitted: any[] = [];
+      component.confirmPayment.subscribe((data: any) => emitted.push(data));
+      component.submit();
+
+      expect(component.pendingDefaultCapitalConfirm).toBe(false);
+      expect(emitted[0].payment_option).toBe('adelantar_cuotas');
+    });
+
+    it('emite abono_capital de una si el operador marcó ese radio', async () => {
+      fixture.componentRef.setInput('pendingInitialAmount', 0);
+      fixture.componentRef.setInput('overdueTotalAmount', 0);
+      fixture.componentRef.setInput('selectedFees', [
+        { id: 1, installment_number: 1, quota_debt: 1000000 },
+      ]);
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      component.paymentForm.patchValue({
+        amount: 1500000,
+        payment_method: 'cash',
+        surplus_action: 'abono_capital',
+      });
+      component['selectedFile'] = new File(['x'], 'recibo.pdf', { type: 'application/pdf' });
+
+      const emitted: any[] = [];
+      component.confirmPayment.subscribe((data: any) => emitted.push(data));
+      component.submit();
+
+      expect(component.pendingDefaultCapitalConfirm).toBe(false);
+      expect(emitted[0].payment_option).toBe('abono_capital');
     });
 
     it('no pisa la elección del operador si ya eligió un destino', async () => {

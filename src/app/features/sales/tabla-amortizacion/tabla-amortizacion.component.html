@@ -71,6 +71,7 @@
                 <th style="padding: 0.9rem 0.75rem; border-bottom: 1px solid #e2e8f0;">Monto</th>
                 <th style="padding: 0.9rem 0.75rem; border-bottom: 1px solid #e2e8f0;">Tipo</th>
                 <th style="padding: 0.9rem 0.75rem; border-bottom: 1px solid #e2e8f0;">Método</th>
+                <th style="padding: 0.9rem 0.75rem; border-bottom: 1px solid #e2e8f0;">Recibo #</th>
                 <th style="padding: 0.9rem 0.75rem; border-bottom: 1px solid #e2e8f0; text-align: right;">Acciones</th>
               </tr>
             </thead>
@@ -81,6 +82,7 @@
                   <td style="padding: 0.9rem 0.75rem; color: #0f172a; font-weight: 700;">$ {{ t.amount | number:'1.0-0' }}</td>
                   <td style="padding: 0.9rem 0.75rem; color: #334155;">{{ transactionTypeLabel(t) }}</td>
                   <td style="padding: 0.9rem 0.75rem; color: #334155;">{{ t.payment_method }}</td>
+                  <td style="padding: 0.9rem 0.75rem; color: #334155;">{{ t.receipt_number || '—' }}</td>
                   <td style="padding: 0.9rem 0.75rem; text-align: right; white-space: nowrap;">
                     <button *ngIf="hasAllocations(t)" type="button" class="tx-details-toggle"
                             (click)="toggleTransactionDetails(t)">
@@ -91,7 +93,7 @@
                   </td>
                 </tr>
                 <tr *ngIf="isTransactionExpanded(t)" class="tx-details-row">
-                  <td colspan="5">
+                  <td colspan="6">
                     <p class="tx-details-intro">
                       El banco recibió un solo movimiento de <strong>$ {{ t.amount | number:'1.0-0' }}</strong>.
                       Así se repartió internamente:
@@ -186,6 +188,39 @@
     [contractData]="contractData"
     [totalWithInterest]="totalWithInterest">
   </app-contract-summary-card>
+
+  <div
+    *ngIf="pendingResidualBalance > 0"
+    class="residual-balance-banner"
+    [class.residual-balance-banner--ready]="residualBalanceCollectible"
+    data-testid="residual-balance-banner"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+    </svg>
+    <div>
+      <h4>Residuales menores acumulados</h4>
+      <p>
+        Hay <strong>$ {{ pendingResidualBalance | number:'1.0-2' }}</strong> pendientes de cobro
+        (condonados al cerrar cuotas; no se evaporan).
+      </p>
+      <p *ngIf="residualBalanceCollectible" class="residual-balance-banner__cta">
+        Ya se puede cobrar como ítem aparte.
+      </p>
+      <p *ngIf="!residualBalanceCollectible" class="residual-balance-banner__cta">
+        Se muestra aunque sea pequeño. El cobro como ítem aparte se habilita al acumular
+        $ {{ residualCollectibleThreshold | number:'1.0-0' }}.
+      </p>
+      <button
+        *ngIf="residualBalanceCollectible && canRegisterPayments"
+        type="button"
+        class="residual-balance-banner__collect"
+        data-testid="collect-residual-balance"
+        (click)="openResidualCollectionDrawer()">
+        Cobrar acumulado
+      </button>
+    </div>
+  </div>
 
 
 
@@ -315,12 +350,25 @@
     <p *ngIf="amortizationNote" style="margin: 0 0 0.75rem; padding: 0.85rem 1rem; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; color: #475569; font-size: 0.85rem;">
       {{ amortizationNote }}
     </p>
-    <div *ngIf="criteriaGap !== null" style="margin: 0 0 1rem; padding: 0.75rem 1rem; border-radius: 10px; background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; font-size: 0.85rem; display: flex; flex-wrap: wrap; gap: 0.35rem 0.75rem;">
-      <strong>{{ criteriaGapLabel }}: $ {{ criteriaGap | number:'1.0-0' }}</strong>
-      <span *ngIf="lifeSheetBalance !== null && outstandingCapital !== null">
-        (hoja de vida $ {{ lifeSheetBalance | number:'1.0-0' }} − capital insoluto $ {{ outstandingCapital | number:'1.0-0' }})
-      </span>
-      <small style="width: 100%; opacity: 0.85;">{{ criteriaGapHint }}</small>
+    <div *ngIf="criteriaGap !== null" class="criteria-gap-card" aria-label="Brecha entre criterios">
+      <div class="criteria-gap-card__header">
+        <strong>{{ criteriaGapLabel }}</strong>
+        <span class="criteria-gap-card__amount">$ {{ criteriaGap | number:'1.0-0' }}</span>
+      </div>
+      <div *ngIf="lifeSheetBalance !== null && outstandingCapital !== null" class="criteria-gap-card__grid">
+        <div>
+          <span>Valor hoja de vida</span>
+          <strong>$ {{ lifeSheetBalance | number:'1.0-0' }}</strong>
+        </div>
+        <div>
+          <span>Valor total de amortización</span>
+          <strong>$ {{ outstandingCapital | number:'1.0-0' }}</strong>
+        </div>
+        <div>
+          <span>Diferencia</span>
+          <strong>$ {{ criteriaGap | number:'1.0-0' }}</strong>
+        </div>
+      </div>
     </div>
     <div *ngIf="!isLoading && currentView === 'preventa'" style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
       <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem;">
@@ -361,7 +409,7 @@
                 Parte de un pago mixto
               </small>
             </span>
-            <strong style="color: #059669; font-size: 1rem;">$ {{ tx.amount | number:'1.0-0' }}</strong>
+            <strong style="color: var(--brand-link); font-size: 1rem;">$ {{ tx.amount | number:'1.0-0' }}</strong>
           </div>
         </ng-container>
 
@@ -463,6 +511,15 @@
     (onClose)="closeDrawer()"
     (confirmPayment)="procesarPago($event)">
   </app-drawer-pago>
+
+  <app-drawer-cobro-residual
+    [isOpen]="isResidualDrawerOpen"
+    [isProcessing]="isProcessingResidualCollection"
+    [pendingAmount]="pendingResidualBalance"
+    [bankAccounts]="contractData?.lot?.project?.bank_accounts || contractData?.project?.bank_accounts || []"
+    (closeDrawer)="closeResidualCollectionDrawer()"
+    (confirmCollection)="procesarCobroResidual($event)">
+  </app-drawer-cobro-residual>
 
   <app-edit-due-date-modal
     [isOpen]="isEditDueDateModalOpen"

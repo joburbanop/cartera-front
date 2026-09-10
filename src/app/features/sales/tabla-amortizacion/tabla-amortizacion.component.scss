@@ -213,6 +213,64 @@
   box-shadow: none;
 }
 
+.criteria-gap-card {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  background: var(--brand-link-soft);
+  border: 1px solid rgba(3, 105, 161, 0.2);
+  color: var(--brand-link);
+  font-size: 0.85rem;
+}
+
+.criteria-gap-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+
+  strong {
+    font-size: 1rem;
+    color: var(--brand-link);
+  }
+}
+
+.criteria-gap-card__amount {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--brand-link);
+}
+
+.criteria-gap-card__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.75rem;
+
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.6rem 0.7rem;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(3, 105, 161, 0.12);
+  }
+
+  span {
+    font-size: 0.72rem;
+    opacity: 0.9;
+    color: var(--brand-link);
+  }
+
+  strong {
+    font-size: 0.96rem;
+    line-height: 1.3;
+    color: var(--brand-link);
+  }
+}
+
 .top-nav-action-btn {
   display: inline-flex;
   align-items: center;
@@ -265,7 +323,7 @@
 .progress-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--brand-primary-deep) 0%, #34d399 100%);
+  background: var(--brand-link);
   box-shadow: inset 0 -1px 0 rgba(255,255,255,0.2);
   transition: width 0.35s ease;
 }
@@ -589,4 +647,63 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+.residual-balance-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin: 0 0 1.5rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+
+  svg {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    color: #d97706;
+  }
+
+  h4 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #92400e;
+  }
+
+  p {
+    margin: 0.35rem 0 0;
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+
+  &--ready {
+    border-color: #a7f3d0;
+    background: #ecfdf5;
+    color: #065f46;
+
+    svg,
+    h4 {
+      color: #047857;
+    }
+  }
+
+  &__cta {
+    font-weight: 700;
+  }
+
+  &__collect {
+    margin-top: 0.75rem;
+    padding: 0.45rem 0.85rem;
+    border: 0;
+    border-radius: 8px;
+    background: #047857;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
 }

@@ -31,6 +31,7 @@ describe('AmortizationComponent', () => {
     transactionType: string;
   } | null = null;
   let lastSplitPaymentArgs: { contractId: number; formData: FormData } | null = null;
+  let lastResidualCollectionArgs: { contractId: number; formData: FormData } | null = null;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -112,6 +113,10 @@ describe('AmortizationComponent', () => {
         lastSplitPaymentArgs = { contractId, formData };
         return registerPaymentResult;
       },
+      registerResidualCollection: (contractId: number, formData: FormData) => {
+        lastResidualCollectionArgs = { contractId, formData };
+        return registerPaymentResult;
+      },
       getTransactionsByContract: () => of({ data: [] }),
       getAllTransactions: () => of({ data: [] }),
     } as Partial<RecaudoService> as RecaudoService;
@@ -168,6 +173,7 @@ describe('AmortizationComponent', () => {
     registerPaymentResult = of({});
     lastRegisterPaymentArgs = null;
     lastSplitPaymentArgs = null;
+    lastResidualCollectionArgs = null;
 
     component.contractData = {
       status: 'activo',
@@ -185,6 +191,53 @@ describe('AmortizationComponent', () => {
     expect(isVencida(cuota2.due_date)).toBeTruthy();
     expect(isVencida(cuota3.due_date)).toBeFalsy();
     expect(isVencida(isoWithOffset(0))).toBeFalsy();
+  });
+
+  it('el banner de residuales se muestra con $2 y no espera el umbral de cobro', () => {
+    component.contractData = {
+      ...component.contractData,
+      pending_residual_balance: 2,
+      residual_balance_collectible: false,
+    };
+
+    expect(component.pendingResidualBalance).toBe(2);
+    expect(component.residualBalanceCollectible).toBe(false);
+  });
+
+  it('no abre el drawer de residuales si el SUM no es cobrable', () => {
+    component.contractData = {
+      ...component.contractData,
+      pending_residual_balance: 256,
+      residual_balance_collectible: false,
+    };
+
+    component.openResidualCollectionDrawer();
+
+    expect(component.isResidualDrawerOpen).toBeFalsy();
+  });
+
+  it('abre el drawer de residuales y cobra por la ruta residual', () => {
+    component.contractId = 77;
+    component.contractData = {
+      ...component.contractData,
+      pending_residual_balance: 600,
+      residual_balance_collectible: true,
+    };
+
+    component.openResidualCollectionDrawer();
+    expect(component.isResidualDrawerOpen).toBeTruthy();
+
+    component.procesarCobroResidual({
+      amount: 500,
+      payment_method: 'cash',
+      transaction_date: '2026-09-09',
+      payment_date: '2026-09-09',
+      receipt: new File(['x'], 'recibo.pdf', { type: 'application/pdf' }),
+    });
+
+    expect(lastResidualCollectionArgs?.contractId).toBe(77);
+    expect(lastResidualCollectionArgs?.formData.get('amount')).toBe('500');
+    expect(component.isDrawerOpen).toBeFalsy();
   });
 
   it('el banner de cartera vencida usa quota_debt y no el saldo del préstamo', () => {
@@ -275,6 +328,30 @@ describe('AmortizationComponent', () => {
     expect(toasts.length).toBe(1);
     expect(toasts[0].type).toBe('success');
     expect(toasts[0].title).toBe('Pago registrado');
+    expect(toasts[0].description).toBe('El abono se aplicó correctamente a la cuota seleccionada.');
+  });
+
+  it('usa application_notice del cascade en el toast de éxito', () => {
+    registerPaymentResult = of({
+      data: {
+        application_notice: 'Se aplicó $1.000 a la cuota corriente #2 antes que a la cuota #3 que seleccionaste, porque estaba pendiente de este mes.',
+      },
+    });
+    component.contractId = 1;
+    component.selectedFees = [{ ...cuota3 }];
+    vi.spyOn(component, 'cargarTablaAmortizacion').mockImplementation(() => undefined);
+    vi.spyOn(component, 'loadContractData').mockImplementation(() => undefined);
+
+    component.procesarPago({
+      amount: 1000000,
+      payment_method: 'transfer',
+      transaction_date: '2026-08-30',
+      receipt: new Blob(),
+    });
+
+    const toasts = toastService.toasts();
+    expect(toasts[0].title).toBe('Pago registrado');
+    expect(toasts[0].description).toContain('cuota corriente #2');
   });
 
   it('Un pago dividido va a la ruta de reparto con las dos partes', () => {
@@ -316,6 +393,34 @@ describe('AmortizationComponent', () => {
     expect(lastSplitPaymentArgs).toBeNull();
     expect(lastRegisterPaymentArgs).not.toBeNull();
     expect(lastRegisterPaymentArgs!.formData.get('to_down_payment')).toBeNull();
+  });
+
+  it('manda receipt_number en el FormData de pago y residual', () => {
+    component.contractId = 1;
+    component.selectedFees = [{ ...cuota3 }];
+    vi.spyOn(component, 'cargarTablaAmortizacion').mockImplementation(() => undefined);
+    vi.spyOn(component, 'loadContractData').mockImplementation(() => undefined);
+
+    component.procesarPago({
+      amount: 1000000,
+      payment_method: 'transfer',
+      transaction_date: '2026-08-30',
+      receipt: new Blob(),
+      receipt_number: '0258, 0289',
+    });
+
+    expect(lastRegisterPaymentArgs!.formData.get('receipt_number')).toBe('0258, 0289');
+
+    component.procesarCobroResidual({
+      amount: 500,
+      payment_method: 'cash',
+      transaction_date: '2026-09-09',
+      payment_date: '2026-09-09',
+      receipt: new File(['x'], 'recibo.pdf', { type: 'application/pdf' }),
+      receipt_number: '0448-0449',
+    });
+
+    expect(lastResidualCollectionArgs!.formData.get('receipt_number')).toBe('0448-0449');
   });
 
   it('El historial despliega el reparto de un pago dividido', () => {
@@ -780,7 +885,9 @@ describe('AmortizationComponent', () => {
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('Saldo de capital del plan francés.');
     expect(text).toContain('Brecha entre criterios');
-    expect(text).toContain('capital insoluto');
+    expect(text).toContain('Valor hoja de vida');
+    expect(text).toContain('Valor total de amortización');
+    expect(text).toContain('Diferencia');
   });
 
   it('con plan vacío muestra el aviso y no genera automáticamente', () => {

@@ -99,6 +99,9 @@ describe('LifeSheetTabComponent', () => {
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('VALOR LOTE FINANCIADO');
     expect(text).toContain('Brecha entre criterios');
+    expect(text).toContain('Valor hoja de vida');
+    expect(text).toContain('Valor total de amortización');
+    expect(text).toContain('Diferencia');
     expect(text).toContain('Efectivo');
     expect(text).toContain('Bancolombia');
     expect(text).toContain('Occidente 6391');

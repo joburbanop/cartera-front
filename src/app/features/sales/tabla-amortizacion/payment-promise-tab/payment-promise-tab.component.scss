@@ -37,7 +37,7 @@
 .progress-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--brand-primary-deep) 0%, #34d399 100%);
+  background: var(--brand-link);
   box-shadow: inset 0 -1px 0 rgba(255,255,255,0.2);
   transition: width 0.35s ease;
 }

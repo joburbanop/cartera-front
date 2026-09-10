@@ -19,11 +19,12 @@
   height: 100%;
   position: relative;
   overflow-x: hidden;
+  min-width: 0;
 }
 
 .sidebar {
-  width: 260px;
-  min-width: 260px;
+  width: 240px;
+  min-width: 240px;
   max-width: 100%;
   background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
   border-right: 1px solid rgba(255, 255, 255, 0.05);
@@ -34,48 +35,29 @@
   position: relative;
   overflow-x: hidden;
   box-sizing: border-box;
-}
-
-.sidebar-resize-handle {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 6px;
-  height: 100%;
-  cursor: col-resize;
-  z-index: 2;
-  background: transparent;
-  transition: background-color 0.15s ease;
 
   &::before {
     content: '';
     position: absolute;
-    top: 0;
-    right: 2px;
-    width: 2px;
-    height: 100%;
-    background: rgba(148, 163, 184, 0.12);
-    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.14;
+    background-image:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.055) 0, rgba(255, 255, 255, 0.055) 1px, transparent 1px, transparent 22px),
+      radial-gradient(circle at 18% 16%, rgba(251, 146, 60, 0.18), transparent 18%),
+      radial-gradient(circle at 80% 78%, rgba(255, 255, 255, 0.06), transparent 20%);
+    background-size: 22px 22px, 100% 100%, 100% 100%;
+    mix-blend-mode: screen;
   }
-
-  &:hover,
-  &.active {
-    background: rgba(148, 163, 184, 0.08);
-
-    &::before {
-      background: rgba(var(--brand-primary-rgb), 0.8);
-      box-shadow: 0 0 0 1px rgba(var(--brand-primary-rgb), 0.18);
-    }
-  }
-}
-
-.sidebar.is-resizing {
-  transition: none;
 }
 
 .sidebar.collapsed {
   width: 72px;
   min-width: 72px;
+
+  &::before {
+    opacity: 0.08;
+  }
 }
 
 .sidebar-header {
@@ -182,6 +164,7 @@
     display: inline-block;
     min-width: 0;
     max-width: 100%;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     transition: opacity 0.2s ease, transform 0.2s ease;
@@ -242,6 +225,25 @@
       display: none;
     }
   }
+}
+
+.main-wrapper {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.content-area {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+  padding: 0.5rem 1rem 1rem;
+  box-sizing: border-box;
 }
 
 .badge-prox {
