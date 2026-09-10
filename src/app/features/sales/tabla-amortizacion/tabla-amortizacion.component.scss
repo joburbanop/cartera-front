@@ -214,9 +214,9 @@
 }
 
 .criteria-gap-card {
-  margin: 0 0 1rem;
-  padding: 0.85rem 1rem;
-  border-radius: 10px;
+  margin: 0 0 1.25rem;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
   background: var(--brand-link-soft);
   border: 1px solid rgba(3, 105, 161, 0.2);
   color: var(--brand-link);
@@ -229,7 +229,7 @@
   align-items: baseline;
   gap: 0.75rem;
   flex-wrap: wrap;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.8rem;
 
   strong {
     font-size: 1rem;
@@ -268,6 +268,76 @@
     font-size: 0.96rem;
     line-height: 1.3;
     color: var(--brand-link);
+  }
+}
+
+.contract-overdue-alert {
+  margin-top: 1.5rem;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  box-shadow: 0 1px 2px rgba(127, 29, 29, 0.04);
+}
+
+.contract-overdue-alert__icon {
+  width: 24px;
+  height: 24px;
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+.contract-overdue-alert__content {
+  min-width: 0;
+  flex: 1;
+}
+
+.contract-overdue-alert__title {
+  margin: 0;
+  color: #991b1b;
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.contract-overdue-alert__text {
+  margin: 0.35rem 0 0;
+  color: #b91c1c;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+@media (max-width: 640px) {
+  .contract-overdue-alert {
+    margin-top: 1.25rem;
+    padding: 0.9rem 1rem;
+  }
+
+  .contract-overdue-alert__content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .contract-overdue-alert__text {
+    font-size: 0.82rem;
+  }
+
+  .criteria-gap-card__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 375px) {
+  .criteria-gap-card__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .criteria-gap-card {
+    padding: 0.8rem 0.85rem;
   }
 }
 
@@ -524,6 +594,41 @@
   min-width: 0;
   flex: 1;
   overflow: visible;
+}
+
+@media (max-width: 900px) {
+  .contract-tab-bar {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.7) transparent;
+  }
+
+  .contract-tabs {
+    display: flex;
+    flex: 1 0 auto;
+    min-width: max-content;
+    width: max-content;
+    max-width: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    padding-bottom: 0.15rem;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  .contract-tab {
+    flex: 0 0 auto;
+    padding-inline: 0.45rem;
+  }
+
+  .contract-tabs-reset {
+    flex-shrink: 0;
+  }
 }
 
 .contract-tab {

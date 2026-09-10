@@ -4,16 +4,21 @@
 }
 
 .table-container {
+  display: block;
+  width: 100%;
+  max-width: 100%;
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  overflow: hidden;
-  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
 }
 
 .custom-table {
   width: 100%;
+  min-width: 820px;
   border-collapse: collapse;
 }
 
