@@ -48,6 +48,26 @@ describe('DrawerPagoComponent', () => {
     expect(emitted[0].receipt_number).toBe('0258, 0289');
   });
 
+  it('rechaza el pago si falta el Recibo #', () => {
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.componentRef.setInput('prefilledAmount', 100000);
+    fixture.detectChanges();
+
+    component.paymentForm.patchValue({
+      amount: 100000,
+      payment_method: 'cash',
+      receipt_number: '',
+    });
+    component['selectedFile'] = new File(['x'], 'recibo.pdf', { type: 'application/pdf' });
+
+    const emitted: any[] = [];
+    component.confirmPayment.subscribe((data: any) => emitted.push(data));
+    component.submit();
+
+    expect(component.paymentForm.get('receipt_number')?.hasError('required')).toBe(true);
+    expect(emitted.length).toBe(0);
+  });
+
   it('en preventa etiqueta el total como pendiente a la fecha', () => {
     fixture.componentRef.setInput('isOpen', true);
     fixture.componentRef.setInput('overdueTotalAmount', 3000000);
@@ -65,6 +85,38 @@ describe('DrawerPagoComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Total vencido a la fecha');
+  });
+
+  it('emite paymentDateChange al cambiar la fecha de pago', () => {
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.detectChanges();
+
+    const emitted: string[] = [];
+    component.paymentDateChange.subscribe((date: string) => emitted.push(date));
+
+    component.paymentForm.patchValue({ transaction_date: '2026-01-15' });
+
+    expect(emitted).toEqual(['2026-01-15']);
+  });
+
+  it('al recalcular el monto sugerido no borra el Recibo # ni la fecha', () => {
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.componentRef.setInput('prefilledAmount', 1000000);
+    fixture.detectChanges();
+
+    component.paymentForm.patchValue({
+      receipt_number: '0258',
+      transaction_date: '2026-01-15',
+      payment_method: 'cash',
+    });
+
+    fixture.componentRef.setInput('prefilledAmount', 2000000);
+    fixture.detectChanges();
+
+    expect(component.paymentForm.get('amount')?.value).toBe(2000000);
+    expect(component.paymentForm.get('receipt_number')?.value).toBe('0258');
+    expect(component.paymentForm.get('transaction_date')?.value).toBe('2026-01-15');
+    expect(component.paymentForm.get('payment_method')?.value).toBe('cash');
   });
 
   describe('pago dividido entre cuota inicial y cuota regular', () => {
@@ -102,6 +154,44 @@ describe('DrawerPagoComponent', () => {
       fixture.detectChanges();
 
       expect(component.canSplit).toBe(false);
+    });
+
+    it('sí ofrece dividir cuando la selección mezcla inicial y regulares', () => {
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.componentRef.setInput('pendingInitialAmount', 200000);
+      fixture.componentRef.setInput('selectedFees', [
+        { id: 10, installment_number: 0, quota_debt: 200000 },
+        { id: 11, installment_number: 1, quota_debt: 1900000 },
+      ]);
+      fixture.detectChanges();
+
+      expect(component.canSplit).toBe(true);
+    });
+
+    it('al confirmar #0 + regulares sin toggle, emite el split automático', () => {
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.componentRef.setInput('pendingInitialAmount', 200000);
+      fixture.componentRef.setInput('selectedFees', [
+        { id: 10, installment_number: 0, quota_debt: 200000 },
+        { id: 11, installment_number: 1, quota_debt: 1900000 },
+      ]);
+      fixture.detectChanges();
+
+      component.paymentForm.patchValue({
+        amount: 700000,
+        payment_method: 'cash',
+        receipt_number: '0420',
+      });
+      component['selectedFile'] = new File(['x'], 'recibo.pdf', { type: 'application/pdf' });
+
+      const emitted: any[] = [];
+      component.confirmPayment.subscribe((data: any) => emitted.push(data));
+      component.submit();
+
+      expect(emitted[0].split).toEqual({
+        to_down_payment: 200000,
+        to_installments: 500000,
+      });
     });
 
     it('propone el faltante de la inicial y deja el resto a la cuota', () => {
@@ -145,6 +235,7 @@ describe('DrawerPagoComponent', () => {
       component.paymentForm.patchValue({
         amount: 2100000,
         payment_method: 'cash',
+        receipt_number: '0258',
       });
       component.toggleSplit();
       component['selectedFile'] = new File(['x'], 'recibo.pdf', { type: 'application/pdf' });
@@ -168,7 +259,7 @@ describe('DrawerPagoComponent', () => {
       // Abono a la inicial por su saldo exacto: no hay excedente que destinar.
       fixture.componentRef.setInput('prefilledAmount', 200000);
       fixture.detectChanges();
-      component.paymentForm.patchValue({ amount: 200000, payment_method: 'cash' });
+      component.paymentForm.patchValue({ amount: 200000, payment_method: 'cash', receipt_number: '0258' });
       component['selectedFile'] = new File(['x'], 'recibo.pdf', { type: 'application/pdf' });
 
       const emitted: any[] = [];
@@ -226,7 +317,7 @@ describe('DrawerPagoComponent', () => {
       fixture.componentRef.setInput('isOpen', true);
       fixture.detectChanges();
       await fixture.whenStable();
-      component.paymentForm.patchValue({ amount: 1500000, payment_method: 'cash' });
+      component.paymentForm.patchValue({ amount: 1500000, payment_method: 'cash', receipt_number: '0258' });
       component['selectedFile'] = new File(['x'], 'recibo.pdf', { type: 'application/pdf' });
 
       const emitted: any[] = [];
@@ -261,7 +352,7 @@ describe('DrawerPagoComponent', () => {
       fixture.componentRef.setInput('isOpen', true);
       fixture.detectChanges();
       await fixture.whenStable();
-      component.paymentForm.patchValue({ amount: 1500000, payment_method: 'cash' });
+      component.paymentForm.patchValue({ amount: 1500000, payment_method: 'cash', receipt_number: '0258' });
       component['selectedFile'] = new File(['x'], 'recibo.pdf', { type: 'application/pdf' });
 
       const emitted: any[] = [];
@@ -295,6 +386,7 @@ describe('DrawerPagoComponent', () => {
         amount: 1500000,
         payment_method: 'cash',
         surplus_action: 'adelantar_cuotas',
+        receipt_number: '0258',
       });
       component['selectedFile'] = new File(['x'], 'recibo.pdf', { type: 'application/pdf' });
 
@@ -319,6 +411,7 @@ describe('DrawerPagoComponent', () => {
         amount: 1500000,
         payment_method: 'cash',
         surplus_action: 'abono_capital',
+        receipt_number: '0258',
       });
       component['selectedFile'] = new File(['x'], 'recibo.pdf', { type: 'application/pdf' });
 
@@ -355,6 +448,101 @@ describe('DrawerPagoComponent', () => {
 
       expect(component.splitEnabled).toBe(false);
       expect(component.paymentForm.get('to_down_payment')?.value).toBe('');
+    });
+  });
+
+  describe('Volver del modal de confirmación (Fase 0)', () => {
+    const receipt = '8484';
+
+    function fillReadyToConfirm(amount = 1000000): void {
+      component.paymentForm.patchValue({
+        amount,
+        payment_method: 'cash',
+        receipt_number: receipt,
+      });
+      component['selectedFile'] = new File(['x'], 'recibo.pdf', { type: 'application/pdf' });
+    }
+
+    function goToSummaryAndBack(): void {
+      const emitted: unknown[] = [];
+      component.confirmPayment.subscribe((data) => emitted.push(data));
+      component.submit();
+      expect(emitted.length).toBe(1);
+      expect(component.isProcessing).toBe(false);
+
+      fixture.componentRef.setInput('confirmPending', true);
+      fixture.detectChanges();
+      expect(component.isProcessing).toBe(false);
+      expect(footerPrimary()?.textContent).not.toContain('Registrando...');
+      expect(footerPrimary()?.textContent).toContain('Confirmar pago');
+
+      fixture.componentRef.setInput('confirmPending', false);
+      fixture.detectChanges();
+    }
+
+    function footerPrimary(): HTMLButtonElement | null {
+      return fixture.nativeElement.querySelector('.panel-footer .btn-primary');
+    }
+
+    function footerCancel(): HTMLButtonElement | null {
+      return fixture.nativeElement.querySelector('.panel-footer .btn-secondary');
+    }
+
+    function expectDrawerInteractive(): void {
+      expect(component.isProcessing).toBe(false);
+      expect(component.paymentForm.get('receipt_number')?.value).toBe(receipt);
+      expect(component.selectedFile).toBeTruthy();
+      expect(footerPrimary()?.disabled).toBe(false);
+      expect(footerPrimary()?.textContent).not.toContain('Registrando...');
+      expect(footerPrimary()?.textContent).toContain('Confirmar pago');
+      expect(footerCancel()?.disabled).toBe(false);
+    }
+
+    it('cascada: Volver deja el drawer interactivo, sin Registrando...', async () => {
+      fixture.componentRef.setInput('selectedFees', [
+        { id: 3, installment_number: 3, quota_debt: 1000000 },
+      ]);
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fillReadyToConfirm();
+
+      goToSummaryAndBack();
+      expectDrawerInteractive();
+
+      const closed: unknown[] = [];
+      component.closeDrawer.subscribe(() => closed.push(true));
+      component.close();
+      expect(closed.length).toBe(1);
+    });
+
+    it('cuota inicial: Volver deja el drawer interactivo, sin Registrando...', async () => {
+      fixture.componentRef.setInput('pendingInitialAmount', 2000000);
+      fixture.componentRef.setInput('selectedFees', [
+        { id: 0, installment_number: 0, quota_debt: 2000000 },
+      ]);
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fillReadyToConfirm(2000000);
+
+      goToSummaryAndBack();
+      expectDrawerInteractive();
+    });
+
+    it('split: Volver deja el drawer interactivo, sin Registrando...', async () => {
+      fixture.componentRef.setInput('pendingInitialAmount', 200000);
+      fixture.componentRef.setInput('regularDueAmount', 1900000);
+      fixture.componentRef.setInput('selectedFees', []);
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fillReadyToConfirm(2100000);
+      component.toggleSplit();
+
+      goToSummaryAndBack();
+      expectDrawerInteractive();
+      expect(component.splitEnabled).toBe(true);
     });
   });
 });

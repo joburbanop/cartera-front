@@ -80,7 +80,10 @@
                 <tr style="border-bottom: 1px solid #edf2f7;">
                   <td style="padding: 0.9rem 0.75rem; color: #1e293b;">{{ t.transaction_date || t.created_at || '--' }}</td>
                   <td style="padding: 0.9rem 0.75rem; color: #0f172a; font-weight: 700;">$ {{ t.amount | number:'1.0-0' }}</td>
-                  <td style="padding: 0.9rem 0.75rem; color: #334155;">{{ transactionTypeLabel(t) }}</td>
+                  <td style="padding: 0.9rem 0.75rem; color: #334155;">
+                    <span>{{ transactionTypeLabel(t) }}</span>
+                    <span *ngIf="isReversedTransaction(t)" class="tx-reversed-badge">Revertido</span>
+                  </td>
                   <td style="padding: 0.9rem 0.75rem; color: #334155;">{{ t.payment_method }}</td>
                   <td style="padding: 0.9rem 0.75rem; color: #334155;">{{ t.receipt_number || '—' }}</td>
                   <td style="padding: 0.9rem 0.75rem; text-align: right; white-space: nowrap;">
@@ -88,8 +91,12 @@
                             (click)="toggleTransactionDetails(t)">
                       {{ isTransactionExpanded(t) ? 'Ocultar detalles' : 'Ver detalles' }}
                     </button>
+                    <button *ngIf="canShowReverseButton(t)" type="button" class="tx-reverse-btn"
+                            (click)="openReverseModal(t)">
+                      Reversar pago
+                    </button>
                     <button *ngIf="t.receipt" type="button" class="btn-outline" (click)="verComprobante(t.receipt)">Ver Recibo</button>
-                    <span *ngIf="!t.receipt && !hasAllocations(t)" style="color: #94a3b8; font-size: 0.8rem;">Sin recibo</span>
+                    <span *ngIf="!t.receipt && !hasAllocations(t) && !canShowReverseButton(t)" style="color: #94a3b8; font-size: 0.8rem;">Sin recibo</span>
                   </td>
                 </tr>
                 <tr *ngIf="isTransactionExpanded(t)" class="tx-details-row">
@@ -131,6 +138,53 @@
             (pageChange)="loadHistoryPage($event)">
           </app-pagination>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="isReverseModalOpen" class="modal-overlay reverse-modal-overlay" (click)="closeReverseModal()">
+    <div class="reverse-modal-card" (click)="$event.stopPropagation()">
+      <div class="reverse-modal-header">
+        <h3>Revertir pago</h3>
+        <button type="button" class="btn-close" (click)="closeReverseModal()" [disabled]="isReversingPayment" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="reverse-modal-body">
+        <p class="reverse-modal-helper">
+          Se revertirá el último cobro
+          <strong *ngIf="reversingTransaction">de $ {{ reversingTransaction.amount | number:'1.0-0' }}</strong>.
+          Esta acción queda registrada en el historial.
+        </p>
+        <label class="modal-label" for="reversal-reason">Motivo *</label>
+        <select
+          id="reversal-reason"
+          class="modal-input"
+          [(ngModel)]="reversalReason"
+          [disabled]="isReversingPayment"
+        >
+          <option *ngFor="let option of reversalReasons" [ngValue]="option.value">{{ option.label }}</option>
+        </select>
+        <label class="modal-label" for="reversal-notes">
+          {{ reversalNotesRequired ? 'Describe el motivo *' : 'Notas (opcional)' }}
+        </label>
+        <textarea
+          id="reversal-notes"
+          class="modal-input reverse-modal-notes"
+          rows="3"
+          [(ngModel)]="reversalNotes"
+          [disabled]="isReversingPayment"
+          [attr.aria-required]="reversalNotesRequired"
+        ></textarea>
+      </div>
+      <div class="reverse-modal-footer">
+        <button type="button" class="btn-cancel" (click)="closeReverseModal()" [disabled]="isReversingPayment">Cancelar</button>
+        <button
+          type="button"
+          class="btn-save tx-reverse-submit"
+          (click)="submitReversal()"
+          [disabled]="isReversingPayment || (reversalNotesRequired && !reversalNotes.trim())"
+        >
+          {{ isReversingPayment ? 'Revirtiendo...' : 'Confirmar reversa' }}
+        </button>
       </div>
     </div>
   </div>
@@ -508,20 +562,31 @@
   [pendingInitialAmount]="pendingInitialAmount"
   [regularDueAmount]="regularDueAmount"
     [isProcessing]="isProcessingPayment"
+    [confirmPending]="isPaymentConfirmOpen"
     [bankAccounts]="contractData?.lot?.project?.bank_accounts || contractData?.project?.bank_accounts || []" 
     (closeDrawer)="closeDrawer()"
     (onClose)="closeDrawer()"
-    (confirmPayment)="procesarPago($event)">
+    (paymentDateChange)="onDrawerPaymentDateChange($event)"
+    (confirmPayment)="onDrawerConfirmPayment($event)">
   </app-drawer-pago>
 
   <app-drawer-cobro-residual
     [isOpen]="isResidualDrawerOpen"
     [isProcessing]="isProcessingResidualCollection"
+    [confirmPending]="isPaymentConfirmOpen"
     [pendingAmount]="pendingResidualBalance"
     [bankAccounts]="contractData?.lot?.project?.bank_accounts || contractData?.project?.bank_accounts || []"
     (closeDrawer)="closeResidualCollectionDrawer()"
-    (confirmCollection)="procesarCobroResidual($event)">
+    (confirmCollection)="onDrawerConfirmResidual($event)">
   </app-drawer-cobro-residual>
+
+  <app-payment-confirm-modal
+    [isOpen]="isPaymentConfirmOpen"
+    [summary]="paymentConfirmSummary"
+    [isProcessing]="isProcessingPayment || isProcessingResidualCollection"
+    (goBack)="dismissPaymentConfirm()"
+    (confirm)="confirmPendingPayment()">
+  </app-payment-confirm-modal>
 
   <app-edit-due-date-modal
     [isOpen]="isEditDueDateModalOpen"

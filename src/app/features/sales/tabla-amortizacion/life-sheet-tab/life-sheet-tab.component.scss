@@ -204,6 +204,14 @@
 .hv-accumulated { font-weight: 600; color: #334155; }
 .hv-initial td { font-weight: 700; background: #f8fafc; }
 
+tr.hv-no-running {
+  color: #64748b;
+
+  td:nth-child(2) {
+    font-style: italic;
+  }
+}
+
 .hv-trace {
   display: block;
   margin-top: 0.25rem;

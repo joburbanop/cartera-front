@@ -32,6 +32,8 @@ export interface LifeSheetRow {
   /** Acumulado pagado hasta esta fila, inclusive. */
   total_paid: string;
   balance: string;
+  /** false en cobros revertidos y en la fila de reversa: no mueven Total Pagado/Saldo. */
+  affects_running_total?: boolean;
   notes: string | null;
   amortization_application: Array<{
     installment_number: number;

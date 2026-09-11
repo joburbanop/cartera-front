@@ -1,0 +1,70 @@
+<div
+  class="app-modal-backdrop app-modal-backdrop--stack"
+  *ngIf="isOpen && summary"
+  data-testid="payment-confirm-modal"
+  (click)="goBack.emit()"
+>
+  <div class="app-modal" role="dialog" aria-modal="true" aria-labelledby="payment-confirm-title" (click)="$event.stopPropagation()">
+    <div class="app-modal-header">
+      <div>
+        <h2 id="payment-confirm-title">
+          {{ summary.kind === 'residual' ? 'Confirmar cobro de residuales' : 'Confirmar pago' }}
+        </h2>
+        <p>Revisa el resumen antes de enviarlo. Nada se registra hasta que confirmes.</p>
+      </div>
+    </div>
+
+    <div class="app-modal-body">
+      <dl class="payment-confirm-summary">
+        <div>
+          <dt>Contrato</dt>
+          <dd>{{ summary.contractLabel }}</dd>
+        </div>
+        <div>
+          <dt>Monto</dt>
+          <dd>$ {{ summary.amount | number:'1.0-0' }}</dd>
+        </div>
+        <div>
+          <dt>Fecha</dt>
+          <dd>{{ summary.transactionDate }}</dd>
+        </div>
+        <div>
+          <dt>Método</dt>
+          <dd>{{ summary.paymentMethod | paymentMethodName }}</dd>
+        </div>
+        <div>
+          <dt>Recibo #</dt>
+          <dd>{{ summary.receiptNumber || '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ summary.kind === 'residual' ? 'Destino' : 'Cuota(s)' }}</dt>
+          <dd>{{ summary.installmentsLabel }}</dd>
+        </div>
+        <div *ngIf="summary.split">
+          <dt>Reparto</dt>
+          <dd>
+            Inicial $ {{ summary.split.toDownPayment | number:'1.0-0' }}
+            · Regulares $ {{ summary.split.toInstallments | number:'1.0-0' }}
+          </dd>
+        </div>
+        <div *ngIf="summary.surplusActionLabel">
+          <dt>Excedente</dt>
+          <dd>{{ summary.surplusActionLabel }}</dd>
+        </div>
+        <div *ngIf="summary.residualPending != null">
+          <dt>Residual pendiente</dt>
+          <dd>$ {{ summary.residualPending | number:'1.0-0' }}</dd>
+        </div>
+      </dl>
+
+      <div class="app-form-actions">
+        <button type="button" class="btn-secondary" (click)="goBack.emit()" [disabled]="isProcessing">
+          Volver
+        </button>
+        <button type="button" class="btn-primary" (click)="confirm.emit()" [disabled]="isProcessing">
+          {{ confirmLabel }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

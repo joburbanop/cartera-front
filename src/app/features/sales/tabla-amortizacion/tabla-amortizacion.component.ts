@@ -7,6 +7,12 @@ import { ContractService } from '../../../core/services/contract.service';
 import { FinancialService } from '../../../core/services/financial.service';
 import { DrawerPagoComponent } from '../../../shared/components/drawer-pago/drawer-pago.component';
 import { DrawerCobroResidualComponent, ResidualCollectionPayload } from '../../../shared/components/drawer-cobro-residual/drawer-cobro-residual.component';
+import {
+  PaymentConfirmKind,
+  PaymentConfirmModalComponent,
+  PaymentConfirmSummary,
+  SURPLUS_ACTION_LABELS,
+} from '../../../shared/components/payment-confirm-modal/payment-confirm-modal.component';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivityEntry } from '../../../core/models/activity-entry.model';
 import { RecaudoService } from '../../../core/services/recaudo.service';
@@ -23,6 +29,7 @@ import { EditPaymentDateModalComponent } from './edit-payment-date-modal/edit-pa
 import { RefinanceModalComponent, RefinanceConfirmPayload } from './refinance-modal/refinance-modal.component';
 import { LifeSheetTabComponent } from './life-sheet-tab/life-sheet-tab.component';
 import { LifeSheet } from '../../../core/models/life-sheet.model';
+import { autoSplitDownPayment } from '../../../core/utils/split-down-payment';
 import { Transaction, TRANSACTION_TYPE_LABELS } from '../../../core/models/transaction.model';
 import { PaymentPromiseService } from '../../../core/services/payment-promise.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -56,6 +63,7 @@ import { buildAppBreadcrumbs, penultimateBreadcrumb } from '../../../core/utils/
     ReactiveFormsModule,
     DrawerPagoComponent,
     DrawerCobroResidualComponent,
+    PaymentConfirmModalComponent,
     PaymentMethodNamePipe,
     AmortizationTablePresenterComponent,
     ContractSummaryCardComponent,
@@ -123,6 +131,10 @@ export class AmortizationComponent implements OnInit, OnDestroy {
 
   get canRegisterPayments(): boolean {
     return this.authService.hasRole(AppRoles.ADMINISTRADOR);
+  }
+
+  get canReversePayments(): boolean {
+    return this.authService.hasPermission('payments.reverse');
   }
 
   get canRefinance(): boolean {
@@ -223,6 +235,8 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   isProcessingPayment = false;
   isResidualDrawerOpen = false;
   isProcessingResidualCollection = false;
+  paymentConfirmSummary: PaymentConfirmSummary | null = null;
+  private pendingPaymentConfirm: { kind: PaymentConfirmKind; payload: any } | null = null;
   currentView: 'venta' | 'preventa' = 'venta';
   resetSelectionFlag = false;
   isGeneralPaymentFlow = false;
@@ -230,12 +244,25 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   drawerAmountHint: 'schedule' | null = null;
   drawerOverdueTotal: number | null = null;
   drawerAmortizationReferenceAmount: number | null = null;
+  drawerPaymentAsOf: string | null = null;
+  drawerManualSelection: any[] = [];
   transactions: any[] = [];
   isHistoryModalOpen = false;
   isLoadingHistory = false;
   historyPage = 1;
   historyTotal = 0;
   readonly historyPageSize = 20;
+  isReverseModalOpen = false;
+  isReversingPayment = false;
+  reversingTransaction: Transaction | null = null;
+  reversalReason = 'error_captura';
+  reversalNotes = '';
+  readonly reversalReasons: { value: string; label: string }[] = [
+    { value: 'error_captura', label: 'Error de captura' },
+    { value: 'duplicado', label: 'Pago duplicado' },
+    { value: 'mal_imputado', label: 'Mal imputado' },
+    { value: 'otro', label: 'Otro' },
+  ];
   paymentPromises: PaymentPromise[] = [];
   activityEntries: ActivityEntry[] = [];
   isLoadingActivity = false;
@@ -908,32 +935,86 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   /**
    * Delegado a `isVencida` de core. Se conserva como método del componente
    * para que los specs existentes sigan llamándolo vía `(component as any).isVencida`.
+   * `asOf` es opcional: banner, badges y checkbox bloqueado no lo pasan (hoy real).
    */
-  private isVencida(dueDate: string | Date | null | undefined): boolean {
-    return isVencida(dueDate);
+  private isVencida(
+    dueDate: string | Date | null | undefined,
+    asOf?: string | Date | null,
+  ): boolean {
+    return isVencida(dueDate, asOf);
+  }
+
+  private todayLocalIsoDate(): string {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   openDrawer(): void {
     this.isGeneralPaymentFlow = false;
     this.drawerSuggestedAmount = null;
     this.drawerOverdueTotal = null;
+    this.drawerManualSelection = this.selectedFees.filter(
+      (fee: any) => this.isFeeSelectable(fee)
+    );
+    this.drawerPaymentAsOf = this.todayLocalIsoDate();
 
-    // Filtrar las seleccionadas manualmente que aún sean elegibles
-    const seleccionadasValidas = this.selectedFees.filter(
+    if (!this.applySelectedDrawerMerge(this.drawerPaymentAsOf)) {
+      return;
+    }
+
+    this.isDrawerOpen = true;
+    this.syncPaymentSessionKeepAlive();
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Recalcula mora y monto sugerido del drawer usando la fecha de pago como `asOf`.
+   * No toca banner, badges ni `isBloqueada` (siguen contra hoy real).
+   */
+  onDrawerPaymentDateChange(date: string): void {
+    if (!this.isDrawerOpen) {
+      return;
+    }
+
+    const asOf = String(date ?? '').trim().substring(0, 10);
+    if (!asOf || asOf === this.drawerPaymentAsOf) {
+      return;
+    }
+
+    this.drawerPaymentAsOf = asOf;
+    this.refreshDrawerForPaymentDate(asOf);
+  }
+
+  private refreshDrawerForPaymentDate(asOf: string): void {
+    if (this.isGeneralPaymentFlow) {
+      this.applyGeneralDrawerPrefill(asOf, true);
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.applySelectedDrawerMerge(asOf);
+    this.cdr.detectChanges();
+  }
+
+  private applySelectedDrawerMerge(asOf?: string | Date | null): boolean {
+    const seleccionadasValidas = this.drawerManualSelection.filter(
       (fee: any) => this.isFeeSelectable(fee)
     );
 
-    // --- Regla de negocio: separar tipo antes de fusionar mora ---
-    // La cuota inicial (installment_number === 0) va al endpoint /down-payment,
-    // las cuotas regulares van a /cascade. Nunca mezclar ambos tipos en un pago.
+    // --- Regla de negocio: separar carril antes de fusionar mora ---
+    // #0 sola va a /down-payment. Regulares van a /cascade. #0 + regulares
+    // se cobran como pago_mixto (SplitPaymentService), no se mandan enteras
+    // a down_payment.
     const isSeleccionInicial = seleccionadasValidas.some(
       (c: any) => Number(c.installment_number) === 0
     );
 
-    // Filtrar mora del mismo tipo que la selección manual
     const cuotasEnMora = (this.amortizationPlan ?? []).filter((c: any) => {
       const esPagada = isPaidStatus(c?.status);
-      const esVencida = this.isVencida(c.due_date);
+      const esVencida = this.isVencida(c.due_date, asOf);
       const esInicial = Number(c.installment_number) === 0;
 
       if (esPagada || !esVencida) return false;
@@ -947,25 +1028,22 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       return isSeleccionInicial ? esInicial : !esInicial;
     });
 
-    // Fusionar mora tipada + selección manual y eliminar duplicados por id
     const merged = [...cuotasEnMora, ...seleccionadasValidas];
     const cuotasUnicas = Array.from(
       new Map(merged.map((c: any) => [c.id ?? c.installment_number, c])).values()
     );
 
-    // Ordenar de más antigua a más reciente (FIFO)
     cuotasUnicas.sort(
       (a: any, b: any) =>
         new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
     );
 
     if (cuotasUnicas.length === 0) {
-      return;
+      return false;
     }
 
     this.selectedFees = cuotasUnicas;
-    this.isDrawerOpen = true;
-    this.cdr.detectChanges();
+    return true;
   }
 
   get hasPendingPaymentsForGeneralFlow(): boolean {
@@ -985,15 +1063,31 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   }
 
   openGeneralPaymentDrawer(): void {
-    const amortizationSuggested = this.computeAmortizationSuggestedAmount();
-    if (amortizationSuggested <= 0 && !this.nextPendingPromise()) {
+    this.drawerManualSelection = [];
+    this.drawerPaymentAsOf = this.todayLocalIsoDate();
+
+    if (!this.applyGeneralDrawerPrefill(this.drawerPaymentAsOf)) {
       return;
+    }
+
+    this.isDrawerOpen = true;
+    this.syncPaymentSessionKeepAlive();
+    this.cdr.detectChanges();
+  }
+
+  private applyGeneralDrawerPrefill(
+    asOf?: string | Date | null,
+    allowEmpty = false,
+  ): boolean {
+    const amortizationSuggested = this.computeAmortizationSuggestedAmount(asOf);
+    if (!allowEmpty && amortizationSuggested <= 0 && !this.nextPendingPromise()) {
+      return false;
     }
 
     const nextPromise = this.nextPendingPromise();
     this.isGeneralPaymentFlow = true;
     this.selectedFees = [];
-    this.drawerOverdueTotal = Math.round(this.computeOverdueTotalToDate());
+    this.drawerOverdueTotal = Math.round(this.computeOverdueTotalToDate(asOf));
 
     if (this.shouldPrioritizePendingInitial()) {
       this.drawerSuggestedAmount = Math.round(this.initialFeeBalance);
@@ -1009,8 +1103,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       this.drawerAmortizationReferenceAmount = null;
     }
 
-    this.isDrawerOpen = true;
-    this.cdr.detectChanges();
+    return true;
   }
 
   private lotStatusValue(): string {
@@ -1028,22 +1121,22 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     return this.financials.suppressesRegularOverdue(this.amortizationPlan, this.contractData);
   }
 
-  private overdueRegularInstallments(): any[] {
+  private overdueRegularInstallments(asOf?: string | Date | null): any[] {
     if (this.shouldPrioritizePendingInitial()) {
       return [];
     }
 
     return this.getRegularPendingInstallmentsSorted()
-      .filter((fee: any) => this.isVencida(fee?.due_date));
+      .filter((fee: any) => this.isVencida(fee?.due_date, asOf));
   }
 
-  private overdueRegularInstallmentsAmount(): number {
-    return this.overdueRegularInstallments()
+  private overdueRegularInstallmentsAmount(asOf?: string | Date | null): number {
+    return this.overdueRegularInstallments(asOf)
       .reduce((sum: number, fee: any) => sum + this.financials.getFeeDebtValue(fee), 0);
   }
 
-  private computeOverdueTotalToDate(): number {
-    const overdueRegulars = this.overdueRegularInstallmentsAmount();
+  private computeOverdueTotalToDate(asOf?: string | Date | null): number {
+    const overdueRegulars = this.overdueRegularInstallmentsAmount(asOf);
 
     if (!this.shouldPrioritizePendingInitial()) {
       return overdueRegulars;
@@ -1075,7 +1168,8 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       return 0;
     }
 
-    const vencidas = pendientes.filter((fee: any) => this.isVencida(fee?.due_date));
+    const asOf = this.isDrawerOpen ? this.drawerPaymentAsOf : undefined;
+    const vencidas = pendientes.filter((fee: any) => this.isVencida(fee?.due_date, asOf));
     const base = vencidas.length > 0 ? vencidas : [pendientes[0]];
 
     return Math.round(
@@ -1087,7 +1181,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     return this.overdueRegularInstallments().length;
   }
 
-  private computeAmortizationSuggestedAmount(): number {
+  private computeAmortizationSuggestedAmount(asOf?: string | Date | null): number {
     if (this.shouldPrioritizePendingInitial()) {
       return this.initialFeeBalance;
     }
@@ -1097,7 +1191,9 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       return 0;
     }
 
-    const overdueInstallments = regularPendingInstallments.filter((fee: any) => this.isVencida(fee?.due_date));
+    const overdueInstallments = regularPendingInstallments.filter((fee: any) =>
+      this.isVencida(fee?.due_date, asOf),
+    );
 
     return overdueInstallments.length > 0
       ? overdueInstallments.reduce((sum: number, fee: any) => sum + this.financials.getFeeDebtValue(fee), 0)
@@ -1174,6 +1270,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   }
 
   closeDrawer(): void {
+    this.dismissPaymentConfirm();
     this.isProcessingPayment = false;
     this.isDrawerOpen = false;
     this.isGeneralPaymentFlow = false;
@@ -1181,7 +1278,10 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     this.drawerAmountHint = null;
     this.drawerAmortizationReferenceAmount = null;
     this.drawerOverdueTotal = null;
+    this.drawerPaymentAsOf = null;
+    this.drawerManualSelection = [];
     this.clearTableSelection();
+    this.syncPaymentSessionKeepAlive();
   }
 
   openResidualCollectionDrawer(): void {
@@ -1189,11 +1289,125 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       return;
     }
     this.isResidualDrawerOpen = true;
+    this.syncPaymentSessionKeepAlive();
   }
 
   closeResidualCollectionDrawer(): void {
+    this.dismissPaymentConfirm();
     this.isProcessingResidualCollection = false;
     this.isResidualDrawerOpen = false;
+    this.syncPaymentSessionKeepAlive();
+  }
+
+  onDrawerConfirmPayment(paymentData: any): void {
+    this.pendingPaymentConfirm = { kind: 'payment', payload: paymentData };
+    this.paymentConfirmSummary = this.buildPaymentConfirmSummary(paymentData);
+  }
+
+  onDrawerConfirmResidual(paymentData: ResidualCollectionPayload): void {
+    this.pendingPaymentConfirm = { kind: 'residual', payload: paymentData };
+    this.paymentConfirmSummary = this.buildResidualConfirmSummary(paymentData);
+  }
+
+  dismissPaymentConfirm(): void {
+    this.pendingPaymentConfirm = null;
+    this.paymentConfirmSummary = null;
+  }
+
+  confirmPendingPayment(): void {
+    const pending = this.pendingPaymentConfirm;
+    if (!pending) {
+      return;
+    }
+
+    this.pendingPaymentConfirm = null;
+    this.paymentConfirmSummary = null;
+
+    if (pending.kind === 'residual') {
+      this.procesarCobroResidual(pending.payload);
+      return;
+    }
+
+    this.procesarPago(pending.payload);
+  }
+
+  get isPaymentConfirmOpen(): boolean {
+    return this.paymentConfirmSummary != null;
+  }
+
+  private buildPaymentConfirmSummary(paymentData: any): PaymentConfirmSummary {
+    const resolvedSplit = this.resolveMixedSelectionSplit(paymentData);
+    const split = resolvedSplit
+      ? {
+          toDownPayment: Number(resolvedSplit.to_down_payment) || 0,
+          toInstallments: Number(resolvedSplit.to_installments) || 0,
+        }
+      : null;
+    const surplusAction = String(paymentData?.payment_option ?? paymentData?.surplus_action ?? '').trim();
+
+    return {
+      kind: 'payment',
+      contractLabel: this.paymentConfirmContractLabel(),
+      amount: Number(paymentData?.amount) || 0,
+      transactionDate: String(paymentData?.transaction_date ?? '').substring(0, 10),
+      paymentMethod: String(paymentData?.payment_method ?? ''),
+      receiptNumber: String(paymentData?.receipt_number ?? '').trim(),
+      installmentsLabel: this.paymentConfirmInstallmentsLabel(),
+      split,
+      surplusActionLabel: SURPLUS_ACTION_LABELS[surplusAction] ?? (surplusAction || null),
+      residualPending: null,
+    };
+  }
+
+  private buildResidualConfirmSummary(paymentData: ResidualCollectionPayload): PaymentConfirmSummary {
+    return {
+      kind: 'residual',
+      contractLabel: this.paymentConfirmContractLabel(),
+      amount: Number(paymentData?.amount) || 0,
+      transactionDate: String(paymentData?.transaction_date ?? '').substring(0, 10),
+      paymentMethod: String(paymentData?.payment_method ?? ''),
+      receiptNumber: String(paymentData?.receipt_number ?? '').trim(),
+      installmentsLabel: 'Ítem aparte (no aplica a cuotas)',
+      split: null,
+      surplusActionLabel: null,
+      residualPending: Math.round(Number(this.pendingResidualBalance) || 0),
+    };
+  }
+
+  private paymentConfirmContractLabel(): string {
+    const lot = this.contractData?.lot?.number;
+    const customer = this.contractData?.customer_name
+      || this.contractData?.customer?.name
+      || this.contractData?.customer?.first_name
+      || this.contractData?.customers?.[0]?.name;
+    const parts: string[] = [];
+
+    if (this.contractData?.contract_number) {
+      parts.push(`Contrato ${this.contractData.contract_number}`);
+    } else if (this.contractId) {
+      parts.push(`Contrato #${this.contractId}`);
+    }
+
+    if (lot) {
+      parts.push(`Lote ${lot}`);
+    }
+
+    if (customer) {
+      parts.push(String(customer));
+    }
+
+    return parts.join(' · ') || 'Contrato';
+  }
+
+  private paymentConfirmInstallmentsLabel(): string {
+    if (this.isGeneralPaymentFlow || this.selectedFees.length === 0) {
+      return 'Imputación FIFO / flujo general';
+    }
+
+    return this.selectedFees.map((fee: any) => {
+      const number = Number(fee?.installment_number);
+      return number === 0 ? 'Cuota inicial' : `Cuota #${number}`;
+    }).join(', ');
   }
 
   procesarCobroResidual(paymentData: ResidualCollectionPayload): void {
@@ -1218,6 +1432,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       next: () => {
         this.isProcessingResidualCollection = false;
         this.isResidualDrawerOpen = false;
+        this.syncPaymentSessionKeepAlive();
         this.toast.show(
           'Residuales cobrados',
           'success',
@@ -1229,6 +1444,10 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.isProcessingResidualCollection = false;
+        if (this.isUnauthorizedError(err)) {
+          this.cdr.detectChanges();
+          return;
+        }
         const backendErrors = err?.error?.errors ?? null;
         const firstMessage = backendErrors
           ? Object.values(backendErrors)
@@ -1297,6 +1516,99 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       ?? String(transaction.transaction_type ?? '--');
   }
 
+  isReversedTransaction(transaction: Transaction): boolean {
+    return !!transaction.reversed_at;
+  }
+
+  isReversalTransaction(transaction: Transaction): boolean {
+    return String(transaction.transaction_type) === 'payment_reversal';
+  }
+
+  canShowReverseButton(transaction: Transaction): boolean {
+    return this.canReversePayments
+      && transaction.can_reverse === true
+      && !this.isReversedTransaction(transaction)
+      && !this.isReversalTransaction(transaction);
+  }
+
+  openReverseModal(transaction: Transaction): void {
+    if (!this.canShowReverseButton(transaction) || this.isReversingPayment) {
+      return;
+    }
+
+    this.reversingTransaction = transaction;
+    this.reversalReason = 'error_captura';
+    this.reversalNotes = '';
+    this.isReverseModalOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  closeReverseModal(): void {
+    if (this.isReversingPayment) {
+      return;
+    }
+
+    this.isReverseModalOpen = false;
+    this.reversingTransaction = null;
+    this.reversalReason = 'error_captura';
+    this.reversalNotes = '';
+    this.cdr.detectChanges();
+  }
+
+  get reversalNotesRequired(): boolean {
+    return this.reversalReason === 'otro';
+  }
+
+  submitReversal(): void {
+    const transaction = this.reversingTransaction;
+    if (!transaction?.id || this.isReversingPayment || !this.canShowReverseButton(transaction)) {
+      return;
+    }
+
+    const notes = this.reversalNotes.trim();
+    if (this.reversalNotesRequired && !notes) {
+      this.toast.show(
+        'Describe el motivo',
+        'error',
+        'El texto es obligatorio cuando eliges Otro.',
+      );
+      return;
+    }
+
+    this.isReversingPayment = true;
+    this.cdr.detectChanges();
+
+    this.recaudoService.reversePayment(this.contractId, transaction.id, {
+      reason: this.reversalReason,
+      notes: notes || null,
+    }).subscribe({
+      next: () => {
+        this.isReversingPayment = false;
+        this.isReverseModalOpen = false;
+        this.reversingTransaction = null;
+        this.reversalNotes = '';
+        this.toast.show('Pago revertido', 'success', 'La reversa se registró en el historial.');
+        this.loadHistoryPage(this.historyPage);
+        this.cargarTablaAmortizacion();
+        this.loadContractData();
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.isReversingPayment = false;
+        if (this.isUnauthorizedError(err)) {
+          this.cdr.detectChanges();
+          return;
+        }
+        this.toast.show(
+          'No se pudo revertir el pago',
+          'error',
+          this.readFirstBackendError(err),
+        );
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
 
   getFeeStatus(fee: any): string {
     return this.financials.getFeeStatus(fee, this.amortizationPlan, this.contractData);
@@ -1350,9 +1662,14 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   }
 
   cerrarHistorialPagos(): void {
+    if (this.isReversingPayment) {
+      return;
+    }
+
     this.isHistoryModalOpen = false;
     this.isLoadingHistory = false;
     this.transactions = [];
+    this.closeReverseModal();
   }
 
   verComprobante(receiptUrl: string): void {
@@ -1536,10 +1853,40 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     this.openDrawer();
   }
 
+  /**
+   * #0 + regulares sin toggle de split: inicial primero (hasta el pendiente),
+   * el resto a las cuotas. Si el cobrador ya mandó `split`, se respeta.
+   */
+  private resolveMixedSelectionSplit(
+    paymentData: any,
+  ): { to_down_payment: number; to_installments: number } | null {
+    const explicit = paymentData?.split;
+    const explicitDown = Math.max(0, Number(explicit?.to_down_payment) || 0);
+    const explicitRegulars = Math.max(0, Number(explicit?.to_installments) || 0);
+    if (explicitDown > 0 && explicitRegulars > 0) {
+      return {
+        to_down_payment: explicitDown,
+        to_installments: explicitRegulars,
+      };
+    }
+
+    const hasInicial = this.selectedFees.some((fee: any) => Number(fee.installment_number) === 0);
+    const hasRegular = this.selectedFees.some((fee: any) => Number(fee.installment_number) > 0);
+    if (!hasInicial || !hasRegular) {
+      return null;
+    }
+
+    return autoSplitDownPayment(
+      Math.max(0, Number(paymentData?.amount) || 0),
+      Math.round(this.pendingInitialAmount),
+    );
+  }
+
   procesarPago(paymentData: any): void {
     this.isProcessingPayment = true;
 
     const transactionType = !this.isGeneralPaymentFlow && this.selectedFees.some((fee: any) => Number(fee.installment_number) === 0)
+      && !this.selectedFees.some((fee: any) => Number(fee.installment_number) > 0)
       ? 'down_payment'
       : 'regular_payment';
 
@@ -1559,7 +1906,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     // Pago dividido: un solo movimiento bancario que cubre parte de la inicial
     // y parte de la cuota del mes. Va por su propia ruta porque el reparto no
     // se puede deducir del monto.
-    const split = paymentData.split;
+    const split = this.resolveMixedSelectionSplit(paymentData);
     if (split) {
       formData.append('to_down_payment', String(split.to_down_payment ?? 0));
       formData.append('to_installments', String(split.to_installments ?? 0));
@@ -1567,6 +1914,10 @@ export class AmortizationComponent implements OnInit, OnDestroy {
 
     if (!this.isGeneralPaymentFlow && this.selectedFees.length) {
       this.selectedFees.forEach((fee: any) => {
+        if (split && Number(fee.installment_number) === 0) {
+          return;
+        }
+
         // El plan persistido siempre trae id; installment_number no se usa como fallback.
         formData.append('installment_numbers[]', String(Number(fee.id)));
         formData.append('selected_installments[]', String(Number(fee.id)));
@@ -1593,6 +1944,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       next: (response) => {
         this.isProcessingPayment = false;
         this.isDrawerOpen = false;
+        this.syncPaymentSessionKeepAlive();
         this.clearTableSelection();
 
         const payload = unwrapResource<Record<string, unknown>>(response);
@@ -1614,6 +1966,10 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.isProcessingPayment = false;
+        if (this.isUnauthorizedError(err)) {
+          this.cdr.detectChanges();
+          return;
+        }
 
         const backendErrors = err?.error?.errors ?? null;
         const firstMessage = backendErrors
@@ -1634,7 +1990,21 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.authService.stopSessionKeepAlive();
     this.pageTitle.clear();
+  }
+
+  private syncPaymentSessionKeepAlive(): void {
+    if (this.isDrawerOpen || this.isResidualDrawerOpen) {
+      this.authService.startSessionKeepAlive();
+      return;
+    }
+
+    this.authService.stopSessionKeepAlive();
+  }
+
+  private isUnauthorizedError(err: unknown): boolean {
+    return (err as { status?: number } | null)?.status === 401;
   }
 
   private buildContractTitle(contract: any): string {

@@ -62,6 +62,17 @@ export class RecaudoService {
     });
   }
 
+  reversePayment(
+    contractId: number,
+    transactionId: number,
+    payload: { reason: string; notes?: string | null },
+  ): Observable<ApiResourceResponse<{ reversal_id: number; reversed_transaction_ids: number[]; amount: string }>> {
+    return this.http.post<ApiResourceResponse<{ reversal_id: number; reversed_transaction_ids: number[]; amount: string }>>(
+      `${this.apiUrl}/contracts/${contractId}/transactions/${transactionId}/reversal`,
+      payload,
+    );
+  }
+
   getAllTransactions(filters?: Record<string, string | number>): Observable<ApiListResponse<Transaction>> {
     const params = filters ? { ...filters } : {};
     return this.http.get<ApiListResponse<Transaction>>(`${this.apiUrl}/transactions`, { params });

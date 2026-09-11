@@ -1,8 +1,8 @@
 import { Component, ChangeDetectorRef, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { AuthService } from '../../../core/services/auth.service';
+import { ActivatedRoute, Router } from '@angular/router';
+import { AuthService, SESSION_EXPIRED_MESSAGE } from '../../../core/services/auth.service';
 import { FieldErrorComponent } from '../../../shared/components/field-error/field-error.component';
 import { markAllAsTouched, scrollToFirstInvalid } from '../../../shared/utils/form-utils';
 
@@ -17,6 +17,7 @@ export class LoginComponent {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private host = inject(ElementRef<HTMLElement>);
   private cdr = inject(ChangeDetectorRef);
 
@@ -36,6 +37,13 @@ export class LoginComponent {
   isLoading = false;
 
   constructor() {
+    if (
+      this.route.snapshot.queryParamMap.get('expired') === '1'
+      || this.authService.consumeSessionExpiredNotice()
+    ) {
+      this.errorMessage = SESSION_EXPIRED_MESSAGE;
+    }
+
     this.loginForm.controls.password.valueChanges.subscribe(() => {
       this.cdr.markForCheck();
     });

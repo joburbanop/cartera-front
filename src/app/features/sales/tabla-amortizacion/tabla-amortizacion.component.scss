@@ -155,6 +155,138 @@
   &:hover { background: #eef2f7; }
 }
 
+.tx-reversed-badge {
+  display: inline-block;
+  margin-left: 0.45rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.tx-reverse-btn {
+  margin-right: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover { background: #fee2e2; }
+}
+
+.reverse-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.reverse-modal-card {
+  width: min(480px, 100%);
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px var(--brand-primary);
+}
+
+.reverse-modal-header,
+.reverse-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.reverse-modal-footer {
+  border-bottom: 0;
+  border-top: 1px solid #e2e8f0;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.reverse-modal-header h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.1rem;
+}
+
+.reverse-modal-body {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1.25rem;
+}
+
+.reverse-modal-helper {
+  margin: 0 0 0.35rem;
+  color: #475569;
+  font-size: 0.88rem;
+}
+
+.reverse-modal-notes {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.reverse-modal-card .modal-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.reverse-modal-card .modal-input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.reverse-modal-card .btn-close {
+  border: none;
+  background: transparent;
+  font-size: 1.4rem;
+  color: #475569;
+  cursor: pointer;
+}
+
+.reverse-modal-card .btn-cancel,
+.reverse-modal-card .btn-save {
+  padding: 0.55rem 0.95rem;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reverse-modal-card .btn-cancel {
+  border: 1px solid #cbd5e1;
+  background: white;
+  color: #334155;
+}
+
+.reverse-modal-card .btn-save {
+  border: 0;
+  background: #b91c1c;
+  color: white;
+}
+
+.reverse-modal-card .btn-save:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .tx-details-row {
   background: #f8fafc;
 

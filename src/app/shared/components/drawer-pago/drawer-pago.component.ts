@@ -7,6 +7,7 @@ import { FinancialRules } from '../../../core/constants/financial-rules';
 import { ToastService } from '../../services/toast.service';
 import { FieldErrorComponent } from '../field-error/field-error.component';
 import { markAllAsTouched, scrollToFirstInvalid } from '../../utils/form-utils';
+import { autoSplitDownPayment } from '../../../core/utils/split-down-payment';
 
 @Component({
   selector: 'app-drawer-pago',
@@ -19,6 +20,7 @@ export class DrawerPagoComponent implements OnInit {
   @Output() closeDrawer = new EventEmitter<void>();
   @Output() onClose = new EventEmitter<void>();
   @Output() confirmPayment = new EventEmitter<any>();
+  @Output() paymentDateChange = new EventEmitter<string>();
 
   private _isProcessing = false;
   @Input() set isProcessing(value: boolean) {
@@ -31,7 +33,8 @@ export class DrawerPagoComponent implements OnInit {
   get isProcessing(): boolean { return this._isProcessing; }
   
   // NUEVO: Lista de cuentas bancarias del proyecto
-  @Input() bankAccounts: any[] = []; 
+  @Input() bankAccounts: any[] = [];
+  @Input() confirmPending = false; 
 
   private fb = inject(FormBuilder);
   private financials = inject(AmortizationFinancialsService);
@@ -47,13 +50,17 @@ export class DrawerPagoComponent implements OnInit {
     payment_method: ['transfer', Validators.required],
     bank_account_id: ['', Validators.required], // Inicia requerido porque por defecto es 'transfer'
     transaction_date: [this.todayIsoDate(), Validators.required],
-    receipt_number: [''],
+    receipt_number: ['', [Validators.required, Validators.maxLength(80)]],
     surplus_action: [''],
     to_down_payment: ['']
   });
 
   private todayIsoDate(): string {
-    return new Date().toISOString().substring(0, 10);
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   private normalizeSelectedDate(value: unknown): string {
@@ -169,6 +176,18 @@ export class DrawerPagoComponent implements OnInit {
     this.paymentForm.get('surplus_action')?.valueChanges.subscribe(() => {
       this.pendingDefaultCapitalConfirm = false;
     });
+
+    this.paymentForm.get('transaction_date')?.valueChanges.subscribe((value) => {
+      this.emitPaymentDate(value);
+    });
+  }
+
+  private emitPaymentDate(value: unknown = this.paymentForm.get('transaction_date')?.value): void {
+    if (!this.isOpen) {
+      return;
+    }
+
+    this.paymentDateChange.emit(this.normalizeSelectedDate(value));
   }
 
   onFileSelected(event: any) {
@@ -200,7 +219,8 @@ export class DrawerPagoComponent implements OnInit {
   private _selectedFees: any[] = [];
   @Input() set selectedFees(value: any[]) {
     this._selectedFees = value;
-    this.calculateDebt(); 
+    this.calculateDebt();
+    this.syncSuggestedAmountToForm();
   }
   get selectedFees(): any[] { return this._selectedFees; }
 
@@ -208,10 +228,7 @@ export class DrawerPagoComponent implements OnInit {
   @Input() set prefilledAmount(value: number | null) {
     this._prefilledAmount = this.normalizePrefilledAmount(value);
     this.calculateDebt();
-
-    if (this.isOpen) {
-      this.updateFormAmount();
-    }
+    this.syncSuggestedAmountToForm();
   }
   get prefilledAmount(): number | null { return this._prefilledAmount; }
 
@@ -240,15 +257,62 @@ export class DrawerPagoComponent implements OnInit {
    * Deuda de cuotas regulares a la fecha. Solo se usa como referencia del
    * excedente cuando el pago se reparte.
    */
-  @Input() regularDueAmount = 0;
+  private _regularDueAmount = 0;
+  @Input() set regularDueAmount(value: number) {
+    this._regularDueAmount = Math.max(0, Math.round(Number(value) || 0));
 
-  /** El reparto solo tiene sentido si la inicial debe algo y no es el pago de la inicial. */
+    if (this.isOpen) {
+      this.syncSurplusValidation();
+    }
+  }
+  get regularDueAmount(): number { return this._regularDueAmount; }
+
+  /**
+   * El reparto aplica si la inicial debe algo y este cobro no es solo la #0.
+   * #0 + regulares sí se puede (y se debe) partir: un solo movimiento bancario.
+   */
   get canSplit(): boolean {
     if (this._pendingInitialAmount <= 0) {
       return false;
     }
 
-    return !this._selectedFees.some((fee: any) => Number(fee?.installment_number) === 0);
+    return !this.isInicialOnlySelection();
+  }
+
+  private isInicialOnlySelection(): boolean {
+    const fees = this._selectedFees ?? [];
+    if (fees.length === 0) {
+      return false;
+    }
+
+    return fees.every((fee: any) => Number(fee?.installment_number) === 0);
+  }
+
+  private hasMixedInicialAndRegularSelection(): boolean {
+    const fees = this._selectedFees ?? [];
+    const hasInicial = fees.some((fee: any) => Number(fee?.installment_number) === 0);
+    const hasRegular = fees.some((fee: any) => Number(fee?.installment_number) > 0);
+
+    return hasInicial && hasRegular;
+  }
+
+  /**
+   * Si el cobrador no tocó “Dividir este pago” pero tildó #0 y regulares,
+   * el sistema parte solo: faltante de inicial primero, resto a cuotas.
+   */
+  private resolveSplitPayload(): { to_down_payment: number; to_installments: number } | null {
+    if (this.splitEnabled) {
+      return {
+        to_down_payment: this.splitToDownPayment,
+        to_installments: this.splitToInstallments,
+      };
+    }
+
+    if (!this.hasMixedInicialAndRegularSelection() || this._pendingInitialAmount <= 0) {
+      return null;
+    }
+
+    return autoSplitDownPayment(this.currentPaymentAmount, this._pendingInitialAmount);
   }
 
   splitEnabled = false;
@@ -354,6 +418,15 @@ export class DrawerPagoComponent implements OnInit {
     this.montoSugeridoTotal = this.totalSelectedAmount;
   }
 
+  private syncSuggestedAmountToForm(): void {
+    if (!this.isOpen) {
+      return;
+    }
+
+    this.paymentForm.patchValue({ amount: this.montoSugeridoTotal });
+    this.syncSurplusValidation();
+  }
+
   updateFormAmount() {
     this.calculateDebt();
     setTimeout(() => {
@@ -393,7 +466,7 @@ export class DrawerPagoComponent implements OnInit {
 
   @HostListener('document:keydown.escape', ['$event'])
   onKeydownHandler(event: Event): void {
-    if (!this.isOpen) {
+    if (!this.isOpen || this.confirmPending) {
       return;
     }
 
@@ -409,7 +482,7 @@ export class DrawerPagoComponent implements OnInit {
   }
 
   close() {
-    if (this.isProcessing) {
+    if (this.isProcessing || this.confirmPending) {
       return;
     }
 
@@ -420,7 +493,7 @@ export class DrawerPagoComponent implements OnInit {
   }
 
   submit() {
-    if (this.isProcessing || this._isProcessing) {
+    if (this.isProcessing || this.confirmPending) {
       return;
     }
 
@@ -445,8 +518,6 @@ export class DrawerPagoComponent implements OnInit {
       return;
     }
 
-    this._isProcessing = true;
-
     const selectedDate = this.paymentForm.get('transaction_date')?.value;
     const normalizedDate = this.normalizeSelectedDate(selectedDate);
     const paymentOption = this.hasSurplus
@@ -460,14 +531,7 @@ export class DrawerPagoComponent implements OnInit {
       receipt: this.selectedFile,
       surplus_action: paymentOption,
       payment_option: paymentOption,
-      // El reparto solo viaja cuando el cobrador lo pidió. Sin él, el pago
-      // sigue el camino de siempre.
-      split: this.splitEnabled
-        ? {
-            to_down_payment: this.splitToDownPayment,
-            to_installments: this.splitToInstallments
-          }
-        : null
+      split: this.resolveSplitPayload(),
     };
 
     this.confirmPayment.emit(paymentData);

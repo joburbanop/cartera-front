@@ -32,6 +32,12 @@ describe('AmortizationComponent', () => {
   } | null = null;
   let lastSplitPaymentArgs: { contractId: number; formData: FormData } | null = null;
   let lastResidualCollectionArgs: { contractId: number; formData: FormData } | null = null;
+  let lastReversePaymentArgs: {
+    contractId: number;
+    transactionId: number;
+    payload: { reason: string; notes?: string | null };
+  } | null = null;
+  let reversePaymentResult: Observable<unknown> = of({});
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -119,6 +125,10 @@ describe('AmortizationComponent', () => {
       },
       getTransactionsByContract: () => of({ data: [] }),
       getAllTransactions: () => of({ data: [] }),
+      reversePayment: (contractId: number, transactionId: number, payload: { reason: string; notes?: string | null }) => {
+        lastReversePaymentArgs = { contractId, transactionId, payload };
+        return reversePaymentResult;
+      },
     } as Partial<RecaudoService> as RecaudoService;
 
     const paymentPromiseServiceMock = {
@@ -132,6 +142,7 @@ describe('AmortizationComponent', () => {
 
     const authServiceMock = {
       hasRole: () => true,
+      hasPermission: () => false,
       getRole: () => 'administrador',
       isLoggedIn: () => true,
       uiPreferences: signal({ contractTabs: [...DEFAULT_CONTRACT_TAB_IDS] }),
@@ -139,6 +150,8 @@ describe('AmortizationComponent', () => {
       contractTabOrder: () => [...DEFAULT_CONTRACT_TAB_IDS],
       updateContractTabs: () => of(undefined),
       resetContractTabs: () => of(undefined),
+      startSessionKeepAlive: vi.fn(),
+      stopSessionKeepAlive: vi.fn(),
     } as unknown as AuthService;
 
     const routerMock = {
@@ -174,6 +187,8 @@ describe('AmortizationComponent', () => {
     lastRegisterPaymentArgs = null;
     lastSplitPaymentArgs = null;
     lastResidualCollectionArgs = null;
+    lastReversePaymentArgs = null;
+    reversePaymentResult = of({});
 
     component.contractData = {
       status: 'activo',
@@ -240,6 +255,103 @@ describe('AmortizationComponent', () => {
     expect(component.isDrawerOpen).toBeFalsy();
   });
 
+  it('pide confirmación antes de enviar un pago y Volver no llama al API', () => {
+    component.contractId = 12;
+    component.contractData = {
+      ...component.contractData,
+      contract_number: 'C-12',
+      customer_name: 'Ana Pérez',
+      lot: { id: 7, number: '7' },
+    };
+    component.isGeneralPaymentFlow = true;
+    component.selectedFees = [];
+
+    component.onDrawerConfirmPayment({
+      amount: 2100000,
+      payment_method: 'cash',
+      transaction_date: '2026-09-10',
+      receipt_number: '0258',
+      payment_option: 'abono_capital',
+      split: { to_down_payment: 200000, to_installments: 1900000 },
+    });
+
+    expect(lastRegisterPaymentArgs).toBeNull();
+    expect(lastSplitPaymentArgs).toBeNull();
+    expect(component.isPaymentConfirmOpen).toBe(true);
+    expect(component.paymentConfirmSummary?.contractLabel).toContain('C-12');
+    expect(component.paymentConfirmSummary?.contractLabel).toContain('Lote 7');
+    expect(component.paymentConfirmSummary?.installmentsLabel).toBe('Imputación FIFO / flujo general');
+    expect(component.paymentConfirmSummary?.split).toEqual({
+      toDownPayment: 200000,
+      toInstallments: 1900000,
+    });
+    expect(component.paymentConfirmSummary?.surplusActionLabel).toBe('Abono a capital');
+
+    component.dismissPaymentConfirm();
+
+    expect(component.isPaymentConfirmOpen).toBe(false);
+    expect(component.isProcessingPayment).toBe(false);
+    expect(lastRegisterPaymentArgs).toBeNull();
+    expect(lastSplitPaymentArgs).toBeNull();
+  });
+
+  it('al confirmar el pago seleccionado envía las cuotas al API', () => {
+    registerPaymentResult = of({});
+    component.contractId = 1;
+    component.isGeneralPaymentFlow = false;
+    component.selectedFees = [{ ...cuota1 }];
+    vi.spyOn(component, 'cargarTablaAmortizacion').mockImplementation(() => undefined);
+    vi.spyOn(component, 'loadContractData').mockImplementation(() => undefined);
+
+    component.onDrawerConfirmPayment({
+      amount: 1000000,
+      payment_method: 'transfer',
+      transaction_date: '2026-08-30',
+      receipt_number: '0258',
+      receipt: new Blob(),
+    });
+
+    expect(lastRegisterPaymentArgs).toBeNull();
+    expect(component.paymentConfirmSummary?.installmentsLabel).toBe('Cuota #1');
+
+    component.confirmPendingPayment();
+
+    expect(lastRegisterPaymentArgs).not.toBeNull();
+    expect(lastRegisterPaymentArgs?.formData.get('amount')).toBe('1000000');
+    expect(component.isPaymentConfirmOpen).toBe(false);
+  });
+
+  it('pide confirmación del cobro residual y Volver no llama al API', () => {
+    component.contractId = 77;
+    component.contractData = {
+      ...component.contractData,
+      pending_residual_balance: 600,
+      residual_balance_collectible: true,
+      lot: { id: 1, number: '1' },
+    };
+
+    component.onDrawerConfirmResidual({
+      amount: 500,
+      payment_method: 'cash',
+      transaction_date: '2026-09-09',
+      payment_date: '2026-09-09',
+      receipt: new File(['x'], 'recibo.pdf', { type: 'application/pdf' }),
+      receipt_number: '0258',
+    });
+
+    expect(lastResidualCollectionArgs).toBeNull();
+    expect(component.isPaymentConfirmOpen).toBe(true);
+    expect(component.paymentConfirmSummary?.kind).toBe('residual');
+    expect(component.paymentConfirmSummary?.residualPending).toBe(600);
+    expect(component.paymentConfirmSummary?.installmentsLabel).toContain('Ítem aparte');
+
+    component.dismissPaymentConfirm();
+
+    expect(lastResidualCollectionArgs).toBeNull();
+    expect(component.isPaymentConfirmOpen).toBe(false);
+    expect(component.isProcessingResidualCollection).toBe(false);
+  });
+
   it('el banner de cartera vencida usa quota_debt y no el saldo del préstamo', () => {
     const cuotaConSaldoPrestamo = {
       ...cuota1,
@@ -294,6 +406,36 @@ describe('AmortizationComponent', () => {
     component.openDrawer();
 
     expect(component.totalSelectedAmount).toBe(2000000);
+  });
+
+  it('isVencida acepta asOf opcional y sin él sigue usando hoy real', () => {
+    const isVencidaFn = (component as any).isVencida.bind(component) as (
+      due: string,
+      asOf?: string,
+    ) => boolean;
+
+    expect(isVencidaFn(cuota1.due_date)).toBe(true);
+    expect(isVencidaFn(cuota1.due_date, isoWithOffset(-25))).toBe(false);
+    expect(isVencidaFn(cuota1.due_date, isoWithOffset(-10))).toBe(true);
+    expect(isVencidaFn(cuota1.due_date, cuota1.due_date)).toBe(false);
+  });
+
+  it('recalcula la fusión FIFO de mora al cambiar la fecha de pago', () => {
+    component.selectedFees = [{ ...cuota3 }];
+    component.openDrawer();
+
+    expect(component.selectedFees.map((fee: any) => fee.id)).toEqual(
+      expect.arrayContaining([1, 3]),
+    );
+
+    const bannerBefore = component.cantidadCuotasVencidas;
+    component.onDrawerPaymentDateChange(isoWithOffset(-25));
+
+    const selectedIds = component.selectedFees.map((fee: any) => fee.id);
+    expect(selectedIds).toEqual([3]);
+    expect(selectedIds).not.toContain(1);
+    expect(component.totalSelectedAmount).toBe(1000000);
+    expect(component.cantidadCuotasVencidas).toBe(bannerBefore);
   });
 
   it('Separación de tuberías: Al seleccionar Cuota Inicial, ignora mora ordinaria', () => {
@@ -352,6 +494,26 @@ describe('AmortizationComponent', () => {
     const toasts = toastService.toasts();
     expect(toasts[0].title).toBe('Pago registrado');
     expect(toasts[0].description).toContain('cuota corriente #2');
+  });
+
+  it('selección #0 + regulares sin split explícito va a pago_mixto y no manda la #0 como cuota regular', () => {
+    component.contractId = 1;
+    component.selectedFees = [{ ...cuotaInicial }, { ...cuota1 }, { ...cuota3 }];
+    vi.spyOn(component, 'cargarTablaAmortizacion').mockImplementation(() => undefined);
+    vi.spyOn(component, 'loadContractData').mockImplementation(() => undefined);
+
+    component.procesarPago({
+      amount: 2500000,
+      payment_method: 'transfer',
+      transaction_date: '2026-08-30',
+      receipt: new Blob(),
+    });
+
+    expect(lastRegisterPaymentArgs).toBeNull();
+    expect(lastSplitPaymentArgs).not.toBeNull();
+    expect(lastSplitPaymentArgs!.formData.get('to_down_payment')).toBe('2000000');
+    expect(lastSplitPaymentArgs!.formData.get('to_installments')).toBe('500000');
+    expect(lastSplitPaymentArgs!.formData.getAll('selected_installments[]')).toEqual(['1', '3']);
   });
 
   it('Un pago dividido va a la ruta de reparto con las dos partes', () => {
@@ -496,6 +658,50 @@ describe('AmortizationComponent', () => {
     expect(toasts[0].description).toBe('El monto es insuficiente');
   });
 
+  it('un 401 al registrar pago no lo presenta como fallo de cobro', () => {
+    registerPaymentResult = throwError(() => ({ status: 401 }));
+    component.contractId = 1;
+    component.selectedFees = [{ ...cuota3 }];
+    component.isDrawerOpen = true;
+
+    component.procesarPago({
+      amount: 1000000,
+      payment_method: 'transfer',
+      transaction_date: '2026-08-30',
+      receipt: new Blob(),
+    });
+
+    expect(component.isProcessingPayment).toBeFalsy();
+    expect(toastService.toasts()).toEqual([]);
+  });
+
+  it('un 401 al cobrar residual no lo presenta como fallo de cobro', () => {
+    registerPaymentResult = throwError(() => ({ status: 401 }));
+    component.contractId = 1;
+
+    component.procesarCobroResidual({
+      amount: 500,
+      payment_method: 'cash',
+      transaction_date: '2026-09-09',
+      payment_date: '2026-09-09',
+      receipt: new File(['x'], 'recibo.pdf', { type: 'application/pdf' }),
+    });
+
+    expect(component.isProcessingResidualCollection).toBeFalsy();
+    expect(toastService.toasts()).toEqual([]);
+  });
+
+  it('mantiene la sesión viva mientras el drawer de pago está abierto', () => {
+    const auth = TestBed.inject(AuthService);
+    component.selectedFees = [{ ...cuota3 }];
+
+    component.openDrawer();
+    expect(auth.startSessionKeepAlive).toHaveBeenCalled();
+
+    component.closeDrawer();
+    expect(auth.stopSessionKeepAlive).toHaveBeenCalled();
+  });
+
   it('Debe sugerir la suma de cuotas vencidas en flujo de pago general', () => {
     component.amortizationPlan = [cuotaInicial, cuota1, cuota2, cuota3];
 
@@ -504,6 +710,41 @@ describe('AmortizationComponent', () => {
     expect(component.isDrawerOpen).toBeTruthy();
     expect(component.selectedFees).toEqual([]);
     expect(component.drawerSuggestedAmount).toBe(1000000);
+  });
+
+  it('recalcula total vencido y monto sugerido al cambiar la fecha de pago', () => {
+    const cuotaReciente = {
+      ...cuota1,
+      id: 4,
+      installment_number: 4,
+      due_date: isoWithOffset(-5),
+      quota_debt: 1000000,
+      remaining_balance: 1000000,
+      status: 'pending',
+    };
+    component.amortizationPlan = [cuotaInicial, cuota1, cuota2, cuota3, cuotaReciente];
+
+    component.openGeneralPaymentDrawer();
+
+    expect(component.drawerOverdueTotal).toBe(2000000);
+    expect(component.drawerSuggestedAmount).toBe(2000000);
+
+    const bannerCount = component.cantidadCuotasVencidas;
+    const bannerTotal = component.totalDineroVencido;
+
+    component.onDrawerPaymentDateChange(isoWithOffset(-10));
+
+    expect(component.drawerOverdueTotal).toBe(1000000);
+    expect(component.drawerSuggestedAmount).toBe(1000000);
+    expect(component.regularDueAmount).toBe(1000000);
+    expect(component.cantidadCuotasVencidas).toBe(bannerCount);
+    expect(component.totalDineroVencido).toBe(bannerTotal);
+
+    component.onDrawerPaymentDateChange(isoWithOffset(15));
+
+    expect(component.drawerOverdueTotal).toBe(3000000);
+    expect(component.drawerSuggestedAmount).toBe(3000000);
+    expect(component.cantidadCuotasVencidas).toBe(bannerCount);
   });
 
   it('en preventa el banner separa inicial y regulares sin lenguaje de cartera vencida', () => {
@@ -1017,5 +1258,77 @@ describe('AmortizationComponent', () => {
       queryParams: { lotId: 12 },
     });
     expect(fixture.nativeElement.textContent).toContain('Volver a Lote 49');
+  });
+
+  it('oculta Reversar pago si el usuario no tiene payments.reverse', () => {
+    const fixture = TestBed.createComponent(AmortizationComponent);
+    const instance = fixture.componentInstance;
+    instance.contractData = { status: 'activo', transactions: [], down_payment_pactada: 2000000 };
+    instance.isHistoryModalOpen = true;
+    instance.isLoadingHistory = false;
+    instance.transactions = [
+      { id: 11, transaction_type: 'regular_payment', amount: 1000, can_reverse: true },
+    ];
+    fixture.detectChanges();
+
+    expect(instance.canReversePayments).toBe(false);
+    expect(fixture.nativeElement.querySelector('.tx-reverse-btn')).toBeNull();
+  });
+
+  it('muestra Reversar pago solo con el permiso y can_reverse', () => {
+    const auth = TestBed.inject(AuthService);
+    vi.spyOn(auth, 'hasPermission').mockImplementation((permission) => permission === 'payments.reverse');
+
+    const fixture = TestBed.createComponent(AmortizationComponent);
+    const instance = fixture.componentInstance;
+    instance.contractData = { status: 'activo', transactions: [], down_payment_pactada: 2000000 };
+    instance.isHistoryModalOpen = true;
+    instance.isLoadingHistory = false;
+    instance.transactions = [
+      { id: 11, transaction_type: 'regular_payment', amount: 1000, can_reverse: true },
+      { id: 12, transaction_type: 'regular_payment', amount: 500, can_reverse: false, reversed_at: '2026-09-10 10:00:00' },
+      { id: 13, transaction_type: 'payment_reversal', amount: 500 },
+    ];
+    fixture.detectChanges();
+
+    expect(instance.canReversePayments).toBe(true);
+    expect(fixture.nativeElement.querySelectorAll('.tx-reverse-btn')).toHaveLength(1);
+    expect(fixture.nativeElement.textContent).toContain('Revertido');
+    expect(fixture.nativeElement.textContent).toContain('Reversa de pago');
+    expect(instance.transactionTypeLabel(instance.transactions[2])).toBe('Reversa de pago');
+  });
+
+  it('el modal de reversa exige texto si el motivo es otro', () => {
+    const auth = TestBed.inject(AuthService);
+    vi.spyOn(auth, 'hasPermission').mockImplementation((permission) => permission === 'payments.reverse');
+
+    const fixture = TestBed.createComponent(AmortizationComponent);
+    const instance = fixture.componentInstance;
+    instance.contractId = 9;
+    instance.contractData = { status: 'activo', transactions: [], down_payment_pactada: 2000000 };
+    vi.spyOn(instance, 'cargarTablaAmortizacion').mockImplementation(() => undefined);
+    vi.spyOn(instance, 'loadContractData').mockImplementation(() => undefined);
+
+    const reversible = { id: 44, transaction_type: 'regular_payment', amount: 1500, can_reverse: true };
+    instance.openReverseModal(reversible);
+    fixture.detectChanges();
+
+    expect(instance.isReverseModalOpen).toBe(true);
+    expect(fixture.nativeElement.querySelector('.reverse-modal-card')).not.toBeNull();
+
+    instance.reversalReason = 'otro';
+    instance.reversalNotes = '';
+    expect(instance.reversalNotesRequired).toBe(true);
+
+    instance.submitReversal();
+    expect(lastReversePaymentArgs).toBeNull();
+
+    instance.reversalNotes = 'Se imputó al contrato equivocado';
+    instance.submitReversal();
+    expect(lastReversePaymentArgs).toEqual({
+      contractId: 9,
+      transactionId: 44,
+      payload: { reason: 'otro', notes: 'Se imputó al contrato equivocado' },
+    });
   });
 });

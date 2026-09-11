@@ -33,11 +33,13 @@ describe('DrawerCobroResidualComponent', () => {
       amount: 500,
       payment_method: 'cash',
       transaction_date: '2026-09-09',
+      receipt_number: '',
     });
     component.submit();
 
     expect(component.receiptMissing).toBe(true);
     expect(emitted.length).toBe(0);
+    expect(component.paymentForm.get('receipt_number')?.hasError('required')).toBe(true);
   });
 
   it('bloquea un monto mayor al pendiente', () => {
@@ -69,6 +71,7 @@ describe('DrawerCobroResidualComponent', () => {
       amount: 500,
       payment_method: 'cash',
       transaction_date: '2026-09-09',
+      receipt_number: '0258',
     });
     component.submit();
 
@@ -96,5 +99,47 @@ describe('DrawerCobroResidualComponent', () => {
     component.submit();
 
     expect(emitted[0].receipt_number).toBe('0448-0449');
+  });
+
+  it('Volver del modal de confirmación deja el drawer interactivo, sin Registrando...', () => {
+    const emitted: ResidualCollectionPayload[] = [];
+    component.confirmCollection.subscribe((data) => emitted.push(data));
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.detectChanges();
+
+    component.selectedFile = new File(['x'], 'recibo.pdf', { type: 'application/pdf' });
+    component.paymentForm.patchValue({
+      amount: 500,
+      payment_method: 'cash',
+      transaction_date: '2026-09-09',
+      receipt_number: '0258',
+    });
+    component.submit();
+
+    expect(emitted.length).toBe(1);
+    expect(component.isProcessing).toBe(false);
+
+    fixture.componentRef.setInput('confirmPending', true);
+    fixture.detectChanges();
+    const primaryWhileModal = fixture.nativeElement.querySelector('.panel-footer .btn-primary') as HTMLButtonElement;
+    expect(primaryWhileModal.textContent).not.toContain('Registrando...');
+    expect(primaryWhileModal.textContent).toContain('Confirmar cobro');
+
+    fixture.componentRef.setInput('confirmPending', false);
+    fixture.detectChanges();
+
+    expect(component.isProcessing).toBe(false);
+    expect(component.paymentForm.get('receipt_number')?.value).toBe('0258');
+    expect(component.selectedFile).toBeTruthy();
+    const primary = fixture.nativeElement.querySelector('.panel-footer .btn-primary') as HTMLButtonElement;
+    const cancel = fixture.nativeElement.querySelector('.panel-footer .btn-secondary') as HTMLButtonElement;
+    expect(primary.disabled).toBe(false);
+    expect(primary.textContent).not.toContain('Registrando...');
+    expect(cancel.disabled).toBe(false);
+
+    const closed: unknown[] = [];
+    component.closeDrawer.subscribe(() => closed.push(true));
+    component.close();
+    expect(closed.length).toBe(1);
   });
 });

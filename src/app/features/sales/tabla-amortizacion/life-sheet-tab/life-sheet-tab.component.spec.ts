@@ -154,6 +154,27 @@ describe('LifeSheetTabComponent', () => {
     expect(accumulated).toEqual(['$ 1,000,000', '$ 3,445,403']);
   });
 
+  it('marca la fila revertida sin mover el énfasis del saldo corrido', () => {
+    fixture.componentRef.setInput('sheet', {
+      ...sheet,
+      rows: [
+        sheet.rows[0],
+        {
+          ...sheet.rows[1],
+          concept: 'PAGO (revertido, no afecta el saldo)',
+          affects_running_total: false,
+          total_paid: sheet.rows[0].total_paid,
+          balance: sheet.rows[0].balance,
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    const reversed = fixture.nativeElement.querySelector('tr.hv-no-running') as HTMLElement;
+    expect(reversed).toBeTruthy();
+    expect(reversed.textContent).toContain('revertido, no afecta el saldo');
+  });
+
   it('expresa cada parte como porcentaje del total pagado', () => {
     fixture.componentRef.setInput('sheet', sheet);
     fixture.detectChanges();

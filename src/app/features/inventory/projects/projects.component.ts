@@ -20,8 +20,6 @@ import { ProjectService } from '../../../core/services/project.service';
 
 import { BankAccountService } from '../../../core/services/bank-account.service';
 
-import { LotService } from '../../../core/services/lot.service';
-
 import { AuthService } from '../../../core/services/auth.service';
 
 import { DashboardService } from '../../../core/services/dashboard.service';
@@ -77,8 +75,6 @@ export class ProjectsComponent implements OnInit {
   private projectService = inject(ProjectService);
 
   private bankAccountService = inject(BankAccountService);
-
-  private lotService = inject(LotService);
 
   private cdr = inject(ChangeDetectorRef);
 
@@ -239,9 +235,6 @@ export class ProjectsComponent implements OnInit {
 
     }
 
-    // Conservamos la lógica de tu rama
-    // para construir las estadísticas de lotes.
-    this.loadLotsStats();
     this.loadCarteraEnMora();
 
   }
@@ -475,176 +468,6 @@ export class ProjectsComponent implements OnInit {
 
       }
     );
-  }
-
-
-  // =========================================================
-  // ESTADÍSTICAS DESDE LOTES
-  // =========================================================
-
-  loadLotsStats(): void {
-
-    this.lotService
-      .getAllLots()
-      .subscribe({
-
-        next: (response) => {
-
-          let allLots: any[] = [];
-
-
-          const data =
-            Array.isArray(response)
-
-              ? response
-
-              : response?.data;
-
-
-          if (Array.isArray(data)) {
-
-            allLots = data;
-
-          } else if (
-            data &&
-            typeof data === 'object' &&
-            'data' in data &&
-            Array.isArray(
-              (
-                data as {
-                  data?: unknown
-                }
-              ).data
-            )
-          ) {
-
-            allLots =
-              (
-                data as {
-                  data: any[]
-                }
-              ).data;
-          }
-
-
-          /*
-           * En caso de que el backend entregue
-           * paginación, getAllLots() puede devolver
-           * solamente la página actual.
-           *
-           * Aun así conservamos esta lógica porque
-           * tu rama ya la utilizaba.
-           */
-          this.totalLots =
-            allLots.length;
-
-
-          this.totalAvailableLots = 0;
-
-          this.projectLotsStats = {};
-
-
-          allLots.forEach(
-            (lot: any) => {
-
-              // ---------------------------------------------
-              // ESTADO
-              // ---------------------------------------------
-
-              const statusStr =
-                typeof lot.status === 'object'
-
-                  ? (
-                      lot.status?.value ||
-                      lot.status?.name
-                    )
-
-                  : lot.status;
-
-
-              const statusLimpio =
-                String(statusStr)
-                  .toLowerCase()
-                  .trim();
-
-
-              const isAvailable =
-                statusLimpio === 'available' ||
-                statusLimpio === 'disponible';
-
-
-              // ---------------------------------------------
-              // KPI GLOBAL
-              // ---------------------------------------------
-
-              if (isAvailable) {
-
-                this.totalAvailableLots++;
-
-              }
-
-
-              // ---------------------------------------------
-              // KPI POR PROYECTO
-              // ---------------------------------------------
-
-              const pId =
-                lot.project_id;
-
-
-              if (pId) {
-
-                if (
-                  !this.projectLotsStats[pId]
-                ) {
-
-                  this.projectLotsStats[pId] = {
-                    total: 0,
-                    available: 0
-                  };
-
-                }
-
-
-                this.projectLotsStats[pId].total++;
-
-
-                if (isAvailable) {
-
-                  this.projectLotsStats[
-                    pId
-                  ].available++;
-
-                }
-
-              }
-
-            }
-          );
-
-
-          this.cdr.detectChanges();
-        },
-
-
-        error: (err) => {
-
-          console.error(
-            'Error cargando estadísticas de lotes',
-            err
-          );
-
-
-          this.toast.show(
-            'No se pudieron cargar las estadísticas de lotes.',
-            'error'
-          );
-
-
-          this.cdr.detectChanges();
-        }
-
-      });
   }
 
 

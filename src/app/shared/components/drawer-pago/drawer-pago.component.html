@@ -6,7 +6,7 @@
   <div class="side-panel">
     <div class="panel-header">
       <h3>Registrar pago</h3>
-      <button (click)="close()" [disabled]="isProcessing">✖</button>
+      <button (click)="close()" [disabled]="isProcessing || confirmPending">✖</button>
     </div>
 
     <div class="panel-body">
@@ -138,7 +138,7 @@
         </div>
 
         <div>
-          <label class="app-form-label">Recibo #</label>
+          <label class="app-form-label">Recibo # *</label>
           <input
             class="app-form-input"
             type="text"
@@ -147,8 +147,9 @@
             placeholder="0258 o 0258-0289"
             autocomplete="off"
           >
+          <app-field-error [control]="paymentForm.get('receipt_number')" label="El número de recibo"></app-field-error>
           <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem;">
-            Opcional. Uno o varios números unidos con guion, como en San Miguel: 0258-0289.
+            Obligatorio. Uno o varios números unidos con guion, como en San Miguel: 0258-0289.
           </div>
         </div>
 
@@ -187,10 +188,10 @@
     </div>
 
     <div class="panel-footer">
-      <button class="btn-secondary" type="button" (click)="close()" [disabled]="isProcessing">
+      <button class="btn-secondary" type="button" (click)="close()" [disabled]="isProcessing || confirmPending">
         Cancelar
       </button>
-      <button class="btn-primary" type="button" (click)="submit()" [disabled]="isProcessing">
+      <button class="btn-primary" type="button" (click)="submit()" [disabled]="isProcessing || confirmPending">
         {{ isProcessing ? 'Registrando...' : 'Confirmar pago' }}
       </button>
     </div>

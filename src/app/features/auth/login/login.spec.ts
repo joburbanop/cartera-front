@@ -1,9 +1,9 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { authInterceptor } from '../../../core/interceptors/auth.interceptor';
-import { AuthService } from '../../../core/services/auth.service';
+import { AuthService, SESSION_EXPIRED_MESSAGE } from '../../../core/services/auth.service';
 import { LoginComponent } from './login.component';
 
 describe('LoginComponent', () => {
@@ -12,16 +12,29 @@ describe('LoginComponent', () => {
   let httpMock: HttpTestingController;
   let authService: AuthService;
   let router: { navigate: ReturnType<typeof vi.fn> };
+  const queryParams: Record<string, string> = {};
 
   beforeEach(async () => {
     router = { navigate: vi.fn() };
+    Object.keys(queryParams).forEach((key) => delete queryParams[key]);
+    sessionStorage.clear();
 
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
       providers: [
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
-        { provide: Router, useValue: router }
+        { provide: Router, useValue: router },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              get queryParamMap() {
+                return convertToParamMap(queryParams);
+              },
+            },
+          },
+        },
       ]
     }).compileComponents();
 
@@ -37,6 +50,7 @@ describe('LoginComponent', () => {
   afterEach(() => {
     httpMock.verify();
     localStorage.clear();
+    sessionStorage.clear();
   });
 
   it('envía el correo en minúsculas aunque el usuario lo escriba con mayúsculas', () => {
@@ -212,5 +226,26 @@ describe('LoginComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/cambiar-contrasena']);
     expect(authService.mustChangePassword()).toBe(true);
     expect(authService.hasPreviousPasswordChange()).toBe(true);
+  });
+
+  it('muestra el aviso de sesión expirada al volver con expired=1', () => {
+    queryParams['expired'] = '1';
+    fixture = TestBed.createComponent(LoginComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    expect(component.errorMessage).toBe(SESSION_EXPIRED_MESSAGE);
+    const alert = fixture.nativeElement.querySelector('.login-error') as HTMLElement | null;
+    expect(alert?.textContent).toContain(SESSION_EXPIRED_MESSAGE);
+  });
+
+  it('recupera el aviso de sesión expirada desde sessionStorage', () => {
+    sessionStorage.setItem('auth_session_expired', '1');
+    fixture = TestBed.createComponent(LoginComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    expect(component.errorMessage).toBe(SESSION_EXPIRED_MESSAGE);
+    expect(sessionStorage.getItem('auth_session_expired')).toBeNull();
   });
 });

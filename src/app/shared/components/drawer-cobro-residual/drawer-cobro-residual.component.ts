@@ -48,6 +48,7 @@ export class DrawerCobroResidualComponent {
 
   @Input() pendingAmount = 0;
   @Input() bankAccounts: Array<{ id: number | string; bank_name?: string; account_number?: string }> = [];
+  @Input() confirmPending = false;
 
   private fb = inject(FormBuilder);
   private toast = inject(ToastService);
@@ -62,7 +63,7 @@ export class DrawerCobroResidualComponent {
     payment_method: ['transfer', Validators.required],
     bank_account_id: ['', Validators.required],
     transaction_date: [this.todayIsoDate(), Validators.required],
-    receipt_number: [''],
+    receipt_number: ['', [Validators.required, Validators.maxLength(80)]],
   });
 
   constructor() {
@@ -84,7 +85,7 @@ export class DrawerCobroResidualComponent {
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
-    if (!this.isOpen || this.isProcessing) {
+    if (!this.isOpen || this.isProcessing || this.confirmPending) {
       return;
     }
     this.close();
@@ -97,7 +98,7 @@ export class DrawerCobroResidualComponent {
   }
 
   close(): void {
-    if (this.isProcessing) {
+    if (this.isProcessing || this.confirmPending) {
       return;
     }
     this.resetState();
@@ -105,7 +106,7 @@ export class DrawerCobroResidualComponent {
   }
 
   submit(): void {
-    if (this.isProcessing) {
+    if (this.isProcessing || this.confirmPending) {
       return;
     }
 
