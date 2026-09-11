@@ -98,6 +98,8 @@ export class ContractsComponent implements OnInit, OnDestroy {
   // Control del Modal
   isModalOpen = false;
   showCustomerModal = false;
+  editingContractId: number | null = null;
+  showArchived = false;
 
   contractForm = this.fb.group({
     contract_number: ['', Validators.required],
@@ -563,6 +565,8 @@ export class ContractsComponent implements OnInit, OnDestroy {
   closeModal() {
     this.isProgrammaticPlanReset = true;
     this.isModalOpen = false;
+    this.editingContractId = null;
+
     this.contractForm.reset();
     this.clearPaymentPromises();
     this.clearExtraTitulares();
@@ -861,6 +865,52 @@ loadContracts(page = 1) {
   });
 }
 
+loadArchivedContracts(page = 1): void {
+  this.currentPage = page;
+  this.isLoading = true;
+
+  this.contractService.getArchivedContracts({
+    page: this.currentPage,
+    perPage: this.pageSize,
+    ...this.currentFilters(),
+  }).subscribe({
+    next: (response) => {
+      const paginator = unwrapPaginator(response);
+
+      this.contracts = paginator.items as any[];
+      this.currentPage = paginator.currentPage;
+      this.totalContracts = paginator.total;
+
+      this.isLoading = false;
+      this.cdr.detectChanges();
+    },
+    error: (err) => {
+      console.error('Error cargando contratos archivados', err);
+
+      this.contracts = [];
+      this.totalContracts = 0;
+      this.isLoading = false;
+      this.errorMessage =
+        'No se pudieron cargar los contratos archivados. Intente nuevamente.';
+
+      this.cdr.detectChanges();
+    },
+  });
+}
+
+  toggleArchived(): void {
+    this.showArchived = !this.showArchived;
+
+    this.currentPage = 1;
+    this.errorMessage = '';
+
+    if (this.showArchived) {
+      this.loadArchivedContracts(1);
+    } else {
+      this.loadContracts(1);
+    }
+  }
+
   calculatePreview(values: any) {
     const salePrice = Number(values.sale_price) || 0;
     const downPayment = Number(values.down_payment_pactada) || 0;
@@ -961,6 +1011,176 @@ loadContracts(page = 1) {
     return invalid;
   }
 
+   editContract(contract: any): void {
+  this.editingContractId = Number(contract.id);
+
+  this.errorMessage = '';
+  this.successMessage = '';
+
+  this.clearExtraTitulares();
+  this.clearPaymentPromises();
+
+  const customerId = contract.customer_id ?? contract.customer?.id ?? '';
+
+  const projectId =
+    contract.lot?.project_id ??
+    contract.project_id ??
+    '';
+
+  this.contractForm.patchValue({
+    contract_number: contract.contract_number ?? '',
+    customer_id: customerId,
+    project_id: projectId,
+    lot_id: contract.lot_id ?? contract.lot?.id ?? '',
+    seller_name: contract.seller_name ?? '',
+    sale_price: contract.sale_price ?? null,
+    down_payment_pactada: contract.down_payment_pactada ?? null,
+    term_months: contract.term_months ?? null,
+    interest_rate: contract.interest_rate ?? 0,
+    start_date: contract.start_date ?? '',
+    down_payment_date:
+      contract.initial_payment_date ??
+      contract.down_payment_date ??
+      '',
+    first_installment_date: contract.first_installment_date ?? '',
+    preventa_stages:
+      contract.preventa_installments_count ?? 0,
+    is_custom_plan: Boolean(contract.is_custom_plan),
+    is_special_lot: Boolean(contract.is_special_lot),
+  }, { emitEvent: false });
+
+  const holders = Array.isArray(contract.customers)
+    ? contract.customers
+    : [];
+
+  holders
+    .filter((customer: any) =>
+      Number(customer.id) !== Number(customerId)
+    )
+    .forEach((customer: any) => {
+      this.extraTitularIds.push(
+        this.fb.control<string | number | null>(customer.id)
+      );
+    });
+
+  this.updatePlanModeValidators(
+    Boolean(contract.is_custom_plan),
+    Boolean(contract.is_special_lot)
+  );
+
+  // Cargar los lotes disponibles del proyecto.
+  if (projectId) {
+    this.lotService
+      .getLotsByProject(Number(projectId), 1, 100)
+      .subscribe({
+        next: (response) => {
+          const data = Array.isArray(response)
+            ? response
+            : response?.data;
+
+          let allLots: any[] = [];
+
+          if (Array.isArray(data)) {
+            allLots = data;
+          } else if (
+            data &&
+            typeof data === 'object' &&
+            'data' in data &&
+            Array.isArray((data as { data?: unknown }).data)
+          ) {
+            allLots = (data as { data: any[] }).data;
+          }
+
+          this.availableLots = allLots.filter((lot: any) => {
+            const statusStr =
+              typeof lot.status === 'object'
+                ? (lot.status?.value || lot.status?.name)
+                : lot.status;
+
+            const status = String(statusStr)
+              .toLowerCase()
+              .trim();
+
+            // Incluimos también el lote actual para poder
+            // conservarlo durante la edición.
+            return (
+              status === 'available' ||
+              status === 'disponible' ||
+              Number(lot.id) === Number(contract.lot_id)
+            );
+          });
+
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.availableLots = [];
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  this.isModalOpen = true;
+  this.cdr.detectChanges();
+}
+
+  archiveContract(contract: any): void {
+  const id = Number(contract.id);
+
+  this.contractService.archiveContract(id).subscribe({
+    next: () => {
+      this.toast.show(
+        'Contrato archivado',
+        'success',
+        'El contrato se archivó correctamente.'
+      );
+
+      this.loadContracts(this.currentPage);
+    },
+    error: (err) => {
+      console.error('[Contracts] Error al archivar contrato', err);
+
+      const message =
+        err.error?.message ||
+        Object.values(err.error?.errors ?? {})
+          .flat()
+          .join('. ') ||
+        'No se pudo archivar el contrato.';
+
+      this.toast.show('No se pudo archivar', 'error', message);
+      this.cdr.detectChanges();
+    }
+  });
+}
+
+restoreContract(contract: any): void {
+  const id = Number(contract.id);
+
+  this.contractService.restoreContract(id).subscribe({
+    next: () => {
+      this.toast.show(
+        'Contrato restaurado',
+        'success',
+        'El contrato se restauró correctamente.'
+      );
+
+     this.loadArchivedContracts(this.currentPage);
+    },
+    error: (err) => {
+      console.error('[Contracts] Error al restaurar contrato', err);
+
+      const message =
+        err.error?.message ||
+        Object.values(err.error?.errors ?? {})
+          .flat()
+          .join('. ') ||
+        'No se pudo restaurar el contrato.';
+
+      this.toast.show('No se pudo restaurar', 'error', message);
+      this.cdr.detectChanges();
+    }
+  });
+}
+
   onSubmit() {
     const isCustom = Boolean(this.contractForm.get('is_custom_plan')?.value) && !this.isSpecialLot;
     const isSpecial = this.isSpecialLot;
@@ -1039,27 +1259,79 @@ loadContracts(page = 1) {
       promises: normalizedPromises,
     };
 
-    this.contractService.createContract(payload).subscribe({
+    const request$ = this.editingContractId
+        ? this.contractService.updateContract(
+            this.editingContractId,
+            payload
+          )
+        : this.contractService.createContract(payload);
+
+      request$.subscribe({
       next: (response) => {
         this.isSaving = false;
-        const created = unwrapResource<any>(response) ?? payload;
-        this.totalContracts += 1;
-        if (this.currentPage === 1) {
-          this.contracts = insertAtFront(this.contracts, created, this.pageSize);
+
+        const savedContract =
+          unwrapResource<any>(response) ?? payload;
+
+        if (this.editingContractId) {
+          const index = this.contracts.findIndex(
+            (contract: any) =>
+              Number(contract.id) === Number(this.editingContractId)
+          );
+
+          if (index !== -1) {
+            this.contracts[index] = savedContract;
+          }
+
+          this.toast.show(
+            'Contrato actualizado',
+            'success',
+            'El contrato se actualizó correctamente.'
+          );
+
+          this.markJustChanged(savedContract?.id);
+        } else {
+          this.totalContracts += 1;
+
+          if (this.currentPage === 1) {
+            this.contracts = insertAtFront(
+              this.contracts,
+              savedContract,
+              this.pageSize
+            );
+          }
+
+          this.toast.show(
+            'Contrato registrado',
+            'success',
+            'El contrato se creó correctamente.'
+          );
+
+          this.markJustChanged(savedContract?.id);
         }
+
         this.calculateKPIs();
+
         this.successMessage = '';
-        this.toast.show('Contrato registrado', 'success', 'El contrato se creó correctamente.');
 
         this.isProgrammaticPlanReset = true;
-        this.contractForm.reset({ interest_rate: 1.00, project_id: '', preventa_stages: 7 });
+
+        this.contractForm.reset({
+          interest_rate: 1.00,
+          project_id: '',
+          preventa_stages: 7
+        });
+
         this.clearPaymentPromises();
         this.clearExtraTitulares();
+
         this.lastIsCustomPlanValue = false;
         this.isProgrammaticPlanReset = false;
+
         this.availableLots = [];
         this.isModalOpen = false;
-        this.markJustChanged(created?.id);
+        this.editingContractId = null;
+
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -1098,5 +1370,22 @@ loadContracts(page = 1) {
 
   private markJustChanged(id: number | null | undefined): void {
     this.justChanged.mark(id, () => this.cdr.detectChanges());
+  }
+
+  canArchive(contract: any): boolean {
+    const status = String(
+      contract?.status?.value ??
+      contract?.status ??
+      ''
+    ).toLowerCase().trim();
+
+    return (
+      status === 'terminado' ||
+      status === 'rescindido' ||
+      (
+        status === 'preventa_inactiva' &&
+        !contract?.has_financial_activity
+      )
+    );
   }
 }

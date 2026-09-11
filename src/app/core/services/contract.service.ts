@@ -71,7 +71,83 @@ export class ContractService {
     return this.http.get<ApiListResponse<Contract>>(this.apiUrl, { params: httpParams });
   }
 
+  getArchivedContracts(params?: {
+    page?: number;
+    perPage?: number;
+  } & ContractListFilters): Observable<ApiListResponse<Contract>> {
+    const httpParams: Record<string, string | number> = {};
+
+    if (params?.page) {
+      httpParams['page'] = params.page;
+    }
+
+    if (params?.perPage) {
+      httpParams['per_page'] = params.perPage;
+    }
+
+    if (params?.contract_number) {
+      httpParams['contract_number'] = params.contract_number;
+    }
+
+    if (params?.customer) {
+      httpParams['customer'] = params.customer;
+    }
+
+    if (params?.project_id) {
+      httpParams['project_id'] = params.project_id;
+    }
+
+    if (params?.lot_number) {
+      httpParams['lot_number'] = params.lot_number;
+    }
+
+    if (params?.status) {
+      httpParams['status'] = params.status;
+    }
+
+    if (params?.cartera) {
+      httpParams['cartera'] = params.cartera;
+    }
+
+    if (params?.start_date_from) {
+      httpParams['start_date_from'] = params.start_date_from;
+    }
+
+    if (params?.start_date_to) {
+      httpParams['start_date_to'] = params.start_date_to;
+    }
+
+    return this.http.get<ApiListResponse<Contract>>(
+      `${this.apiUrl}/archived`,
+      { params: httpParams }
+    );
+  }
+
   getContractById(id: number): Observable<ApiResourceResponse<Contract>> {
     return this.http.get<ApiResourceResponse<Contract>>(`${this.apiUrl}/${id}`);
+  }
+
+  updateContract(
+    id: number,
+    data: Partial<Contract> | Record<string, unknown>
+  ): Observable<ApiResourceResponse<Contract>> {
+    return this.http.put<ApiResourceResponse<Contract>>(
+      `${this.apiUrl}/${id}`,
+      data
+    );
+  }
+
+  archiveContract(id: number): Observable<ApiResourceResponse<Contract>> {
+    return this.http.patch<ApiResourceResponse<Contract>>(
+      `${this.apiUrl}/${id}/archive`,
+      {}
+    );
+  }
+
+  restoreContract(id: number): Observable<ApiResourceResponse<Contract>> {
+    return this.http.patch<ApiResourceResponse<Contract>>(
+      `${this.apiUrl}/${id}/restore`,
+      {}
+    );
   }
 }

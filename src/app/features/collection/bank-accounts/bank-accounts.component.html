@@ -2,8 +2,15 @@
   <div class="app-modal" (click)="$event.stopPropagation()">
     <div class="app-modal-header">
       <div>
-        <h2>Nueva cuenta bancaria</h2>
-        <p>Registra una cuenta para recaudos y pagos.</p>
+       <h2>
+          {{ editingAccountId ? 'Editar cuenta bancaria' : 'Nueva cuenta bancaria' }}
+        </h2>
+
+        <p>
+          {{ editingAccountId
+            ? 'Actualiza la información editable de la cuenta.'
+            : 'Registra una cuenta para recaudos y pagos.' }}
+        </p>
       </div>
       <button type="button" class="app-modal-close" (click)="closeModal()" [disabled]="isSaving">×</button>
     </div>
@@ -16,17 +23,17 @@
       <div class="app-form-grid">
         <div class="app-form-group">
           <label class="app-form-label">Banco *</label>
-          <input class="app-form-input" type="text" formControlName="bank_name" placeholder="Ej. Bancolombia">
+          <input class="app-form-input" type="text" formControlName="bank_name" placeholder="Ej. Bancolombia" [readonly]="editingAccountId !== null">
           <app-field-error [control]="accountForm.controls.bank_name" label="El banco"></app-field-error>
         </div>
         <div class="app-form-group">
           <label class="app-form-label">Número de cuenta *</label>
-          <input class="app-form-input" type="text" formControlName="account_number" placeholder="Ej. 123-456789-00">
+          <input class="app-form-input" type="text" formControlName="account_number" placeholder="Ej. 123-456789-00" [readonly]="editingAccountId !== null">
           <app-field-error [control]="accountForm.controls.account_number" label="El número de cuenta"></app-field-error>
         </div>
         <div class="app-form-group">
           <label class="app-form-label">Tipo de cuenta *</label>
-          <select class="app-form-select" formControlName="account_type">
+          <select class="app-form-select" formControlName="account_type"[disabled]="editingAccountId !== null">
             <option value="savings">Ahorros</option>
             <option value="checking">Corriente</option>
           </select>
@@ -41,7 +48,9 @@
       <div class="app-form-actions">
         <button type="button" class="btn-secondary" (click)="closeModal()" [disabled]="isSaving">Cancelar</button>
         <button type="submit" class="btn-primary" [disabled]="isSaving">
-          {{ isSaving ? 'Guardando...' : 'Guardar cuenta' }}
+          {{ isSaving
+            ? 'Guardando...'
+            : (editingAccountId ? 'Actualizar cuenta' : 'Guardar cuenta') }}
         </button>
       </div>
     </form>
@@ -58,7 +67,24 @@
       <h1>Cuentas Bancarias</h1>
       <p>Gestión de cuentas para recaudos y pagos del proyecto</p>
     </div>
-    <button *ngIf="canCreate" class="btn-primary" (click)="openModal()">+ Nueva Cuenta</button>
+    <div class="action-buttons">
+      <button
+        type="button"
+        class="btn-secondary"
+        (click)="toggleArchived()"
+      >
+        {{ showArchived ? 'Ver cuentas activas' : 'Ver cuentas archivadas' }}
+      </button>
+
+      <button
+        *ngIf="canCreate && !showArchived"
+        type="button"
+        class="btn-primary"
+        (click)="openModal()"
+      >
+        + Nueva Cuenta
+      </button>
+    </div>
   </div>
 
   <div class="kpi-grid">
@@ -70,7 +96,7 @@
       </div>
       <div>
         <p class="kpi-card__value">{{ totalAccounts }}</p>
-        <p class="kpi-card__label">Total cuentas activas</p>
+        <p class="kpi-card__label">Total cuentas</p>
       </div>
     </div>
     <div class="kpi-card">
@@ -97,7 +123,14 @@
     </div>
   </div>
 
-  <div *ngIf="accounts.length === 0" class="empty-state">
+
+  <div *ngIf="isLoading" class="empty-state">
+  <p>Cargando cuentas bancarias...</p>
+  </div>
+  <div *ngIf="!isLoading && errorMessage" class="app-form-alert">
+  {{ errorMessage }}
+  </div>
+  <div *ngIf="!isLoading && !errorMessage && accounts.length === 0" class="empty-state">
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
       <path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.315 48.315 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75Z" />
     </svg>
@@ -114,11 +147,61 @@
       <div class="account-card__body">
         <div class="account-card__head">
           <h3>{{ account.bank_name }}</h3>
-          <span class="badge-pill badge-pill--success">Activa</span>
+          <span
+            class="badge-pill"
+            [class.badge-pill--success]="account.is_active"
+            [class.badge-pill--warning]="!account.is_active"
+          >
+            {{ account.is_active ? 'Activa' : 'Inactiva' }}
+          </span>
         </div>
         <p class="account-card__number">{{ account.account_number }}</p>
         <p class="account-card__meta">{{ account.account_type === 'savings' ? 'Ahorros' : 'Corriente' }} · {{ account.holder_name }}</p>
+        
+
+        
+       <div class="action-buttons" *ngIf="canCreate">
+
+      <ng-container *ngIf="!showArchived">
+        <button
+          type="button"
+          class="btn-secondary"
+          (click)="editAccount(account)"
+          [disabled]="mutatingAccountId === account.id"
+        >
+          Editar
+        </button>
+
+        <button
+          type="button"
+          class="btn-secondary"
+          (click)="archiveAccount(account)"
+          [disabled]="mutatingAccountId === account.id"
+        >
+          {{ mutatingAccountId === account.id ? 'Archivando...' : 'Archivar' }}
+        </button>
+      </ng-container>
+
+      <button
+        *ngIf="showArchived"
+        type="button"
+        class="btn-primary"
+        (click)="restoreAccount(account)"
+        [disabled]="mutatingAccountId === account.id"
+      >
+        {{ mutatingAccountId === account.id ? 'Restaurando...' : 'Restaurar' }}
+      </button>
+
+    </div>
+
       </div>
     </article>
   </div>
+    <app-pagination
+      *ngIf="!isLoading && (showArchived ? totalArchivedAccounts : totalAccounts) > pageSize"
+      [totalItems]="showArchived ? totalArchivedAccounts : totalAccounts"
+      [pageSize]="pageSize"
+      [currentPage]="currentPage"
+      (pageChange)="showArchived ? loadArchivedAccounts($event) : loadAccounts($event)"
+    ></app-pagination>
 </div>
