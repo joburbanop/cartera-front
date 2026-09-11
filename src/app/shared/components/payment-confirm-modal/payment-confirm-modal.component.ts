@@ -5,7 +5,7 @@ import { PaymentMethodNamePipe } from '../../pipes/payment-method-name.pipe';
 export const SURPLUS_ACTION_LABELS: Record<string, string> = {
   reducir_plazo: 'Reducir Plazo',
   reducir_cuota: 'Reducir Cuota',
-  adelantar_cuotas: 'Adelanto de Cuotas',
+  adelantar_cuotas: 'Pagar cuotas futuras',
   abono_capital: 'Abono a capital',
 };
 

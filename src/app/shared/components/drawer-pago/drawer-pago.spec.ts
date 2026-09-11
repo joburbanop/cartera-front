@@ -68,6 +68,60 @@ describe('DrawerPagoComponent', () => {
     expect(emitted.length).toBe(0);
   });
 
+  it('muestra la lista de destinos de la tabla y no usa el cronograma como origen', () => {
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.componentRef.setInput('targetInstallments', [
+      {
+        isInitial: false,
+        installmentNumber: 4,
+        dueDateLabel: '05/02/2026',
+        statusLabel: 'Parcial',
+        amount: 673695,
+      },
+      {
+        isInitial: false,
+        installmentNumber: 5,
+        dueDateLabel: '05/03/2026',
+        statusLabel: 'Vencida',
+        amount: 2106024,
+      },
+    ]);
+    fixture.componentRef.setInput('scheduleNextAmount', 249598);
+    fixture.componentRef.setInput('lifeSheetBalance', 15500000);
+    fixture.componentRef.setInput('outstandingCapital', 12000000);
+    fixture.componentRef.setInput('overdueTotalAmount', 2779719);
+    fixture.detectChanges();
+
+    const html = fixture.nativeElement.textContent as string;
+    expect(html).toContain('Se aplicará a la tabla de amortización');
+    expect(html).toContain('Cuota #4');
+    expect(html).toContain('05/02/2026');
+    expect(html).toContain('Cuota #5');
+    expect(html).toContain('Total de esta operación');
+    expect(html).toContain('Deuda pendiente según cronograma pactado');
+    expect(html).toContain('Deuda pendiente según hoja de vida');
+    expect(html).toContain('Saldo de capital del plan');
+    expect(html).not.toContain('Mora a la fecha');
+    expect(html).not.toContain('Según amortización real sería');
+  });
+
+  it('muestra la mora a la fecha solo si no está completa en la lista', () => {
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.componentRef.setInput('targetInstallments', [
+      {
+        isInitial: false,
+        installmentNumber: 4,
+        dueDateLabel: '05/02/2026',
+        statusLabel: 'Parcial',
+        amount: 673695,
+      },
+    ]);
+    fixture.componentRef.setInput('overdueTotalAmount', 15415865);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Mora a la fecha');
+  });
+
   it('en preventa etiqueta el total como pendiente a la fecha', () => {
     fixture.componentRef.setInput('isOpen', true);
     fixture.componentRef.setInput('overdueTotalAmount', 3000000);
@@ -75,16 +129,16 @@ describe('DrawerPagoComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Total pendiente a la fecha');
-    expect(fixture.nativeElement.textContent).not.toContain('Total vencido a la fecha');
+    expect(fixture.nativeElement.textContent).not.toContain('Mora a la fecha');
   });
 
-  it('fuera de preventa conserva Total vencido a la fecha', () => {
+  it('fuera de preventa etiqueta el total como mora a la fecha', () => {
     fixture.componentRef.setInput('isOpen', true);
     fixture.componentRef.setInput('overdueTotalAmount', 1000000);
     fixture.componentRef.setInput('overdueTotalIsPreventa', false);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Total vencido a la fecha');
+    expect(fixture.nativeElement.textContent).toContain('Mora a la fecha');
   });
 
   it('emite paymentDateChange al cambiar la fecha de pago', () => {
@@ -148,6 +202,7 @@ describe('DrawerPagoComponent', () => {
     it('no ofrece dividir cuando el pago es de la propia cuota inicial', () => {
       fixture.componentRef.setInput('isOpen', true);
       fixture.componentRef.setInput('pendingInitialAmount', 200000);
+      fixture.componentRef.setInput('planRemainingAmount', 1000000);
       fixture.componentRef.setInput('selectedFees', [
         { id: 10, installment_number: 0, quota_debt: 200000 },
       ]);
@@ -159,6 +214,7 @@ describe('DrawerPagoComponent', () => {
     it('sí ofrece dividir cuando la selección mezcla inicial y regulares', () => {
       fixture.componentRef.setInput('isOpen', true);
       fixture.componentRef.setInput('pendingInitialAmount', 200000);
+      fixture.componentRef.setInput('planRemainingAmount', 1000000);
       fixture.componentRef.setInput('selectedFees', [
         { id: 10, installment_number: 0, quota_debt: 200000 },
         { id: 11, installment_number: 1, quota_debt: 1900000 },
@@ -171,6 +227,7 @@ describe('DrawerPagoComponent', () => {
     it('al confirmar #0 + regulares sin toggle, emite el split automático', () => {
       fixture.componentRef.setInput('isOpen', true);
       fixture.componentRef.setInput('pendingInitialAmount', 200000);
+      fixture.componentRef.setInput('planRemainingAmount', 1000000);
       fixture.componentRef.setInput('selectedFees', [
         { id: 10, installment_number: 0, quota_debt: 200000 },
         { id: 11, installment_number: 1, quota_debt: 1900000 },
@@ -269,9 +326,10 @@ describe('DrawerPagoComponent', () => {
       expect(emitted[0].split).toBeNull();
     });
 
-    it('no premarca ningún destino si hay excedente', async () => {
+    it('no premarca ningún destino si hay excedente de capital', async () => {
       fixture.componentRef.setInput('pendingInitialAmount', 0);
       fixture.componentRef.setInput('overdueTotalAmount', 0);
+      fixture.componentRef.setInput('planRemainingAmount', 1000000);
       fixture.componentRef.setInput('selectedFees', [
         { id: 1, installment_number: 1, quota_debt: 1000000 },
       ]);
@@ -289,12 +347,13 @@ describe('DrawerPagoComponent', () => {
       expect(fixture.nativeElement.textContent).not.toContain('predeterminado');
       expect(fixture.nativeElement.textContent).toContain('Reducir Plazo');
       expect(fixture.nativeElement.textContent).toContain('Reducir Cuota');
-      expect(fixture.nativeElement.textContent).toContain('Adelanto de Cuotas');
+      expect(fixture.nativeElement.textContent).toContain('Pagar cuotas futuras');
     });
 
     it('tampoco premarca destino si hay mora y hay excedente', async () => {
       fixture.componentRef.setInput('pendingInitialAmount', 0);
       fixture.componentRef.setInput('overdueTotalAmount', 1000000);
+      fixture.componentRef.setInput('planRemainingAmount', 1000000);
       fixture.componentRef.setInput('selectedFees', [
         { id: 1, installment_number: 1, quota_debt: 1000000 },
       ]);
@@ -311,6 +370,7 @@ describe('DrawerPagoComponent', () => {
     it('pide confirmación de abono a capital si hay excedente y no eligió destino', async () => {
       fixture.componentRef.setInput('pendingInitialAmount', 0);
       fixture.componentRef.setInput('overdueTotalAmount', 0);
+      fixture.componentRef.setInput('planRemainingAmount', 1000000);
       fixture.componentRef.setInput('selectedFees', [
         { id: 1, installment_number: 1, quota_debt: 1000000 },
       ]);
@@ -346,6 +406,7 @@ describe('DrawerPagoComponent', () => {
     it('Volver cierra el modal sin enviar el pago', async () => {
       fixture.componentRef.setInput('pendingInitialAmount', 0);
       fixture.componentRef.setInput('overdueTotalAmount', 0);
+      fixture.componentRef.setInput('planRemainingAmount', 1000000);
       fixture.componentRef.setInput('selectedFees', [
         { id: 1, installment_number: 1, quota_debt: 1000000 },
       ]);
@@ -376,6 +437,7 @@ describe('DrawerPagoComponent', () => {
     it('emite de una si el operador eligió un destino explícito', async () => {
       fixture.componentRef.setInput('pendingInitialAmount', 0);
       fixture.componentRef.setInput('overdueTotalAmount', 0);
+      fixture.componentRef.setInput('planRemainingAmount', 1000000);
       fixture.componentRef.setInput('selectedFees', [
         { id: 1, installment_number: 1, quota_debt: 1000000 },
       ]);
@@ -401,6 +463,7 @@ describe('DrawerPagoComponent', () => {
     it('emite abono_capital de una si el operador marcó ese radio', async () => {
       fixture.componentRef.setInput('pendingInitialAmount', 0);
       fixture.componentRef.setInput('overdueTotalAmount', 0);
+      fixture.componentRef.setInput('planRemainingAmount', 1000000);
       fixture.componentRef.setInput('selectedFees', [
         { id: 1, installment_number: 1, quota_debt: 1000000 },
       ]);
@@ -426,6 +489,7 @@ describe('DrawerPagoComponent', () => {
     it('no pisa la elección del operador si ya eligió un destino', async () => {
       fixture.componentRef.setInput('pendingInitialAmount', 0);
       fixture.componentRef.setInput('overdueTotalAmount', 0);
+      fixture.componentRef.setInput('planRemainingAmount', 1000000);
       fixture.componentRef.setInput('selectedFees', [
         { id: 1, installment_number: 1, quota_debt: 1000000 },
       ]);
@@ -435,6 +499,69 @@ describe('DrawerPagoComponent', () => {
       component.paymentForm.patchValue({ amount: 1500000, surplus_action: 'adelantar_cuotas' });
 
       expect(component.paymentForm.get('surplus_action')?.value).toBe('adelantar_cuotas');
+    });
+
+    it('B6: pagar más que la pactada y menos que la # no es capital', async () => {
+      fixture.componentRef.setInput('pendingInitialAmount', 0);
+      fixture.componentRef.setInput('planRemainingAmount', 673695);
+      fixture.componentRef.setInput('selectedFees', [
+        { id: 4, installment_number: 4, quota_debt: 673695 },
+      ]);
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      component.paymentForm.patchValue({ amount: 300000, payment_method: 'cash', receipt_number: '0258' });
+      component['selectedFile'] = new File(['x'], 'recibo.pdf', { type: 'application/pdf' });
+
+      const emitted: any[] = [];
+      component.confirmPayment.subscribe((data: any) => emitted.push(data));
+      component.submit();
+
+      expect(component.hasSurplus).toBe(false);
+      expect(component.pendingDefaultCapitalConfirm).toBe(false);
+      expect(fixture.nativeElement.textContent).not.toContain('Excedente (Abono a capital)');
+      expect(emitted[0].payment_option).toBe('');
+    });
+
+    it('F1: si el pago supera la deuda objetivo y no elige, pide confirmación de capital', async () => {
+      fixture.componentRef.setInput('pendingInitialAmount', 0);
+      fixture.componentRef.setInput('selectedFees', [
+        { id: 1, installment_number: 1, quota_debt: 1000000 },
+      ]);
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      component.paymentForm.patchValue({ amount: 1500000, payment_method: 'cash', receipt_number: '0258' });
+      component['selectedFile'] = new File(['x'], 'recibo.pdf', { type: 'application/pdf' });
+
+      const emitted: any[] = [];
+      component.confirmPayment.subscribe((data: any) => emitted.push(data));
+      component.submit();
+
+      expect(component.hasSurplus).toBe(true);
+      expect(component.pendingDefaultCapitalConfirm).toBe(true);
+      expect(emitted.length).toBe(0);
+
+      component.submit();
+      expect(emitted[0].payment_option).toBe('abono_capital');
+    });
+
+    it('F3: sobra vs una promesa informativa con tabla abierta no es capital', async () => {
+      fixture.componentRef.setInput('pendingInitialAmount', 0);
+      fixture.componentRef.setInput('planRemainingAmount', 673695);
+      fixture.componentRef.setInput('scheduleNextAmount', 249598);
+      fixture.componentRef.setInput('selectedFees', [
+        { id: 4, installment_number: 4, quota_debt: 673695 },
+      ]);
+      fixture.componentRef.setInput('isOpen', true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      component.paymentForm.patchValue({ amount: 300000 });
+      fixture.detectChanges();
+
+      expect(component.hasSurplus).toBe(false);
+      expect(fixture.nativeElement.textContent).toContain('Deuda pendiente según cronograma pactado');
+      expect(fixture.nativeElement.textContent).not.toContain('Excedente (Abono a capital)');
     });
 
     it('olvida el reparto si la inicial deja de tener saldo', () => {
@@ -499,6 +626,7 @@ describe('DrawerPagoComponent', () => {
     }
 
     it('cascada: Volver deja el drawer interactivo, sin Registrando...', async () => {
+      fixture.componentRef.setInput('planRemainingAmount', 1000000);
       fixture.componentRef.setInput('selectedFees', [
         { id: 3, installment_number: 3, quota_debt: 1000000 },
       ]);
@@ -518,6 +646,7 @@ describe('DrawerPagoComponent', () => {
 
     it('cuota inicial: Volver deja el drawer interactivo, sin Registrando...', async () => {
       fixture.componentRef.setInput('pendingInitialAmount', 2000000);
+      fixture.componentRef.setInput('planRemainingAmount', 2000000);
       fixture.componentRef.setInput('selectedFees', [
         { id: 0, installment_number: 0, quota_debt: 2000000 },
       ]);
@@ -533,6 +662,7 @@ describe('DrawerPagoComponent', () => {
     it('split: Volver deja el drawer interactivo, sin Registrando...', async () => {
       fixture.componentRef.setInput('pendingInitialAmount', 200000);
       fixture.componentRef.setInput('regularDueAmount', 1900000);
+      fixture.componentRef.setInput('planRemainingAmount', 2100000);
       fixture.componentRef.setInput('selectedFees', []);
       fixture.componentRef.setInput('isOpen', true);
       fixture.detectChanges();

@@ -9,6 +9,14 @@ import { FieldErrorComponent } from '../field-error/field-error.component';
 import { markAllAsTouched, scrollToFirstInvalid } from '../../utils/form-utils';
 import { autoSplitDownPayment } from '../../../core/utils/split-down-payment';
 
+export interface DrawerTargetInstallment {
+  isInitial: boolean;
+  installmentNumber: number;
+  dueDateLabel: string;
+  statusLabel: string;
+  amount: number;
+}
+
 @Component({
   selector: 'app-drawer-pago',
   standalone: true,
@@ -93,12 +101,11 @@ export class DrawerPagoComponent implements OnInit {
   }
 
   /**
-   * Deuda regular contra la que se mide el excedente. En el flujo general con
-   * inicial pendiente, el monto sugerido es el saldo de la inicial; si el pago
-   * se reparte, la referencia pasa a ser lo que deben las cuotas regulares.
+   * Excedente contra la deuda objetivo (lista precargada). El split sigue
+   * midiendo el resto regular; no se toca ese carril.
    */
   private get surplusReference(): number {
-    if (this.splitEnabled && this._selectedFees.length === 0 && this.regularDueAmount > 0) {
+    if (this.splitEnabled && this.regularDueAmount > 0) {
       return this.regularDueAmount;
     }
 
@@ -232,10 +239,27 @@ export class DrawerPagoComponent implements OnInit {
   }
   get prefilledAmount(): number | null { return this._prefilledAmount; }
 
-  @Input() amountHint: 'schedule' | null = null;
-  @Input() amortizationReferenceAmount: number | null = null;
+  @Input() targetInstallments: DrawerTargetInstallment[] = [];
+  @Input() scheduleNextAmount: number | null = null;
+  @Input() scheduleOpenTotal: number | null = null;
+  @Input() lifeSheetBalance: number | null = null;
+  @Input() outstandingCapital: number | null = null;
   @Input() overdueTotalAmount: number | null = null;
   @Input() overdueTotalIsPreventa = false;
+
+  get targetListTotal(): number {
+    return (this.targetInstallments ?? []).reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  }
+
+  /** Mora que no está toda en la lista (p. ej. desfase de fecha). */
+  get showOverdueOutsideList(): boolean {
+    const overdue = Number(this.overdueTotalAmount ?? 0);
+    if (overdue <= FinancialRules.absorbedSurplus) {
+      return false;
+    }
+
+    return overdue > this.targetListTotal + FinancialRules.absorbedSurplus;
+  }
 
   /**
    * Saldo pendiente de la cuota inicial. Cuando hay saldo, el pago se puede
@@ -266,6 +290,16 @@ export class DrawerPagoComponent implements OnInit {
     }
   }
   get regularDueAmount(): number { return this._regularDueAmount; }
+
+  private _planRemainingAmount = 0;
+  @Input() set planRemainingAmount(value: number | null) {
+    this._planRemainingAmount = Math.max(0, Math.round(Number(value) || 0));
+
+    if (this.isOpen) {
+      this.syncSurplusValidation();
+    }
+  }
+  get planRemainingAmount(): number { return this._planRemainingAmount; }
 
   /**
    * El reparto aplica si la inicial debe algo y este cobro no es solo la #0.

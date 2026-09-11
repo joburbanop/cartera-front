@@ -702,17 +702,28 @@ describe('AmortizationComponent', () => {
     expect(auth.stopSessionKeepAlive).toHaveBeenCalled();
   });
 
-  it('Debe sugerir la suma de cuotas vencidas en flujo de pago general', () => {
-    component.amortizationPlan = [cuotaInicial, cuota1, cuota2, cuota3];
+  it('A4: en flujo general sugiere toda la mora, no solo la primera #', () => {
+    const otraVencida = {
+      ...cuota3,
+      id: 5,
+      installment_number: 5,
+      due_date: isoWithOffset(-5),
+      quota_debt: 1000000,
+      remaining_balance: 1000000,
+      status: 'pending',
+    };
+    component.amortizationPlan = [cuotaInicial, cuota1, cuota2, otraVencida, cuota3];
 
     component.openGeneralPaymentDrawer();
 
     expect(component.isDrawerOpen).toBeTruthy();
     expect(component.selectedFees).toEqual([]);
-    expect(component.drawerSuggestedAmount).toBe(1000000);
+    expect(component.drawerSuggestedAmount).toBe(2000000);
+    expect(component.drawerOverdueTotal).toBe(2000000);
+    expect(component.drawerTargetInstallments.map((row) => row.installmentNumber)).toEqual([1, 5]);
   });
 
-  it('recalcula total vencido y monto sugerido al cambiar la fecha de pago', () => {
+  it('D1: al cambiar la fecha de pago el sugerido sigue toda la mora a esa fecha', () => {
     const cuotaReciente = {
       ...cuota1,
       id: 4,
@@ -728,6 +739,7 @@ describe('AmortizationComponent', () => {
 
     expect(component.drawerOverdueTotal).toBe(2000000);
     expect(component.drawerSuggestedAmount).toBe(2000000);
+    expect(component.drawerTargetInstallments.map((row) => row.installmentNumber)).toEqual([1, 4]);
 
     const bannerCount = component.cantidadCuotasVencidas;
     const bannerTotal = component.totalDineroVencido;
@@ -736,7 +748,6 @@ describe('AmortizationComponent', () => {
 
     expect(component.drawerOverdueTotal).toBe(1000000);
     expect(component.drawerSuggestedAmount).toBe(1000000);
-    expect(component.regularDueAmount).toBe(1000000);
     expect(component.cantidadCuotasVencidas).toBe(bannerCount);
     expect(component.totalDineroVencido).toBe(bannerTotal);
 
@@ -833,6 +844,7 @@ describe('AmortizationComponent', () => {
 
     expect(component.drawerSuggestedAmount).toBe(1000000);
     expect(component.drawerOverdueTotal).toBe(1000000);
+    expect(component.drawerTargetInstallments[0]?.installmentNumber).toBe(1);
   });
 
   it('en lote que no es preventa no cambia la precarga aunque la inicial tenga saldo', () => {
@@ -875,7 +887,7 @@ describe('AmortizationComponent', () => {
     expect(component.drawerSuggestedAmount).toBe(250000);
   });
 
-  it('en plan personalizado precarga la próxima promesa y deja la amortización como referencia', () => {
+  it('A2: en plan personalizado precarga la primera # y deja la pactada como información', () => {
     component.contractData = {
       ...component.contractData,
       is_custom_plan: true,
@@ -884,22 +896,40 @@ describe('AmortizationComponent', () => {
       {
         id: 21,
         contract_id: 1,
-        payment_number: 1,
+        payment_number: 4,
         expected_date: isoWithOffset(3),
-        expected_amount: 180000,
-        remaining_amount: 180000,
+        expected_amount: 249598,
+        remaining_amount: 249598,
         description: 'Cuota pactada',
         is_paid: false,
         status: 'pendiente',
       },
     ];
-    component.amortizationPlan = [cuotaInicial, cuota1, cuota2, cuota3];
+    const cuota4Parcial = {
+      id: 4,
+      installment_number: 4,
+      due_date: '2026-02-05',
+      installment_value: 673695,
+      quota_debt: 673695,
+      remaining_balance: 673695,
+      status: 'partial',
+    };
+    component.amortizationPlan = [
+      { ...cuotaInicial, status: 'paid', quota_debt: 0 },
+      { ...cuota1, status: 'paid', quota_debt: 0 },
+      { ...cuota2, status: 'paid', quota_debt: 0 },
+      cuota4Parcial,
+      cuota3,
+    ];
 
     component.openGeneralPaymentDrawer();
 
-    expect(component.drawerSuggestedAmount).toBe(180000);
-    expect(component.drawerAmountHint).toBe('schedule');
-    expect(component.drawerAmortizationReferenceAmount).toBe(1000000);
+    expect(component.drawerSuggestedAmount).toBe(673695);
+    expect(component.drawerTargetInstallments[0]?.installmentNumber).toBe(4);
+    expect(component.drawerTargetInstallments[0]?.dueDateLabel).toBe('05/02/2026');
+    expect(component.drawerScheduleNextAmount).toBe(249598);
+    expect(component.drawerScheduleOpenTotal).toBe(249598);
+    expect(component.selectedFees).toEqual([]);
   });
 
   it('oculta la pestaña de cronograma en contratos estándar', () => {
@@ -933,6 +963,103 @@ describe('AmortizationComponent', () => {
     const formData = lastRegisterPaymentArgs?.formData as FormData;
     expect(formData.getAll('installment_numbers[]').length).toBe(0);
     expect(formData.getAll('selected_installments[]').length).toBe(0);
+    expect(formData.get('payment_option')).toBeNull();
+  });
+
+  it('A6: si todo está paid no abre el drawer general', () => {
+    component.amortizationPlan = [
+      { ...cuotaInicial, status: 'paid', quota_debt: 0 },
+      { ...cuota1, status: 'paid', quota_debt: 0 },
+      { ...cuota2, status: 'paid', quota_debt: 0 },
+      { ...cuota3, status: 'paid', quota_debt: 0 },
+    ];
+
+    expect(component.hasPendingPaymentsForGeneralFlow).toBe(false);
+    component.openGeneralPaymentDrawer();
+    expect(component.isDrawerOpen).toBeFalsy();
+  });
+
+  it('A7: sin promesa precarga la primera # y no arma cronograma', () => {
+    component.contractData = { ...component.contractData, is_custom_plan: false };
+    component.paymentPromises = [];
+    component.amortizationPlan = [cuotaInicial, cuota1, cuota2, cuota3];
+
+    component.openGeneralPaymentDrawer();
+
+    expect(component.drawerSuggestedAmount).toBe(1000000);
+    expect(component.drawerScheduleNextAmount).toBeNull();
+  });
+
+  it('F1: procesarPago respeta abono_capital si el pago supera la deuda objetivo', () => {
+    component.contractId = 1;
+    component.amortizationPlan = [cuotaInicial, cuota1, cuota2, cuota3];
+    component.openGeneralPaymentDrawer();
+    component.procesarPago({
+      amount: 1500000,
+      payment_method: 'cash',
+      transaction_date: '2026-08-30',
+      receipt: new Blob(),
+      payment_option: 'abono_capital',
+    });
+
+    const formData = lastRegisterPaymentArgs?.formData as FormData;
+    expect(formData.get('payment_option')).toBe('abono_capital');
+  });
+
+  it('Pagar de arriba carga toda la mora aunque la primera # abierta deba poco', () => {
+    const cuota4Chica = {
+      id: 4,
+      installment_number: 4,
+      due_date: isoWithOffset(-40),
+      installment_value: 2106024,
+      quota_debt: 249598,
+      remaining_balance: 249598,
+      status: 'partial',
+    };
+    const cuota5 = {
+      id: 5,
+      installment_number: 5,
+      due_date: isoWithOffset(-20),
+      installment_value: 2106024,
+      quota_debt: 2106024,
+      remaining_balance: 2106024,
+      status: 'pending',
+    };
+    const cuota6 = {
+      id: 6,
+      installment_number: 6,
+      due_date: isoWithOffset(-10),
+      installment_value: 2106024,
+      quota_debt: 2106024,
+      remaining_balance: 2106024,
+      status: 'pending',
+    };
+    component.amortizationPlan = [
+      { ...cuotaInicial, status: 'paid', quota_debt: 0 },
+      cuota4Chica,
+      cuota5,
+      cuota6,
+    ];
+
+    component.openGeneralPaymentDrawer();
+
+    expect(component.drawerSuggestedAmount).toBe(4461646);
+    expect(component.drawerTargetInstallments.map((row) => row.installmentNumber)).toEqual([4, 5, 6]);
+    expect(component.drawerTargetInstallments[0].amount).toBe(249598);
+    expect(component.drawerOverdueTotal).toBe(4461646);
+
+    component.contractId = 1;
+    component.procesarPago({
+      amount: component.drawerSuggestedAmount,
+      payment_method: 'cash',
+      transaction_date: '2026-08-30',
+      receipt: new Blob(),
+    });
+
+    const formData = lastRegisterPaymentArgs?.formData as FormData;
+    expect(formData.getAll('selected_installments[]').length).toBe(0);
+    expect(formData.get('payment_option')).toBeNull();
+    expect(formData.get('amount')).toBe('4461646');
   });
 
   it('oculta Pagar y muestra las pestañas de bitácora para socio_gerencia', () => {

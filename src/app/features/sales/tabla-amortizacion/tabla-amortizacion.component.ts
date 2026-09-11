@@ -5,7 +5,7 @@ import { CdkDrag, CdkDragDrop, CdkDropList, CDK_DRAG_CONFIG, moveItemInArray } f
 import { AmortizationService } from '../../../core/services/amortization.service';
 import { ContractService } from '../../../core/services/contract.service';
 import { FinancialService } from '../../../core/services/financial.service';
-import { DrawerPagoComponent } from '../../../shared/components/drawer-pago/drawer-pago.component';
+import { DrawerPagoComponent, DrawerTargetInstallment } from '../../../shared/components/drawer-pago/drawer-pago.component';
 import { DrawerCobroResidualComponent, ResidualCollectionPayload } from '../../../shared/components/drawer-cobro-residual/drawer-cobro-residual.component';
 import {
   PaymentConfirmKind,
@@ -43,7 +43,7 @@ import { PaymentPromise } from '../../../core/models/payment-promise.model';
 import { AmortizationInstallment } from '../../../core/models/amortization-installment.model';
 import { AppRoles } from '../../../core/models/app-roles';
 import { unwrapListItems, unwrapPaginator, unwrapResource } from '../../../core/models/api-response';
-import { isPaidStatus, isVencida } from '../../../core/models/amortization-status';
+import { amortizationStatusLabel, isPaidStatus, isPartialStatus, isVencida } from '../../../core/models/amortization-status';
 import { FinancialRules } from '../../../core/constants/financial-rules';
 import { ResidualBalanceRules } from '../../../core/constants/residual-balance-rules';
 import {
@@ -241,9 +241,10 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   resetSelectionFlag = false;
   isGeneralPaymentFlow = false;
   drawerSuggestedAmount: number | null = null;
-  drawerAmountHint: 'schedule' | null = null;
+  drawerTargetInstallments: DrawerTargetInstallment[] = [];
+  drawerScheduleNextAmount: number | null = null;
+  drawerScheduleOpenTotal: number | null = null;
   drawerOverdueTotal: number | null = null;
-  drawerAmortizationReferenceAmount: number | null = null;
   drawerPaymentAsOf: string | null = null;
   drawerManualSelection: any[] = [];
   transactions: any[] = [];
@@ -955,6 +956,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   openDrawer(): void {
     this.isGeneralPaymentFlow = false;
     this.drawerSuggestedAmount = null;
+    this.drawerTargetInstallments = [];
     this.drawerOverdueTotal = null;
     this.drawerManualSelection = this.selectedFees.filter(
       (fee: any) => this.isFeeSelectable(fee)
@@ -1043,6 +1045,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     }
 
     this.selectedFees = cuotasUnicas;
+    this.syncDrawerCollectionContext(asOf, cuotasUnicas);
     return true;
   }
 
@@ -1055,7 +1058,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
       return true;
     }
 
-    return this.isCustomPlan && this.nextPendingPromise() !== null;
+    return false;
   }
 
   get generalPayButtonLabel(): string {
@@ -1079,29 +1082,16 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     asOf?: string | Date | null,
     allowEmpty = false,
   ): boolean {
-    const amortizationSuggested = this.computeAmortizationSuggestedAmount(asOf);
-    if (!allowEmpty && amortizationSuggested <= 0 && !this.nextPendingPromise()) {
+    const targets = this.generalPaymentTargets(asOf);
+    const amortizationSuggested = this.sumFeeDebt(targets);
+    if (!allowEmpty && (targets.length === 0 || amortizationSuggested <= 0)) {
       return false;
     }
 
-    const nextPromise = this.nextPendingPromise();
     this.isGeneralPaymentFlow = true;
     this.selectedFees = [];
-    this.drawerOverdueTotal = Math.round(this.computeOverdueTotalToDate(asOf));
-
-    if (this.shouldPrioritizePendingInitial()) {
-      this.drawerSuggestedAmount = Math.round(this.initialFeeBalance);
-      this.drawerAmountHint = null;
-      this.drawerAmortizationReferenceAmount = null;
-    } else if (this.isCustomPlan && nextPromise) {
-      this.drawerSuggestedAmount = Math.round(this.promiseRemainingAmount(nextPromise));
-      this.drawerAmountHint = 'schedule';
-      this.drawerAmortizationReferenceAmount = Math.round(amortizationSuggested);
-    } else {
-      this.drawerSuggestedAmount = Math.round(amortizationSuggested);
-      this.drawerAmountHint = null;
-      this.drawerAmortizationReferenceAmount = null;
-    }
+    this.drawerSuggestedAmount = Math.round(amortizationSuggested);
+    this.syncDrawerCollectionContext(asOf, targets);
 
     return true;
   }
@@ -1158,23 +1148,18 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Lo que deben las cuotas regulares a la fecha, sin la supresión que aplica
-   * la preventa. El drawer lo necesita para medir el excedente cuando el pago
-   * se reparte entre inicial y cuota regular.
+   * Deuda abierta de todas las # regulares. Sirve de tope de capital cuando
+   * el pago se reparte (la inicial ya va por su carril).
    */
   get regularDueAmount(): number {
-    const pendientes = this.getRegularPendingInstallmentsSorted();
-    if (pendientes.length === 0) {
-      return 0;
-    }
-
-    const asOf = this.isDrawerOpen ? this.drawerPaymentAsOf : undefined;
-    const vencidas = pendientes.filter((fee: any) => this.isVencida(fee?.due_date, asOf));
-    const base = vencidas.length > 0 ? vencidas : [pendientes[0]];
-
     return Math.round(
-      base.reduce((sum: number, fee: any) => sum + this.financials.getFeeDebtValue(fee), 0)
+      this.getRegularPendingInstallmentsSorted()
+        .reduce((sum: number, fee: any) => sum + this.financials.getFeeDebtValue(fee), 0)
     );
+  }
+
+  get planRemainingAmount(): number {
+    return Math.round(this.initialFeeBalance + this.regularDueAmount);
   }
 
   get overdueRegularCount(): number {
@@ -1182,22 +1167,94 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   }
 
   private computeAmortizationSuggestedAmount(asOf?: string | Date | null): number {
+    return this.sumFeeDebt(this.generalPaymentTargets(asOf));
+  }
+
+  /** Lista que precarga el Pagar de arriba: toda la mora, o la próxima #. */
+  private generalPaymentTargets(asOf?: string | Date | null): any[] {
     if (this.shouldPrioritizePendingInitial()) {
-      return this.initialFeeBalance;
+      const initial = (this.amortizationPlan ?? []).find(
+        (fee: any) => Number(fee?.installment_number) === 0,
+      );
+      const debt = initial ? this.financials.getFeeDebtValue(initial) : 0;
+      return initial && debt > 0 ? [initial] : [];
     }
 
-    const regularPendingInstallments = this.getRegularPendingInstallmentsSorted();
-    if (regularPendingInstallments.length === 0) {
-      return 0;
+    const overdue = this.overdueRegularInstallments(asOf);
+    if (overdue.length > 0) {
+      return overdue;
     }
 
-    const overdueInstallments = regularPendingInstallments.filter((fee: any) =>
-      this.isVencida(fee?.due_date, asOf),
+    const next = this.getRegularPendingInstallmentsSorted()[0];
+    return next ? [next] : [];
+  }
+
+  private sumFeeDebt(fees: any[]): number {
+    return Math.round(
+      fees.reduce((sum: number, fee: any) => sum + this.financials.getFeeDebtValue(fee), 0),
     );
+  }
 
-    return overdueInstallments.length > 0
-      ? overdueInstallments.reduce((sum: number, fee: any) => sum + this.financials.getFeeDebtValue(fee), 0)
-      : this.financials.getFeeDebtValue(regularPendingInstallments[0]);
+  private syncDrawerCollectionContext(
+    asOf?: string | Date | null,
+    fees: any[] = [],
+  ): void {
+    this.drawerOverdueTotal = Math.round(this.computeOverdueTotalToDate(asOf));
+
+    const nextPromise = this.isCustomPlan ? this.nextPendingPromise() : null;
+    this.drawerScheduleNextAmount = nextPromise
+      ? Math.round(this.promiseRemainingAmount(nextPromise))
+      : null;
+    const openTotal = this.isCustomPlan ? Math.round(this.openPromisesRemainingTotal()) : 0;
+    this.drawerScheduleOpenTotal = nextPromise && openTotal > 0 ? openTotal : null;
+
+    this.drawerTargetInstallments = fees.map((fee: any) => this.toDrawerTarget(fee, asOf));
+  }
+
+  private toDrawerTarget(fee: any, asOf?: string | Date | null): DrawerTargetInstallment {
+    const overdue = Number(fee?.installment_number) !== 0 && this.isVencida(fee?.due_date, asOf);
+    const status = overdue
+      ? (isPartialStatus(fee?.status) ? 'partial' : 'overdue')
+      : this.getFeeStatus(fee);
+
+    return {
+      isInitial: Number(fee?.installment_number) === 0,
+      installmentNumber: Number(fee?.installment_number) || 0,
+      dueDateLabel: this.formatDueDateLabel(fee?.due_date),
+      statusLabel: Number(fee?.installment_number) === 0
+        ? 'Cuota inicial'
+        : amortizationStatusLabel(status),
+      amount: Math.round(this.financials.getFeeDebtValue(fee)),
+    };
+  }
+
+  private formatDueDateLabel(due: string | Date | null | undefined): string {
+    if (!due) {
+      return '—';
+    }
+
+    const raw = typeof due === 'string'
+      ? due.substring(0, 10)
+      : `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`;
+    const [year, month, day] = raw.split('-');
+    if (!year || !month || !day) {
+      return raw;
+    }
+
+    return `${day}/${month}/${year}`;
+  }
+
+  private openPromisesRemainingTotal(): number {
+    return [...(this.paymentPromises ?? [])]
+      .filter((promise) => {
+        const status = String(promise.status ?? '').toLowerCase();
+        if (status === 'pagada' || status === 'paid' || promise.is_paid) {
+          return false;
+        }
+
+        return this.promiseRemainingAmount(promise) > 0;
+      })
+      .reduce((sum, promise) => sum + this.promiseRemainingAmount(promise), 0);
   }
 
   private nextPendingPromise(): PaymentPromise | null {
@@ -1275,8 +1332,9 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     this.isDrawerOpen = false;
     this.isGeneralPaymentFlow = false;
     this.drawerSuggestedAmount = null;
-    this.drawerAmountHint = null;
-    this.drawerAmortizationReferenceAmount = null;
+    this.drawerTargetInstallments = [];
+    this.drawerScheduleNextAmount = null;
+    this.drawerScheduleOpenTotal = null;
     this.drawerOverdueTotal = null;
     this.drawerPaymentAsOf = null;
     this.drawerManualSelection = [];
@@ -1882,6 +1940,32 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     );
   }
 
+  private resolveOutgoingPaymentOption(paymentData: any): string {
+    const requested = String(paymentData.payment_option ?? paymentData.surplus_action ?? '').trim();
+    const amount = Number(paymentData.amount) || 0;
+    const target = this.selectedOrSuggestedDebt();
+    const absorbed = FinancialRules.absorbedSurplus;
+
+    if (amount <= target + absorbed) {
+      return '';
+    }
+
+    return requested || 'abono_capital';
+  }
+
+  private selectedOrSuggestedDebt(): number {
+    if (!this.isGeneralPaymentFlow && this.selectedFees.length) {
+      return Math.round(
+        this.selectedFees.reduce(
+          (sum: number, fee: any) => sum + this.financials.getFeeDebtValue(fee),
+          0,
+        ),
+      );
+    }
+
+    return Math.round(this.drawerSuggestedAmount ?? 0);
+  }
+
   procesarPago(paymentData: any): void {
     this.isProcessingPayment = true;
 
@@ -1898,9 +1982,9 @@ export class AmortizationComponent implements OnInit, OnDestroy {
     formData.append('payment_date', paymentData.payment_date ?? paymentData.transaction_date ?? '');
     formData.append('transaction_type', transactionType);
 
-    const paymentOption = paymentData.payment_option ?? paymentData.surplus_action;
+    const paymentOption = this.resolveOutgoingPaymentOption(paymentData);
     if (paymentOption) {
-      formData.append('payment_option', String(paymentOption));
+      formData.append('payment_option', paymentOption);
     }
 
     // Pago dividido: un solo movimiento bancario que cubre parte de la inicial
