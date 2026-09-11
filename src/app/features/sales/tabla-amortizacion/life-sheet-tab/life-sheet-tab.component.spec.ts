@@ -175,6 +175,37 @@ describe('LifeSheetTabComponent', () => {
     expect(reversed.textContent).toContain('revertido, no afecta el saldo');
   });
 
+  it('pinta el concepto que manda el API aunque notes sigan diciendo CUOTA INICIAL', () => {
+    fixture.componentRef.setInput('sheet', {
+      ...sheet,
+      rows: [
+        {
+          ...sheet.rows[0],
+          concept: 'CUOTA 1',
+          amount: '250400.00',
+          efectivo: '0.00',
+          bancolombia: '250400.00',
+          notes: 'Recibo #0448 | Concepto: CUOTA INICIAL',
+          allocations: [
+            {
+              target: 'installment',
+              target_label: 'Cuota regular',
+              installment_number: 1,
+              amount: '250400.00',
+              principal: '0.00',
+              interest: '250400.00',
+            },
+          ],
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('CUOTA 1');
+    expect(text).not.toContain('CUOTA INICIAL');
+  });
+
   it('expresa cada parte como porcentaje del total pagado', () => {
     fixture.componentRef.setInput('sheet', sheet);
     fixture.detectChanges();
