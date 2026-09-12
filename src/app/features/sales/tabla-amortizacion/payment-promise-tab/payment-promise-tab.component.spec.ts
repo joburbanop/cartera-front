@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PaymentPromiseTabComponent } from './payment-promise-tab.component';
 import { PaymentPromise } from '../../../../core/models/payment-promise.model';
 
-describe('PaymentPromiseTabComponent Viene de', () => {
+describe('PaymentPromiseTabComponent recorrido del recibo', () => {
   let fixture: ComponentFixture<PaymentPromiseTabComponent>;
   let component: PaymentPromiseTabComponent;
 
@@ -66,7 +66,7 @@ describe('PaymentPromiseTabComponent Viene de', () => {
     component = fixture.componentInstance;
   });
 
-  it('en la promesa destino muestra Viene de y deja También cubrió vacío', () => {
+  it('en la promesa destino dice que el recibo empezó en la promesa origen', () => {
     component.paymentPromises = [destPromise()];
     fixture.detectChanges();
 
@@ -75,19 +75,19 @@ describe('PaymentPromiseTabComponent Viene de', () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Viene de');
+    expect(text).toContain('Recorrido del recibo');
     expect(text).toContain('Promesa #1');
-    expect(text).toContain('sobrante');
+    expect(text).toContain('Empezó en');
+    expect(text).not.toContain('Viene de');
 
     const cells = fixture.nativeElement.querySelectorAll(
       '.quota-details-table tbody td',
     ) as NodeListOf<HTMLTableCellElement>;
-    expect(cells[3].textContent?.trim()).toBe('—');
-    expect(cells[4].textContent?.trim()).toContain('Promesa #1');
-    expect(cells[4].textContent?.trim()).toContain('sobrante $');
+    expect(cells[3].textContent?.trim()).toContain('Promesa #1');
+    expect(cells[3].textContent).not.toContain('sobrante $');
   });
 
-  it('en la promesa origen muestra También cubrió y deja Viene de vacío', () => {
+  it('en la promesa origen describe el resto del recibo en una sola columna', () => {
     component.paymentPromises = [originPromise()];
     fixture.detectChanges();
 
@@ -99,11 +99,11 @@ describe('PaymentPromiseTabComponent Viene de', () => {
       '.quota-details-table tbody td',
     ) as NodeListOf<HTMLTableCellElement>;
     expect(cells[3].textContent?.trim()).toContain('Promesa #2');
-    expect(cells[3].textContent).not.toContain('sobrante');
-    expect(cells[4].textContent?.trim()).toBe('—');
+    expect(cells[3].textContent).toContain('Empezó en esta promesa');
+    expect(cells[3].textContent).not.toContain('sobrante $');
   });
 
-  it('nunca muestra ambas etiquetas en la misma fila aunque vengan ambos arrays', () => {
+  it('el recorrido no pega el monto de esta promesa al número de la origen', () => {
     const source = {
       transaction_id: 1,
       transaction_date: '2026-02-06',
@@ -113,7 +113,9 @@ describe('PaymentPromiseTabComponent Viene de', () => {
       came_from: [{ target_label: 'Promesa #4', installment_number: 4, amount: 100 }],
     };
 
-    expect(component.alsoAppliedLabel(source)).toBe('');
-    expect(component.cameFromLabel(source)).toContain('Promesa #4 (sobrante $');
+    const label = component.receiptRouteLabel(source, 11);
+    expect(label).toContain('Promesa #4');
+    expect(label).toContain('Empezó en');
+    expect(label).not.toContain('sobrante $');
   });
 });

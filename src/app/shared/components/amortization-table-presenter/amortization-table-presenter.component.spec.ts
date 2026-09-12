@@ -324,11 +324,11 @@ describe('AmortizationTablePresenterComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('cuota inicial');
     expect(fixture.nativeElement.textContent).toContain('0433');
-    expect(fixture.nativeElement.textContent).toContain('También cubrió');
-    expect(fixture.nativeElement.textContent).toContain('Viene de');
+    expect(fixture.nativeElement.textContent).toContain('Recorrido del recibo');
+    expect(fixture.nativeElement.textContent).toContain('En esta cuota');
   });
 
-  it('en la cuota que recibe el sobrante muestra Viene de y no También cubrió', () => {
+  it('en la cuota que recibe el sobrante dice que el recibo empezó en la cuota origen', () => {
     component.installments = [
       {
         id: 31,
@@ -363,13 +363,15 @@ describe('AmortizationTablePresenterComponent', () => {
 
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('cuota #4');
-    expect(text).toContain('sobrante');
+    expect(text).toContain('Empezó en');
+    expect(text).not.toContain('También cubrió');
+    expect(text).not.toContain('Viene de');
     const cells = fixture.nativeElement.querySelectorAll('.quota-details-table tbody td') as NodeListOf<HTMLTableCellElement>;
-    expect(cells[3].textContent?.trim()).toBe('—');
-    expect(cells[4].textContent?.trim()).toContain('cuota #4');
+    expect(cells[3].textContent?.trim()).toContain('cuota #4');
+    expect(cells[3].textContent).not.toContain('sobrante $');
   });
 
-  it('en la cuota origen del sobrante sigue mostrando También cubrió y deja Viene de vacío', () => {
+  it('en la cuota origen del sobrante describe el resto del recibo en una sola columna', () => {
     component.installments = [
       {
         id: 41,
@@ -404,22 +406,25 @@ describe('AmortizationTablePresenterComponent', () => {
 
     const cells = fixture.nativeElement.querySelectorAll('.quota-details-table tbody td') as NodeListOf<HTMLTableCellElement>;
     expect(cells[3].textContent?.trim()).toContain('cuota #3');
-    expect(cells[3].textContent).not.toContain('sobrante');
-    expect(cells[4].textContent?.trim()).toBe('—');
+    expect(cells[3].textContent).toContain('Empezó en esta cuota');
+    expect(cells[3].textContent).not.toContain('sobrante $');
   });
 
-  it('no muestra ambas etiquetas en la misma fila aunque el API mande las dos listas', () => {
+  it('el recorrido no pega el monto de esta cuota al número de la cuota origen', () => {
     const source = {
       transaction_id: 1,
       transaction_date: '2026-01-01',
       receipt_number: '1',
-      amount: 100,
+      amount: 1988092,
       also_applied_to: [{ target_label: 'Cuota', installment_number: 2, amount: 50 }],
-      came_from: [{ target_label: 'Cuota', installment_number: 4, amount: 100 }],
+      came_from: [{ target_label: 'Cuota', installment_number: 4, amount: 1988092 }],
     };
 
-    expect(component.alsoAppliedLabel(source)).toBe('');
-    expect(component.cameFromLabel(source)).toContain('cuota #4');
+    const label = component.receiptRouteLabel(source, 11);
+    expect(label).toContain('cuota #4');
+    expect(label).toContain('Empezó en');
+    expect(label).not.toContain('sobrante $ 1');
+    expect(label).not.toContain('1.988.092');
   });
 });
 

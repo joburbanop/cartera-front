@@ -121,15 +121,15 @@
             <p class="quota-details-intro">
               Cubierto $ {{ coveredAmount(fee) | number:'1.0-0' }}
               · Falta $ {{ remainingAmount(fee) | number:'1.0-0' }}
+              · Cada fila es un recibo que tocó esta cuota
             </p>
             <table class="quota-details-table">
               <thead>
                 <tr>
                   <th>Fecha</th>
                   <th>Recibo</th>
-                  <th class="num">Aportó a esta cuota</th>
-                  <th>También cubrió</th>
-                  <th>Viene de</th>
+                  <th class="num">En esta cuota</th>
+                  <th>Recorrido del recibo</th>
                 </tr>
               </thead>
               <tbody>
@@ -137,8 +137,7 @@
                   <td>{{ source.transaction_date | date:'dd/MM/yyyy' }}</td>
                   <td>{{ source.receipt_number || '—' }}</td>
                   <td class="num">$ {{ source.amount | number:'1.0-0' }}</td>
-                  <td>{{ alsoAppliedLabel(source) || '—' }}</td>
-                  <td>{{ cameFromLabel(source) || '—' }}</td>
+                  <td>{{ receiptRouteLabel(source, fee.installment_number) }}</td>
                 </tr>
               </tbody>
             </table>

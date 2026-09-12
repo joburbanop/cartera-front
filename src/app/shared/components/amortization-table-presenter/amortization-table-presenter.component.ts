@@ -255,30 +255,50 @@ export class AmortizationTablePresenterComponent {
     return this.financials.getFeeDebtValue(fee);
   }
 
-  alsoAppliedLabel(source: PaymentSource): string {
-    if ((source.came_from?.length ?? 0) > 0) {
-      return '';
+  receiptRouteLabel(source: PaymentSource, currentNumber: number): string {
+    const route = source.route ?? [];
+    if (route.length > 0) {
+      const origin = route[0];
+      const path = route.map((item) => this.peerQuotaLabel(item)).join(' → ');
+      if (this.isSameQuota(origin, currentNumber)) {
+        if (route.length === 1) {
+          return 'Este recibo se aplicó solo a esta cuota.';
+        }
+
+        const rest = route
+          .slice(1)
+          .map((item) => `${this.peerQuotaLabel(item)} ($ ${this.peerAmount(item)})`)
+          .join(', ');
+
+        return `Empezó en esta cuota. Recorrido: ${path}. El resto fue a ${rest}.`;
+      }
+
+      return `Sobrante del mismo recibo. Empezó en ${this.peerQuotaLabel(origin)}. Recorrido: ${path}.`;
+    }
+
+    const cameFrom = source.came_from?.[0];
+    if (cameFrom) {
+      return `Sobrante del mismo recibo. Empezó en ${this.peerQuotaLabel(cameFrom)}.`;
     }
 
     const others = source.also_applied_to ?? [];
-    if (others.length === 0) {
-      return '';
+    if (others.length > 0) {
+      const rest = others
+        .map((item) => `${this.peerQuotaLabel(item)} ($ ${this.peerAmount(item)})`)
+        .join(', ');
+
+      return `Empezó en esta cuota. El resto fue a ${rest}.`;
     }
 
-    return others
-      .map((item) => `${this.peerQuotaLabel(item)} ($ ${this.peerAmount(item)})`)
-      .join(', ');
+    return 'Este recibo se aplicó solo a esta cuota.';
   }
 
-  cameFromLabel(source: PaymentSource): string {
-    const origin = source.came_from ?? [];
-    if (origin.length === 0) {
-      return '';
+  private isSameQuota(item: PaymentSourceAlsoApplied, currentNumber: number): boolean {
+    if (item.installment_number == null) {
+      return false;
     }
 
-    return origin
-      .map((item) => `${this.peerQuotaLabel(item)} (sobrante $ ${this.peerAmount(item)})`)
-      .join(', ');
+    return Number(item.installment_number) === Number(currentNumber);
   }
 
   private peerQuotaLabel(item: PaymentSourceAlsoApplied): string {

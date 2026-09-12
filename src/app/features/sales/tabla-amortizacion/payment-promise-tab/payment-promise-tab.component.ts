@@ -161,30 +161,42 @@ export class PaymentPromiseTabComponent {
     return Math.max(0, Number(promise.expected_amount || 0) - this.quotaDebt(promise));
   }
 
-  alsoAppliedLabel(source: PaymentSource): string {
-    if ((source.came_from?.length ?? 0) > 0) {
-      return '';
+  receiptRouteLabel(source: PaymentSource, currentNumber: number): string {
+    const route = source.route ?? [];
+    if (route.length > 0) {
+      const origin = route[0];
+      const path = route.map((item) => this.peerPromiseLabel(item)).join(' → ');
+      if (Number(origin.installment_number) === Number(currentNumber)) {
+        if (route.length === 1) {
+          return 'Este recibo se aplicó solo a esta promesa.';
+        }
+
+        const rest = route
+          .slice(1)
+          .map((item) => `${this.peerPromiseLabel(item)} ($ ${this.peerAmount(item)})`)
+          .join(', ');
+
+        return `Empezó en esta promesa. Recorrido: ${path}. El resto fue a ${rest}.`;
+      }
+
+      return `Sobrante del mismo recibo. Empezó en ${this.peerPromiseLabel(origin)}. Recorrido: ${path}.`;
+    }
+
+    const cameFrom = source.came_from?.[0];
+    if (cameFrom) {
+      return `Sobrante del mismo recibo. Empezó en ${this.peerPromiseLabel(cameFrom)}.`;
     }
 
     const others = source.also_applied_to ?? [];
-    if (others.length === 0) {
-      return '';
+    if (others.length > 0) {
+      const rest = others
+        .map((item) => `${this.peerPromiseLabel(item)} ($ ${this.peerAmount(item)})`)
+        .join(', ');
+
+      return `Empezó en esta promesa. El resto fue a ${rest}.`;
     }
 
-    return others
-      .map((item) => `${this.peerPromiseLabel(item)} ($ ${this.peerAmount(item)})`)
-      .join(', ');
-  }
-
-  cameFromLabel(source: PaymentSource): string {
-    const origin = source.came_from ?? [];
-    if (origin.length === 0) {
-      return '';
-    }
-
-    return origin
-      .map((item) => `${this.peerPromiseLabel(item)} (sobrante $ ${this.peerAmount(item)})`)
-      .join(', ');
+    return 'Este recibo se aplicó solo a esta promesa.';
   }
 
   private peerPromiseLabel(item: { target_label: string; installment_number?: number | null }): string {
