@@ -87,6 +87,7 @@ describe('DrawerPagoComponent', () => {
       },
     ]);
     fixture.componentRef.setInput('scheduleNextAmount', 249598);
+    fixture.componentRef.setInput('scheduleOpenTotal', 111922858);
     fixture.componentRef.setInput('lifeSheetBalance', 15500000);
     fixture.componentRef.setInput('outstandingCapital', 12000000);
     fixture.componentRef.setInput('overdueTotalAmount', 2779719);
@@ -94,15 +95,23 @@ describe('DrawerPagoComponent', () => {
 
     const html = fixture.nativeElement.textContent as string;
     expect(html).toContain('Se aplicará a la tabla de amortización');
-    expect(html).toContain('Cuota #4');
+    expect(html).toContain('2 cuotas pendientes');
     expect(html).toContain('05/02/2026');
-    expect(html).toContain('Cuota #5');
+    expect(html).not.toContain('Cuota #5');
     expect(html).toContain('Total de esta operación');
     expect(html).toContain('Deuda pendiente según cronograma pactado');
     expect(html).toContain('Deuda pendiente según hoja de vida');
-    expect(html).toContain('Saldo de capital del plan');
+    expect(html).not.toContain('total abierto');
+    expect(html).not.toContain('Saldo de capital del plan');
     expect(html).not.toContain('Mora a la fecha');
     expect(html).not.toContain('Según amortización real sería');
+
+    fixture.nativeElement.querySelector('.targets-toggle')?.click();
+    fixture.detectChanges();
+
+    const expanded = fixture.nativeElement.textContent as string;
+    expect(expanded).toContain('Cuota #4');
+    expect(expanded).toContain('Cuota #5');
   });
 
   it('muestra la mora a la fecha solo si no está completa en la lista', () => {

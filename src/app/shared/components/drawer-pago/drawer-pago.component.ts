@@ -212,6 +212,7 @@ export class DrawerPagoComponent implements OnInit {
   @Input() set isOpen(value: boolean) {
     this._isOpen = value;
     if (value) {
+      this.targetsExpanded = false;
       this.updateFormAmount();
       return;
     }
@@ -247,8 +248,42 @@ export class DrawerPagoComponent implements OnInit {
   @Input() overdueTotalAmount: number | null = null;
   @Input() overdueTotalIsPreventa = false;
 
+  targetsExpanded = false;
+
   get targetListTotal(): number {
     return (this.targetInstallments ?? []).reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  }
+
+  get targetCountLabel(): string {
+    const rows = this.targetInstallments ?? [];
+    if (rows.length === 1) {
+      return rows[0].isInitial ? '1 cuota inicial' : '1 cuota pendiente';
+    }
+
+    return `${rows.length} cuotas pendientes`;
+  }
+
+  get targetDateRangeLabel(): string {
+    const rows = this.targetInstallments ?? [];
+    if (rows.length === 0) {
+      return '';
+    }
+
+    const first = rows[0].dueDateLabel || '';
+    const last = rows[rows.length - 1].dueDateLabel || '';
+    if (!first) {
+      return last;
+    }
+
+    if (!last || first === last || rows.length === 1) {
+      return first;
+    }
+
+    return `${first} – ${last}`;
+  }
+
+  toggleTargets(): void {
+    this.targetsExpanded = !this.targetsExpanded;
   }
 
   /** Mora que no está toda en la lista (p. ej. desfase de fecha). */
@@ -481,6 +516,7 @@ export class DrawerPagoComponent implements OnInit {
   private resetState() {
     this.selectedFile = null;
     this.receiptMissing = false;
+    this.targetsExpanded = false;
     this.splitEnabled = false;
     this.pendingDefaultCapitalConfirm = false;
     this.paymentForm.reset({

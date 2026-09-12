@@ -144,3 +144,25 @@
   height: 14px;
   margin-top: 1px;
 }
+
+.targets-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.targets-toggle:hover,
+.targets-toggle:focus-visible {
+  color: #0f172a;
+}

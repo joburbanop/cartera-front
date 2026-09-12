@@ -17,8 +17,20 @@
           <input class="app-form-input" type="text" formControlName="amount" appCurrencyMask>
           <app-field-error [control]="paymentForm.get('amount')" label="El monto"></app-field-error>
           <div style="margin: 0.45rem 0 0 0; font-size: 0.75rem; color: #475569; font-weight: 500; line-height: 1.45;">
-            <p style="margin: 0 0 0.35rem 0;">Se aplicará a la tabla de amortización:</p>
-            <ul *ngIf="targetInstallments?.length" style="margin: 0; padding-left: 1.1rem;">
+            <button
+              *ngIf="targetInstallments?.length"
+              type="button"
+              class="targets-toggle"
+              (click)="toggleTargets()"
+              [attr.aria-expanded]="targetsExpanded">
+              <span>Se aplicará a la tabla de amortización</span>
+              <span>
+                {{ targetCountLabel }}
+                <ng-container *ngIf="targetDateRangeLabel"> · {{ targetDateRangeLabel }}</ng-container>
+              </span>
+            </button>
+            <p *ngIf="!targetInstallments?.length" style="margin: 0 0 0.35rem 0;">Se aplicará a la tabla de amortización:</p>
+            <ul *ngIf="targetInstallments?.length && targetsExpanded" style="margin: 0.35rem 0 0 0; padding-left: 1.1rem;">
               <li *ngFor="let row of targetInstallments">
                 {{ row.isInitial ? 'Cuota inicial' : ('Cuota #' + row.installmentNumber) }}
                 · {{ row.dueDateLabel || '—' }}
@@ -32,15 +44,9 @@
           </div>
           <p *ngIf="scheduleNextAmount != null" style="margin: 0.35rem 0 0 0; font-size: 0.72rem; color: #64748b; font-weight: 600;">
             Deuda pendiente según cronograma pactado: $ {{ scheduleNextAmount | number:'1.0-0' }}
-            <span *ngIf="scheduleOpenTotal != null && scheduleOpenTotal !== scheduleNextAmount">
-              · total abierto $ {{ scheduleOpenTotal | number:'1.0-0' }}
-            </span>
           </p>
           <p *ngIf="lifeSheetBalance != null" style="margin: 0.2rem 0 0 0; font-size: 0.72rem; color: #64748b; font-weight: 600;">
             Deuda pendiente según hoja de vida: $ {{ lifeSheetBalance | number:'1.0-0' }}
-          </p>
-          <p *ngIf="outstandingCapital != null" style="margin: 0.2rem 0 0 0; font-size: 0.72rem; color: #64748b; font-weight: 600;">
-            Saldo de capital del plan: $ {{ outstandingCapital | number:'1.0-0' }}
           </p>
           <p *ngIf="overdueTotalIsPreventa && overdueTotalAmount != null" style="margin: 0.35rem 0 0 0; font-size: 0.72rem; color: #64748b; font-weight: 600;">
             Total pendiente a la fecha: $ {{ overdueTotalAmount | number:'1.0-0' }}
