@@ -99,6 +99,9 @@ describe('LifeSheetTabComponent', () => {
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('VALOR LOTE FINANCIADO');
     expect(text).toContain('Brecha entre criterios');
+    expect(text).toContain('Valor hoja de vida');
+    expect(text).toContain('Valor total de amortización');
+    expect(text).toContain('Diferencia');
     expect(text).toContain('Efectivo');
     expect(text).toContain('Bancolombia');
     expect(text).toContain('Occidente 6391');
@@ -149,6 +152,58 @@ describe('LifeSheetTabComponent', () => {
       fixture.nativeElement.querySelectorAll('.hv-accumulated') as NodeListOf<HTMLElement>
     ).map((cell) => cell.textContent?.trim());
     expect(accumulated).toEqual(['$ 1,000,000', '$ 3,445,403']);
+  });
+
+  it('marca la fila revertida sin mover el énfasis del saldo corrido', () => {
+    fixture.componentRef.setInput('sheet', {
+      ...sheet,
+      rows: [
+        sheet.rows[0],
+        {
+          ...sheet.rows[1],
+          concept: 'PAGO (revertido, no afecta el saldo)',
+          affects_running_total: false,
+          total_paid: sheet.rows[0].total_paid,
+          balance: sheet.rows[0].balance,
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    const reversed = fixture.nativeElement.querySelector('tr.hv-no-running') as HTMLElement;
+    expect(reversed).toBeTruthy();
+    expect(reversed.textContent).toContain('revertido, no afecta el saldo');
+  });
+
+  it('pinta el concepto que manda el API aunque notes sigan diciendo CUOTA INICIAL', () => {
+    fixture.componentRef.setInput('sheet', {
+      ...sheet,
+      rows: [
+        {
+          ...sheet.rows[0],
+          concept: 'CUOTA 1',
+          amount: '250400.00',
+          efectivo: '0.00',
+          bancolombia: '250400.00',
+          notes: 'Recibo #0448 | Concepto: CUOTA INICIAL',
+          allocations: [
+            {
+              target: 'installment',
+              target_label: 'Cuota regular',
+              installment_number: 1,
+              amount: '250400.00',
+              principal: '0.00',
+              interest: '250400.00',
+            },
+          ],
+        },
+      ],
+    });
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('CUOTA 1');
+    expect(text).not.toContain('CUOTA INICIAL');
   });
 
   it('expresa cada parte como porcentaje del total pagado', () => {

@@ -324,6 +324,107 @@ describe('AmortizationTablePresenterComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('cuota inicial');
     expect(fixture.nativeElement.textContent).toContain('0433');
+    expect(fixture.nativeElement.textContent).toContain('Recorrido del recibo');
+    expect(fixture.nativeElement.textContent).toContain('En esta cuota');
+  });
+
+  it('en la cuota que recibe el sobrante dice que el recibo empezó en la cuota origen', () => {
+    component.installments = [
+      {
+        id: 31,
+        installment_number: 3,
+        due_date: '2026-04-05',
+        installment_value: 100,
+        extra_payment: 0,
+        interest_paid: 20,
+        principal_paid: 80,
+        quota_debt: 0,
+        remaining_balance: 0,
+        status: 'paid',
+        sources: [
+          {
+            transaction_id: 88,
+            transaction_date: '2026-04-06',
+            receipt_number: '0803',
+            amount: 67671,
+            also_applied_to: [],
+            came_from: [
+              { target_label: 'Cuota', installment_number: 4, amount: 67671 },
+            ],
+          },
+        ],
+      },
+    ];
+
+    fixture.detectChanges();
+    const button = fixture.nativeElement.querySelector('.quota-details-toggle') as HTMLButtonElement;
+    button.click();
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('cuota #4');
+    expect(text).toContain('Empezó en');
+    expect(text).not.toContain('También cubrió');
+    expect(text).not.toContain('Viene de');
+    const cells = fixture.nativeElement.querySelectorAll('.quota-details-table tbody td') as NodeListOf<HTMLTableCellElement>;
+    expect(cells[3].textContent?.trim()).toContain('cuota #4');
+    expect(cells[3].textContent).not.toContain('sobrante $');
+  });
+
+  it('en la cuota origen del sobrante describe el resto del recibo en una sola columna', () => {
+    component.installments = [
+      {
+        id: 41,
+        installment_number: 4,
+        due_date: '2026-05-05',
+        installment_value: 100,
+        extra_payment: 0,
+        interest_paid: 20,
+        principal_paid: 80,
+        quota_debt: 0,
+        remaining_balance: 0,
+        status: 'paid',
+        sources: [
+          {
+            transaction_id: 88,
+            transaction_date: '2026-04-06',
+            receipt_number: '0803',
+            amount: 1000000,
+            also_applied_to: [
+              { target_label: 'Cuota', installment_number: 3, amount: 67671 },
+            ],
+            came_from: [],
+          },
+        ],
+      },
+    ];
+
+    fixture.detectChanges();
+    const button = fixture.nativeElement.querySelector('.quota-details-toggle') as HTMLButtonElement;
+    button.click();
+    fixture.detectChanges();
+
+    const cells = fixture.nativeElement.querySelectorAll('.quota-details-table tbody td') as NodeListOf<HTMLTableCellElement>;
+    expect(cells[3].textContent?.trim()).toContain('cuota #3');
+    expect(cells[3].textContent).toContain('Empezó en esta cuota');
+    expect(cells[3].textContent).not.toContain('sobrante $');
+  });
+
+  it('el recorrido no pega el monto de esta cuota al número de la cuota origen', () => {
+    const source = {
+      transaction_id: 1,
+      transaction_date: '2026-01-01',
+      receipt_number: '1',
+      amount: 1988092,
+      also_applied_to: [{ target_label: 'Cuota', installment_number: 2, amount: 50 }],
+      came_from: [{ target_label: 'Cuota', installment_number: 4, amount: 1988092 }],
+    };
+
+    const label = component.receiptRouteLabel(source, 11);
+    expect(label).toContain('cuota #4');
+    expect(label).toContain('Empezó en');
+    expect(label).not.toContain('sobrante $ 1');
+    expect(label).not.toContain('1.988.092');
   });
 });
 

@@ -28,10 +28,25 @@
       </dl>
     </div>
 
-    <div class="hv-gap">
-      <span>{{ sheet.summary.criteria_gap_label }}</span>
-      <strong>$ {{ money(sheet.summary.criteria_gap) | number:'1.0-0' }}</strong>
-      <small>{{ sheet.summary.criteria_gap_hint }}</small>
+    <div class="hv-gap" aria-label="Brecha entre criterios">
+      <div class="hv-gap__header">
+        <span>{{ sheet.summary.criteria_gap_label }}</span>
+        <strong>$ {{ money(sheet.summary.criteria_gap) | number:'1.0-0' }}</strong>
+      </div>
+      <div class="hv-gap__grid">
+        <div>
+          <span>Valor hoja de vida</span>
+          <strong>$ {{ money(sheet.summary.life_sheet_balance) | number:'1.0-0' }}</strong>
+        </div>
+        <div>
+          <span>Valor total de amortización</span>
+          <strong>$ {{ money(sheet.summary.outstanding_capital) | number:'1.0-0' }}</strong>
+        </div>
+        <div>
+          <span>Diferencia</span>
+          <strong>$ {{ money(sheet.summary.criteria_gap) | number:'1.0-0' }}</strong>
+        </div>
+      </div>
     </div>
 
     <div class="hv-card hv-header">
@@ -122,7 +137,7 @@
             <td></td>
           </tr>
           <ng-container *ngFor="let row of sheet.rows">
-            <tr>
+            <tr [class.hv-no-running]="row.affects_running_total === false">
               <td>{{ row.date | date:'dd/MM/yyyy' }}</td>
               <td>
                 {{ row.concept }}

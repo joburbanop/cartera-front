@@ -11,21 +11,33 @@ import {
   normalizeContractTabOrder,
 } from '../utils/contract-tabs';
 
+export const SESSION_EXPIRED_MESSAGE = 'La sesión expiró; vuelve a iniciar sesión';
+export const SESSION_KEEP_ALIVE_MS = 60_000;
+const SESSION_EXPIRED_NOTICE_KEY = 'auth_session_expired';
+
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
+  static readonly SESSION_EXPIRED_MESSAGE = SESSION_EXPIRED_MESSAGE;
+
   private http = inject(HttpClient);
   private apiUrl = environment.apiUrl;
   private readonly tokenKey = 'auth_token';
   private readonly rolesKey = 'auth_roles';
+  private readonly permissionsKey = 'auth_permissions';
   private readonly userIdKey = 'auth_user_id';
   private readonly userNameKey = 'auth_user_name';
   private readonly mustChangePasswordKey = 'auth_must_change_password';
   private readonly passwordChangedAtKey = 'auth_password_changed_at';
   private roles: string[] = this.readStoredRoles();
+  private permissions: string[] = this.readStoredPermissions();
   private loggingOut = false;
   private profileSyncStarted = false;
+  private inFlightWrites = 0;
+  private sessionExpiryDeferred = false;
+  private sessionExpiredNotified = false;
+  private keepAliveTimer: ReturnType<typeof setInterval> | null = null;
   private readonly userNameState = signal<string | null>(this.readStoredName());
   readonly userName = this.userNameState.asReadonly();
   private readonly uiPreferencesState = signal<{ contractTabs: ContractTabId[] }>({
@@ -40,10 +52,14 @@ export class AuthService {
         const payload = response?.data ?? response;
         const token = payload?.access_token ?? response?.access_token ?? null;
         const roles = payload?.roles ?? payload?.user?.roles ?? [];
+        const permissions = payload?.permissions ?? payload?.user?.permissions ?? [];
 
         if (token) {
+          this.resetSessionExpiryState();
+          sessionStorage.removeItem(SESSION_EXPIRED_NOTICE_KEY);
           localStorage.setItem(this.tokenKey, token);
           this.setRoles(Array.isArray(roles) ? roles : []);
+          this.setPermissions(Array.isArray(permissions) ? permissions : []);
           const userId = payload?.user?.id ?? null;
           if (userId != null) {
             localStorage.setItem(this.userIdKey, String(userId));
@@ -92,6 +108,10 @@ export class AuthService {
 
   hasRole(role: string | AppRole): boolean {
     return this.roles.includes(role);
+  }
+
+  hasPermission(permission: string): boolean {
+    return this.permissions.includes(permission);
   }
 
   homePath(): string {
@@ -177,6 +197,62 @@ export class AuthService {
     return url.includes('/logout');
   }
 
+  beginWrite(): void {
+    this.inFlightWrites += 1;
+  }
+
+  endWrite(): boolean {
+    this.inFlightWrites = Math.max(0, this.inFlightWrites - 1);
+    if (this.inFlightWrites > 0 || !this.sessionExpiryDeferred) {
+      return false;
+    }
+
+    this.sessionExpiryDeferred = false;
+    return true;
+  }
+
+  hasInFlightWrites(): boolean {
+    return this.inFlightWrites > 0;
+  }
+
+  deferSessionExpiry(): void {
+    this.sessionExpiryDeferred = true;
+  }
+
+  notifySessionExpired(): boolean {
+    if (this.sessionExpiredNotified) {
+      return false;
+    }
+
+    this.sessionExpiredNotified = true;
+    sessionStorage.setItem(SESSION_EXPIRED_NOTICE_KEY, '1');
+    return true;
+  }
+
+  consumeSessionExpiredNotice(): boolean {
+    const raw = sessionStorage.getItem(SESSION_EXPIRED_NOTICE_KEY);
+    sessionStorage.removeItem(SESSION_EXPIRED_NOTICE_KEY);
+    return raw === '1';
+  }
+
+  startSessionKeepAlive(): void {
+    if (this.keepAliveTimer || !this.getToken()) {
+      return;
+    }
+
+    this.pingSession();
+    this.keepAliveTimer = setInterval(() => this.pingSession(), SESSION_KEEP_ALIVE_MS);
+  }
+
+  stopSessionKeepAlive(): void {
+    if (!this.keepAliveTimer) {
+      return;
+    }
+
+    clearInterval(this.keepAliveTimer);
+    this.keepAliveTimer = null;
+  }
+
   ensureProfile(): void {
     if (!this.getToken() || this.profileSyncStarted) {
       return;
@@ -190,6 +266,14 @@ export class AuthService {
         this.persistUserName(user?.name ?? payload?.name);
         this.persistPasswordFlags(user);
         this.persistUiPreferences(user?.ui_preferences);
+        const roles = payload?.roles ?? user?.roles;
+        if (Array.isArray(roles)) {
+          this.setRoles(roles.filter((role: unknown) => typeof role === 'string'));
+        }
+        const permissions = payload?.permissions ?? user?.permissions;
+        if (Array.isArray(permissions)) {
+          this.setPermissions(permissions.filter((permission: unknown) => typeof permission === 'string'));
+        }
       },
       error: () => {
         this.uiPreferencesReady.set(true);
@@ -228,6 +312,11 @@ export class AuthService {
     localStorage.setItem(this.rolesKey, JSON.stringify(roles));
   }
 
+  private setPermissions(permissions: string[]): void {
+    this.permissions = permissions.filter((permission) => typeof permission === 'string');
+    localStorage.setItem(this.permissionsKey, JSON.stringify(this.permissions));
+  }
+
   private persistUserName(name: unknown): void {
     if (typeof name !== 'string' || !name.trim()) {
       return;
@@ -244,17 +333,38 @@ export class AuthService {
   }
 
   private clearSession(): void {
+    this.stopSessionKeepAlive();
+    this.resetSessionExpiryState();
     this.roles = [];
+    this.permissions = [];
     this.userNameState.set(null);
     this.uiPreferencesState.set({ contractTabs: [...DEFAULT_CONTRACT_TAB_IDS] });
     this.uiPreferencesReady.set(false);
     this.profileSyncStarted = false;
     localStorage.removeItem(this.tokenKey);
     localStorage.removeItem(this.rolesKey);
+    localStorage.removeItem(this.permissionsKey);
     localStorage.removeItem(this.userIdKey);
     localStorage.removeItem(this.userNameKey);
     localStorage.removeItem(this.mustChangePasswordKey);
     localStorage.removeItem(this.passwordChangedAtKey);
+  }
+
+  private resetSessionExpiryState(): void {
+    this.inFlightWrites = 0;
+    this.sessionExpiryDeferred = false;
+    this.sessionExpiredNotified = false;
+  }
+
+  private pingSession(): void {
+    if (!this.getToken() || this.loggingOut) {
+      return;
+    }
+
+    this.http.get(`${this.apiUrl}/me`).subscribe({
+      next: () => undefined,
+      error: () => undefined,
+    });
   }
 
   private persistUiPreferences(raw: unknown): void {
@@ -279,14 +389,22 @@ export class AuthService {
   }
 
   private readStoredRoles(): string[] {
-    const raw = localStorage.getItem(this.rolesKey);
+    return this.readStoredStringList(this.rolesKey);
+  }
+
+  private readStoredPermissions(): string[] {
+    return this.readStoredStringList(this.permissionsKey);
+  }
+
+  private readStoredStringList(key: string): string[] {
+    const raw = localStorage.getItem(key);
     if (!raw) {
       return [];
     }
 
     try {
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed.filter((role) => typeof role === 'string') : [];
+      return Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string') : [];
     } catch {
       return [];
     }

@@ -88,14 +88,15 @@
                 <p class="quota-details-intro">
                   Cubierto $ {{ coveredAmount(promise) | number:'1.0-0' }}
                   · Falta $ {{ quotaDebt(promise) | number:'1.0-0' }}
+                  · Cada fila es un recibo que tocó esta promesa
                 </p>
                 <table class="quota-details-table">
                   <thead>
                     <tr>
                       <th>Fecha</th>
                       <th>Recibo</th>
-                      <th class="num">Aportó a esta cuota</th>
-                      <th>También cubrió</th>
+                      <th class="num">En esta promesa</th>
+                      <th>Recorrido del recibo</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -103,7 +104,7 @@
                       <td>{{ source.transaction_date | date:'dd/MM/yyyy' }}</td>
                       <td>{{ source.receipt_number || '—' }}</td>
                       <td class="num">$ {{ source.amount | number:'1.0-0' }}</td>
-                      <td>{{ alsoAppliedLabel(source) || 'Solo esta cuota' }}</td>
+                      <td>{{ receiptRouteLabel(source, promise.payment_number) }}</td>
                     </tr>
                   </tbody>
                 </table>

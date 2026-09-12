@@ -1,0 +1,26 @@
+.payment-confirm-summary {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0 0 1.25rem;
+
+  div {
+    display: grid;
+    grid-template-columns: 9.5rem 1fr;
+    gap: 0.75rem;
+    align-items: start;
+  }
+
+  dt {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  dd {
+    margin: 0;
+    color: #0f172a;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+}

@@ -161,20 +161,58 @@ export class PaymentPromiseTabComponent {
     return Math.max(0, Number(promise.expected_amount || 0) - this.quotaDebt(promise));
   }
 
-  alsoAppliedLabel(source: PaymentSource): string {
-    const others = source.also_applied_to ?? [];
-    if (others.length === 0) {
-      return '';
+  receiptRouteLabel(source: PaymentSource, currentNumber: number): string {
+    const route = source.route ?? [];
+    if (route.length > 0) {
+      const origin = route[0];
+      const path = route.map((item) => this.peerPromiseLabel(item)).join(' → ');
+      if (Number(origin.installment_number) === Number(currentNumber)) {
+        if (route.length === 1) {
+          return 'Este recibo se aplicó solo a esta promesa.';
+        }
+
+        const rest = route
+          .slice(1)
+          .map((item) => `${this.peerPromiseLabel(item)} ($ ${this.peerAmount(item)})`)
+          .join(', ');
+
+        return `Empezó en esta promesa. Recorrido: ${path}. El resto fue a ${rest}.`;
+      }
+
+      return `Sobrante del mismo recibo. Empezó en ${this.peerPromiseLabel(origin)}. Recorrido: ${path}.`;
     }
 
-    return others
-      .map((item) => {
-        const dest = item.installment_number === 0
-          ? 'cuota inicial'
-          : (item.installment_number != null ? `${item.target_label}` : item.target_label);
-        return `${dest} ($ ${Number(item.amount || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 })})`;
-      })
-      .join(', ');
+    const cameFrom = source.came_from?.[0];
+    if (cameFrom) {
+      return `Sobrante del mismo recibo. Empezó en ${this.peerPromiseLabel(cameFrom)}.`;
+    }
+
+    const others = source.also_applied_to ?? [];
+    if (others.length > 0) {
+      const rest = others
+        .map((item) => `${this.peerPromiseLabel(item)} ($ ${this.peerAmount(item)})`)
+        .join(', ');
+
+      return `Empezó en esta promesa. El resto fue a ${rest}.`;
+    }
+
+    return 'Este recibo se aplicó solo a esta promesa.';
+  }
+
+  private peerPromiseLabel(item: { target_label: string; installment_number?: number | null }): string {
+    if (item.installment_number === 0) {
+      return 'cuota inicial';
+    }
+
+    if (item.target_label) {
+      return item.target_label;
+    }
+
+    return item.installment_number != null ? `Promesa #${item.installment_number}` : 'Otra promesa';
+  }
+
+  private peerAmount(item: { amount: number | string }): string {
+    return Number(item.amount || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
   }
 
   private statusOf(promise: PaymentPromise): PaymentPromiseStatus {

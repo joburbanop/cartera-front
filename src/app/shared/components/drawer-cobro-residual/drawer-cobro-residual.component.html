@@ -1,0 +1,95 @@
+<div *ngIf="isOpen" data-testid="drawer-cobro-residual">
+  <div class="side-panel-overlay" (click)="close()"></div>
+
+  <div class="side-panel" role="dialog" aria-modal="true" aria-labelledby="residual-drawer-title">
+    <div class="panel-header">
+      <h3 id="residual-drawer-title">Cobrar residuales acumulados</h3>
+      <button type="button" (click)="close()" [disabled]="isProcessing || confirmPending" aria-label="Cerrar">✖</button>
+    </div>
+
+    <div class="panel-body">
+      <form [formGroup]="paymentForm" style="display: flex; flex-direction: column; gap: 1.25rem;">
+        <p class="residual-drawer__hint">
+          Ítem aparte: no se aplica a cuotas ni al plan de amortización.
+          Pendiente: <strong>$ {{ pendingAmount | number:'1.2-2' }}</strong>.
+        </p>
+
+        <div>
+          <label class="app-form-label">Monto a cobrar *</label>
+          <input class="app-form-input" type="text" formControlName="amount" appCurrencyMask>
+          <app-field-error [control]="paymentForm.get('amount')" label="El monto"></app-field-error>
+          <p class="field-error" *ngIf="amountExceedsPending" role="alert">
+            El monto no puede superar el residual pendiente.
+          </p>
+        </div>
+
+        <div>
+          <label class="app-form-label">Método de pago *</label>
+          <select class="app-form-select" formControlName="payment_method">
+            <option value="cash">Efectivo</option>
+            <option value="transfer">Transferencia</option>
+            <option value="barter">Permuta</option>
+          </select>
+          <app-field-error [control]="paymentForm.get('payment_method')" label="El método de pago"></app-field-error>
+        </div>
+
+        <div *ngIf="paymentForm.get('payment_method')?.value === 'transfer'">
+          <label class="app-form-label">Cuenta de destino *</label>
+          <select class="app-form-select" formControlName="bank_account_id">
+            <option value="">-- Seleccione la cuenta bancaria --</option>
+            <option *ngFor="let acc of bankAccounts" [value]="acc.id">
+              {{ acc.bank_name }} - {{ acc.account_number }}
+            </option>
+          </select>
+          <app-field-error [control]="paymentForm.get('bank_account_id')" label="La cuenta de destino"></app-field-error>
+        </div>
+
+        <div>
+          <label class="app-form-label">Fecha de pago *</label>
+          <input class="app-form-input" type="date" formControlName="transaction_date">
+          <app-field-error [control]="paymentForm.get('transaction_date')" label="La fecha de pago"></app-field-error>
+        </div>
+
+        <div>
+          <label class="app-form-label">Recibo # *</label>
+          <input
+            class="app-form-input"
+            type="text"
+            formControlName="receipt_number"
+            maxlength="80"
+            placeholder="0258 o 0258-0289"
+            autocomplete="off"
+          >
+          <app-field-error [control]="paymentForm.get('receipt_number')" label="El número de recibo"></app-field-error>
+          <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem;">
+            Obligatorio. Uno o varios números unidos con guion: 0258-0289.
+          </div>
+        </div>
+
+        <div [class.ng-invalid]="receiptMissing">
+          <label class="app-form-label">Soporte de pago (Recibo) *</label>
+          <input
+            type="file"
+            (change)="onFileSelected($event)"
+            accept="image/*,application/pdf"
+            style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; background-color: #f8fafc;">
+          <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.4rem;">
+            * Obligatorio. Formatos aceptados: JPG, PNG, PDF.
+          </div>
+          <p class="field-error" *ngIf="receiptMissing" role="alert">
+            <span>El comprobante es obligatorio</span>
+          </p>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel-footer">
+      <button class="btn-secondary" type="button" (click)="close()" [disabled]="isProcessing || confirmPending">
+        Cancelar
+      </button>
+      <button class="btn-primary" type="button" (click)="submit()" [disabled]="isProcessing || confirmPending">
+        {{ isProcessing ? 'Registrando...' : 'Confirmar cobro' }}
+      </button>
+    </div>
+  </div>
+</div>

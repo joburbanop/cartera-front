@@ -155,6 +155,138 @@
   &:hover { background: #eef2f7; }
 }
 
+.tx-reversed-badge {
+  display: inline-block;
+  margin-left: 0.45rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.tx-reverse-btn {
+  margin-right: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover { background: #fee2e2; }
+}
+
+.reverse-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.reverse-modal-card {
+  width: min(480px, 100%);
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px var(--brand-primary);
+}
+
+.reverse-modal-header,
+.reverse-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.reverse-modal-footer {
+  border-bottom: 0;
+  border-top: 1px solid #e2e8f0;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.reverse-modal-header h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.1rem;
+}
+
+.reverse-modal-body {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1.25rem;
+}
+
+.reverse-modal-helper {
+  margin: 0 0 0.35rem;
+  color: #475569;
+  font-size: 0.88rem;
+}
+
+.reverse-modal-notes {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.reverse-modal-card .modal-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.reverse-modal-card .modal-input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.reverse-modal-card .btn-close {
+  border: none;
+  background: transparent;
+  font-size: 1.4rem;
+  color: #475569;
+  cursor: pointer;
+}
+
+.reverse-modal-card .btn-cancel,
+.reverse-modal-card .btn-save {
+  padding: 0.55rem 0.95rem;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reverse-modal-card .btn-cancel {
+  border: 1px solid #cbd5e1;
+  background: white;
+  color: #334155;
+}
+
+.reverse-modal-card .btn-save {
+  border: 0;
+  background: #b91c1c;
+  color: white;
+}
+
+.reverse-modal-card .btn-save:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .tx-details-row {
   background: #f8fafc;
 
@@ -213,6 +345,134 @@
   box-shadow: none;
 }
 
+.criteria-gap-card {
+  margin: 0 0 1.25rem;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  background: var(--brand-link-soft);
+  border: 1px solid rgba(3, 105, 161, 0.2);
+  color: var(--brand-link);
+  font-size: 0.85rem;
+}
+
+.criteria-gap-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.8rem;
+
+  strong {
+    font-size: 1rem;
+    color: var(--brand-link);
+  }
+}
+
+.criteria-gap-card__amount {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--brand-link);
+}
+
+.criteria-gap-card__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.75rem;
+
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.6rem 0.7rem;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(3, 105, 161, 0.12);
+  }
+
+  span {
+    font-size: 0.72rem;
+    opacity: 0.9;
+    color: var(--brand-link);
+  }
+
+  strong {
+    font-size: 0.96rem;
+    line-height: 1.3;
+    color: var(--brand-link);
+  }
+}
+
+.contract-overdue-alert {
+  margin-top: 1.5rem;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  box-shadow: 0 1px 2px rgba(127, 29, 29, 0.04);
+}
+
+.contract-overdue-alert__icon {
+  width: 24px;
+  height: 24px;
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+.contract-overdue-alert__content {
+  min-width: 0;
+  flex: 1;
+}
+
+.contract-overdue-alert__title {
+  margin: 0;
+  color: #991b1b;
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.contract-overdue-alert__text {
+  margin: 0.35rem 0 0;
+  color: #b91c1c;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+@media (max-width: 640px) {
+  .contract-overdue-alert {
+    margin-top: 1.25rem;
+    padding: 0.9rem 1rem;
+  }
+
+  .contract-overdue-alert__content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .contract-overdue-alert__text {
+    font-size: 0.82rem;
+  }
+
+  .criteria-gap-card__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 375px) {
+  .criteria-gap-card__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .criteria-gap-card {
+    padding: 0.8rem 0.85rem;
+  }
+}
+
 .top-nav-action-btn {
   display: inline-flex;
   align-items: center;
@@ -265,7 +525,7 @@
 .progress-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--brand-primary-deep) 0%, #34d399 100%);
+  background: var(--brand-link);
   box-shadow: inset 0 -1px 0 rgba(255,255,255,0.2);
   transition: width 0.35s ease;
 }
@@ -468,6 +728,41 @@
   overflow: visible;
 }
 
+@media (max-width: 900px) {
+  .contract-tab-bar {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.7) transparent;
+  }
+
+  .contract-tabs {
+    display: flex;
+    flex: 1 0 auto;
+    min-width: max-content;
+    width: max-content;
+    max-width: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    padding-bottom: 0.15rem;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  .contract-tab {
+    flex: 0 0 auto;
+    padding-inline: 0.45rem;
+  }
+
+  .contract-tabs-reset {
+    flex-shrink: 0;
+  }
+}
+
 .contract-tab {
   background: none;
   border: none;
@@ -589,4 +884,63 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+.residual-balance-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin: 0 0 1.5rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+
+  svg {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    color: #d97706;
+  }
+
+  h4 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #92400e;
+  }
+
+  p {
+    margin: 0.35rem 0 0;
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+
+  &--ready {
+    border-color: #a7f3d0;
+    background: #ecfdf5;
+    color: #065f46;
+
+    svg,
+    h4 {
+      color: #047857;
+    }
+  }
+
+  &__cta {
+    font-weight: 700;
+  }
+
+  &__collect {
+    margin-top: 0.75rem;
+    padding: 0.45rem 0.85rem;
+    border: 0;
+    border-radius: 8px;
+    background: #047857;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
 }

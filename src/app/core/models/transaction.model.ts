@@ -5,7 +5,9 @@ export const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   extraordinary_payment: 'Abono extraordinario',
   interes_diferido: 'Interés diferido',
   pago_mixto: 'Inicial + cuota',
+  residual_collection: 'Residuales menores',
   refund: 'Devolución',
+  payment_reversal: 'Reversa de pago',
 };
 
 /**
@@ -28,6 +30,7 @@ export interface Transaction {
   type?: string;
   amount?: number | string;
   payment_method?: string;
+  receipt_number?: string | null;
   transaction_date?: string | null;
   created_at?: string | null;
   receipt?: string | null;
@@ -35,4 +38,9 @@ export interface Transaction {
   lot_number?: string;
   /** Vacío en los pagos de un solo destino. */
   allocations?: TransactionAllocation[];
+  reversed_at?: string | null;
+  reversal_transaction_id?: number | null;
+  reversal_reason?: string | null;
+  reversal_notes?: string | null;
+  can_reverse?: boolean;
 }

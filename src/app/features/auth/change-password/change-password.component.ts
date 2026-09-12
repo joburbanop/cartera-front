@@ -45,6 +45,13 @@ export class ChangePasswordComponent {
     sameAsCurrent: 'La nueva contraseña debe ser diferente a la actual.',
   };
 
+  readonly strengthLevels = [
+    { label: 'Muy débil', className: 'weak' },
+    { label: 'Débil', className: 'fair' },
+    { label: 'Buena', className: 'good' },
+    { label: 'Fuerte', className: 'strong' },
+  ];
+
   form = this.fb.nonNullable.group({
     current_password: ['', [Validators.required]],
     password: ['', [Validators.required, Validators.minLength(8), differentFromCurrent]],
@@ -53,9 +60,37 @@ export class ChangePasswordComponent {
 
   errorMessage = '';
   isLoading = false;
+  successState = false;
 
   get isFirstAccess(): boolean {
     return !this.authService.hasPreviousPasswordChange();
+  }
+
+  get passwordStrength() {
+    const value = this.form.controls.password.value ?? '';
+    const trimmed = value.trim();
+
+    if (!trimmed) {
+      return { level: 0, label: 'Sin contraseña', className: 'empty' };
+    }
+
+    let score = 0;
+    if (trimmed.length >= 8) score += 1;
+    if (/[A-Z]/.test(trimmed)) score += 1;
+    if (/[0-9]/.test(trimmed)) score += 1;
+    if (/[^A-Za-z0-9]/.test(trimmed)) score += 1;
+
+    const level = Math.min(score, 4);
+    return {
+      level,
+      label: this.strengthLevels[Math.max(level - 1, 0)].label,
+      className: level === 0 ? 'empty' : this.strengthLevels[Math.max(level - 1, 0)].className,
+    };
+  }
+
+  get passwordStrengthSegments(): number[] {
+    const level = this.passwordStrength.level;
+    return [1, 2, 3, 4].map((segment) => (segment <= level ? 1 : 0));
   }
 
   constructor() {
@@ -64,6 +99,7 @@ export class ChangePasswordComponent {
     });
     this.form.controls.password.valueChanges.subscribe(() => {
       this.form.controls.password_confirmation.updateValueAndValidity({ emitEvent: false });
+      this.cdr.markForCheck();
     });
   }
 
@@ -86,8 +122,12 @@ export class ChangePasswordComponent {
     this.authService.changePassword(this.form.getRawValue()).subscribe({
       next: () => {
         this.isLoading = false;
+        this.successState = true;
         this.cdr.markForCheck();
-        void this.router.navigate([this.authService.homePath()]);
+
+        window.setTimeout(() => {
+          void this.router.navigate([this.authService.homePath()]);
+        }, 650);
       },
       error: (err) => {
         this.isLoading = false;

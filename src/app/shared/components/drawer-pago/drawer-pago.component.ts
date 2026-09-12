@@ -7,6 +7,15 @@ import { FinancialRules } from '../../../core/constants/financial-rules';
 import { ToastService } from '../../services/toast.service';
 import { FieldErrorComponent } from '../field-error/field-error.component';
 import { markAllAsTouched, scrollToFirstInvalid } from '../../utils/form-utils';
+import { autoSplitDownPayment } from '../../../core/utils/split-down-payment';
+
+export interface DrawerTargetInstallment {
+  isInitial: boolean;
+  installmentNumber: number;
+  dueDateLabel: string;
+  statusLabel: string;
+  amount: number;
+}
 
 @Component({
   selector: 'app-drawer-pago',
@@ -19,6 +28,7 @@ export class DrawerPagoComponent implements OnInit {
   @Output() closeDrawer = new EventEmitter<void>();
   @Output() onClose = new EventEmitter<void>();
   @Output() confirmPayment = new EventEmitter<any>();
+  @Output() paymentDateChange = new EventEmitter<string>();
 
   private _isProcessing = false;
   @Input() set isProcessing(value: boolean) {
@@ -31,7 +41,8 @@ export class DrawerPagoComponent implements OnInit {
   get isProcessing(): boolean { return this._isProcessing; }
   
   // NUEVO: Lista de cuentas bancarias del proyecto
-  @Input() bankAccounts: any[] = []; 
+  @Input() bankAccounts: any[] = [];
+  @Input() confirmPending = false; 
 
   private fb = inject(FormBuilder);
   private financials = inject(AmortizationFinancialsService);
@@ -47,12 +58,17 @@ export class DrawerPagoComponent implements OnInit {
     payment_method: ['transfer', Validators.required],
     bank_account_id: ['', Validators.required], // Inicia requerido porque por defecto es 'transfer'
     transaction_date: [this.todayIsoDate(), Validators.required],
+    receipt_number: ['', [Validators.required, Validators.maxLength(80)]],
     surplus_action: [''],
     to_down_payment: ['']
   });
 
   private todayIsoDate(): string {
-    return new Date().toISOString().substring(0, 10);
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   private normalizeSelectedDate(value: unknown): string {
@@ -85,12 +101,11 @@ export class DrawerPagoComponent implements OnInit {
   }
 
   /**
-   * Deuda regular contra la que se mide el excedente. En el flujo general con
-   * inicial pendiente, el monto sugerido es el saldo de la inicial; si el pago
-   * se reparte, la referencia pasa a ser lo que deben las cuotas regulares.
+   * Excedente contra la deuda objetivo (lista precargada). El split sigue
+   * midiendo el resto regular; no se toca ese carril.
    */
   private get surplusReference(): number {
-    if (this.splitEnabled && this._selectedFees.length === 0 && this.regularDueAmount > 0) {
+    if (this.splitEnabled && this.regularDueAmount > 0) {
       return this.regularDueAmount;
     }
 
@@ -111,36 +126,34 @@ export class DrawerPagoComponent implements OnInit {
     return this.excessAmount;
   }
 
+  pendingDefaultCapitalConfirm = false;
+  readonly defaultSurplusAction = 'abono_capital';
+
   get hasSurplus(): boolean {
     return this.excessAmount > FinancialRules.absorbedSurplus;
   }
 
   /**
    * Al día: inicial saldada y ninguna regular vencida.
-   * Ahí el excedente se sugiere a capital; con mora, a cubrir vencidas.
    */
   get isContractCurrent(): boolean {
     return this.pendingInitialAmount <= 0 && Number(this.overdueTotalAmount ?? 0) <= 0;
   }
 
-  get suggestedSurplusAction(): 'reducir_plazo' | 'adelantar_cuotas' {
-    return this.isContractCurrent ? 'reducir_plazo' : 'adelantar_cuotas';
+  get chosenSurplusAction(): string {
+    return String(this.paymentForm.get('surplus_action')?.value || '').trim();
   }
 
   private syncSurplusValidation(): void {
     const surplusControl = this.paymentForm.get('surplus_action');
 
-    if (this.hasSurplus) {
-      surplusControl?.setValidators([Validators.required]);
-      if (!surplusControl?.value) {
-        surplusControl?.setValue(this.suggestedSurplusAction, { emitEvent: false });
-      }
-    } else {
-      surplusControl?.clearValidators();
+    if (!this.hasSurplus) {
       surplusControl?.setValue('');
+      this.pendingDefaultCapitalConfirm = false;
     }
 
-    surplusControl?.updateValueAndValidity();
+    surplusControl?.clearValidators();
+    surplusControl?.updateValueAndValidity({ emitEvent: false });
   }
 
   ngOnInit() {
@@ -158,12 +171,30 @@ export class DrawerPagoComponent implements OnInit {
     });
 
     this.paymentForm.get('amount')?.valueChanges.subscribe(() => {
+      this.pendingDefaultCapitalConfirm = false;
       this.syncSurplusValidation();
     });
 
     this.paymentForm.get('to_down_payment')?.valueChanges.subscribe(() => {
+      this.pendingDefaultCapitalConfirm = false;
       this.syncSurplusValidation();
     });
+
+    this.paymentForm.get('surplus_action')?.valueChanges.subscribe(() => {
+      this.pendingDefaultCapitalConfirm = false;
+    });
+
+    this.paymentForm.get('transaction_date')?.valueChanges.subscribe((value) => {
+      this.emitPaymentDate(value);
+    });
+  }
+
+  private emitPaymentDate(value: unknown = this.paymentForm.get('transaction_date')?.value): void {
+    if (!this.isOpen) {
+      return;
+    }
+
+    this.paymentDateChange.emit(this.normalizeSelectedDate(value));
   }
 
   onFileSelected(event: any) {
@@ -181,6 +212,7 @@ export class DrawerPagoComponent implements OnInit {
   @Input() set isOpen(value: boolean) {
     this._isOpen = value;
     if (value) {
+      this.targetsExpanded = false;
       this.updateFormAmount();
       return;
     }
@@ -195,7 +227,8 @@ export class DrawerPagoComponent implements OnInit {
   private _selectedFees: any[] = [];
   @Input() set selectedFees(value: any[]) {
     this._selectedFees = value;
-    this.calculateDebt(); 
+    this.calculateDebt();
+    this.syncSuggestedAmountToForm();
   }
   get selectedFees(): any[] { return this._selectedFees; }
 
@@ -203,17 +236,65 @@ export class DrawerPagoComponent implements OnInit {
   @Input() set prefilledAmount(value: number | null) {
     this._prefilledAmount = this.normalizePrefilledAmount(value);
     this.calculateDebt();
-
-    if (this.isOpen) {
-      this.updateFormAmount();
-    }
+    this.syncSuggestedAmountToForm();
   }
   get prefilledAmount(): number | null { return this._prefilledAmount; }
 
-  @Input() amountHint: 'schedule' | null = null;
-  @Input() amortizationReferenceAmount: number | null = null;
+  @Input() targetInstallments: DrawerTargetInstallment[] = [];
+  @Input() scheduleNextAmount: number | null = null;
+  @Input() scheduleOpenTotal: number | null = null;
+  @Input() lifeSheetBalance: number | null = null;
+  @Input() outstandingCapital: number | null = null;
   @Input() overdueTotalAmount: number | null = null;
   @Input() overdueTotalIsPreventa = false;
+
+  targetsExpanded = false;
+
+  get targetListTotal(): number {
+    return (this.targetInstallments ?? []).reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  }
+
+  get targetCountLabel(): string {
+    const rows = this.targetInstallments ?? [];
+    if (rows.length === 1) {
+      return rows[0].isInitial ? '1 cuota inicial' : '1 cuota pendiente';
+    }
+
+    return `${rows.length} cuotas pendientes`;
+  }
+
+  get targetDateRangeLabel(): string {
+    const rows = this.targetInstallments ?? [];
+    if (rows.length === 0) {
+      return '';
+    }
+
+    const first = rows[0].dueDateLabel || '';
+    const last = rows[rows.length - 1].dueDateLabel || '';
+    if (!first) {
+      return last;
+    }
+
+    if (!last || first === last || rows.length === 1) {
+      return first;
+    }
+
+    return `${first} – ${last}`;
+  }
+
+  toggleTargets(): void {
+    this.targetsExpanded = !this.targetsExpanded;
+  }
+
+  /** Mora que no está toda en la lista (p. ej. desfase de fecha). */
+  get showOverdueOutsideList(): boolean {
+    const overdue = Number(this.overdueTotalAmount ?? 0);
+    if (overdue <= FinancialRules.absorbedSurplus) {
+      return false;
+    }
+
+    return overdue > this.targetListTotal + FinancialRules.absorbedSurplus;
+  }
 
   /**
    * Saldo pendiente de la cuota inicial. Cuando hay saldo, el pago se puede
@@ -235,15 +316,72 @@ export class DrawerPagoComponent implements OnInit {
    * Deuda de cuotas regulares a la fecha. Solo se usa como referencia del
    * excedente cuando el pago se reparte.
    */
-  @Input() regularDueAmount = 0;
+  private _regularDueAmount = 0;
+  @Input() set regularDueAmount(value: number) {
+    this._regularDueAmount = Math.max(0, Math.round(Number(value) || 0));
 
-  /** El reparto solo tiene sentido si la inicial debe algo y no es el pago de la inicial. */
+    if (this.isOpen) {
+      this.syncSurplusValidation();
+    }
+  }
+  get regularDueAmount(): number { return this._regularDueAmount; }
+
+  private _planRemainingAmount = 0;
+  @Input() set planRemainingAmount(value: number | null) {
+    this._planRemainingAmount = Math.max(0, Math.round(Number(value) || 0));
+
+    if (this.isOpen) {
+      this.syncSurplusValidation();
+    }
+  }
+  get planRemainingAmount(): number { return this._planRemainingAmount; }
+
+  /**
+   * El reparto aplica si la inicial debe algo y este cobro no es solo la #0.
+   * #0 + regulares sí se puede (y se debe) partir: un solo movimiento bancario.
+   */
   get canSplit(): boolean {
     if (this._pendingInitialAmount <= 0) {
       return false;
     }
 
-    return !this._selectedFees.some((fee: any) => Number(fee?.installment_number) === 0);
+    return !this.isInicialOnlySelection();
+  }
+
+  private isInicialOnlySelection(): boolean {
+    const fees = this._selectedFees ?? [];
+    if (fees.length === 0) {
+      return false;
+    }
+
+    return fees.every((fee: any) => Number(fee?.installment_number) === 0);
+  }
+
+  private hasMixedInicialAndRegularSelection(): boolean {
+    const fees = this._selectedFees ?? [];
+    const hasInicial = fees.some((fee: any) => Number(fee?.installment_number) === 0);
+    const hasRegular = fees.some((fee: any) => Number(fee?.installment_number) > 0);
+
+    return hasInicial && hasRegular;
+  }
+
+  /**
+   * Si el cobrador no tocó “Dividir este pago” pero tildó #0 y regulares,
+   * el sistema parte solo: faltante de inicial primero, resto a cuotas.
+   */
+  private resolveSplitPayload(): { to_down_payment: number; to_installments: number } | null {
+    if (this.splitEnabled) {
+      return {
+        to_down_payment: this.splitToDownPayment,
+        to_installments: this.splitToInstallments,
+      };
+    }
+
+    if (!this.hasMixedInicialAndRegularSelection() || this._pendingInitialAmount <= 0) {
+      return null;
+    }
+
+    return autoSplitDownPayment(this.currentPaymentAmount, this._pendingInitialAmount);
   }
 
   splitEnabled = false;
@@ -349,6 +487,15 @@ export class DrawerPagoComponent implements OnInit {
     this.montoSugeridoTotal = this.totalSelectedAmount;
   }
 
+  private syncSuggestedAmountToForm(): void {
+    if (!this.isOpen) {
+      return;
+    }
+
+    this.paymentForm.patchValue({ amount: this.montoSugeridoTotal });
+    this.syncSurplusValidation();
+  }
+
   updateFormAmount() {
     this.calculateDebt();
     setTimeout(() => {
@@ -358,6 +505,7 @@ export class DrawerPagoComponent implements OnInit {
         amount: this.montoSugeridoTotal,
         payment_method: 'transfer',
         bank_account_id: '',
+        receipt_number: '',
         surplus_action: '',
         to_down_payment: ''
       });
@@ -368,12 +516,15 @@ export class DrawerPagoComponent implements OnInit {
   private resetState() {
     this.selectedFile = null;
     this.receiptMissing = false;
+    this.targetsExpanded = false;
     this.splitEnabled = false;
+    this.pendingDefaultCapitalConfirm = false;
     this.paymentForm.reset({
       amount: this.montoSugeridoTotal,
       payment_method: 'transfer',
       bank_account_id: '',
       transaction_date: this.todayIsoDate(),
+      receipt_number: '',
       surplus_action: '',
       to_down_payment: ''
     });
@@ -385,17 +536,23 @@ export class DrawerPagoComponent implements OnInit {
 
   @HostListener('document:keydown.escape', ['$event'])
   onKeydownHandler(event: Event): void {
-    if (!this.isOpen) {
+    if (!this.isOpen || this.confirmPending) {
       return;
     }
 
     const keyboardEvent = event as KeyboardEvent;
     keyboardEvent.preventDefault();
+
+    if (this.pendingDefaultCapitalConfirm) {
+      this.cancelDefaultCapitalConfirm();
+      return;
+    }
+
     this.close();
   }
 
   close() {
-    if (this.isProcessing) {
+    if (this.isProcessing || this.confirmPending) {
       return;
     }
 
@@ -406,7 +563,7 @@ export class DrawerPagoComponent implements OnInit {
   }
 
   submit() {
-    if (this.isProcessing || this._isProcessing) {
+    if (this.isProcessing || this.confirmPending) {
       return;
     }
 
@@ -426,27 +583,31 @@ export class DrawerPagoComponent implements OnInit {
       return;
     }
 
-    this._isProcessing = true;
+    if (this.hasSurplus && !this.chosenSurplusAction && !this.pendingDefaultCapitalConfirm) {
+      this.pendingDefaultCapitalConfirm = true;
+      return;
+    }
 
     const selectedDate = this.paymentForm.get('transaction_date')?.value;
     const normalizedDate = this.normalizeSelectedDate(selectedDate);
+    const paymentOption = this.hasSurplus
+      ? (this.chosenSurplusAction || this.defaultSurplusAction)
+      : '';
 
     const paymentData = {
       ...this.paymentForm.value,
       transaction_date: normalizedDate,
       payment_date: normalizedDate,
       receipt: this.selectedFile,
-      payment_option: this.paymentForm.get('surplus_action')?.value || '',
-      // El reparto solo viaja cuando el cobrador lo pidió. Sin él, el pago
-      // sigue el camino de siempre.
-      split: this.splitEnabled
-        ? {
-            to_down_payment: this.splitToDownPayment,
-            to_installments: this.splitToInstallments
-          }
-        : null
+      surplus_action: paymentOption,
+      payment_option: paymentOption,
+      split: this.resolveSplitPayload(),
     };
 
     this.confirmPayment.emit(paymentData);
+  }
+
+  cancelDefaultCapitalConfirm(): void {
+    this.pendingDefaultCapitalConfirm = false;
   }
 }

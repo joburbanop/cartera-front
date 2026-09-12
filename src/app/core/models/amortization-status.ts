@@ -50,19 +50,32 @@ export function amortizationStatusLabel(value: unknown): string {
 }
 
 /**
- * True si la fecha de vencimiento es anterior a hoy
+ * True si la fecha de vencimiento es anterior a `asOf`
  * (comparación por día calendario local). El día de vencimiento no es mora.
+ * Sin `asOf`, usa hoy real para no romper banner, badges y checkbox bloqueado.
+ *
+ * Esta regla debe mantenerse sincronizada con
+ * `app/Support/DueDateRules.php` → `DueDateRules::isOverdue`.
+ * Si cambias el criterio de mora aquí, cámbialo también allá.
+ *
+ * Diferencia conocida (no “arreglarla” de paso): due nulo o vacío
+ * aquí no es mora (`false`); en PHP `isOverdue` devuelve `true`.
  */
-export function isVencida(dueDate: string | Date | null | undefined): boolean {
+export function isVencida(
+  dueDate: string | Date | null | undefined,
+  asOf?: string | Date | null,
+): boolean {
   const due = startOfLocalDay(dueDate);
   if (!due) {
     return false;
   }
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const asOfDay = startOfLocalDay(asOf ?? new Date()) ?? startOfLocalDay(new Date());
+  if (!asOfDay) {
+    return false;
+  }
 
-  return due.getTime() < today.getTime();
+  return due.getTime() < asOfDay.getTime();
 }
 
 function startOfLocalDay(value: string | Date | null | undefined): Date | null {

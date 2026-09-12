@@ -48,12 +48,30 @@ describe('MainLayoutComponent', () => {
     expect(component.hasVisibleItemsInSection('finanzas')).toBe(true);
   });
 
-  it('should read a stored sidebar width and keep it within bounds', () => {
-    localStorage.setItem('sidebar_width', '520');
+  it('starts collapsed by default on desktop and expands on hover', () => {
+    vi.spyOn(component, 'isMobileViewport').mockReturnValue(false);
 
     component.ngOnInit();
+    expect(component.isSidebarCollapsed).toBe(true);
 
-    expect(component.sidebarWidth).toBe(400);
+    component.onSidebarMouseEnter();
+    expect(component.isHoverExpanded).toBe(true);
+    expect(component.isSidebarCollapsed).toBe(false);
+
+    component.onSidebarMouseLeave();
+    expect(component.isHoverExpanded).toBe(false);
+    expect(component.isSidebarCollapsed).toBe(true);
+  });
+
+  it('keeps mobile menu behavior unchanged and ignores hover on mobile', () => {
+    vi.spyOn(component, 'isMobileViewport').mockReturnValue(true);
+
+    component.isCollapsed = true;
+    component.onSidebarMouseEnter();
+    expect(component.isHoverExpanded).toBe(false);
+
+    component.onSidebarMouseLeave();
+    expect(component.isHoverExpanded).toBe(false);
   });
 
   it('admin_sistema solo ve Dashboard y Usuarios', () => {

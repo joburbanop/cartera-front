@@ -29,4 +29,7 @@ export interface Contract {
   lot?: Lot;
   project?: Project;
   transactions?: Transaction[];
+  pending_residual_balance?: number | string;
+  residual_balance_collectible?: boolean;
+  residual_collectible_threshold?: number | string;
 }

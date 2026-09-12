@@ -17,15 +17,51 @@
 
 .hv-gap {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.5rem 0.75rem;
-  background: #fff7ed;
-  border-color: #fed7aa;
+  flex-direction: column;
+  gap: 0.85rem;
+  background: var(--brand-link-soft);
+  border-color: rgba(3, 105, 161, 0.2);
+  color: var(--brand-link);
 
-  span { font-weight: 700; color: #9a3412; }
-  strong { font-size: 1.05rem; color: #9a3412; }
-  small { width: 100%; color: #9a3412; opacity: 0.85; }
+  span { font-weight: 700; color: var(--brand-link); }
+  strong { font-size: 1.05rem; color: var(--brand-link); }
+
+  .hv-gap__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .hv-gap__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 0.75rem;
+
+    > div {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      padding: 0.6rem 0.7rem;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.45);
+      border: 1px solid rgba(3, 105, 161, 0.12);
+    }
+
+    span {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: none;
+      letter-spacing: 0;
+      opacity: 0.9;
+    }
+
+    strong {
+      font-size: 0.96rem;
+      line-height: 1.3;
+    }
+  }
 }
 
 .hv-card {
@@ -167,6 +203,14 @@
 .hv-table .num { text-align: right; white-space: nowrap; }
 .hv-accumulated { font-weight: 600; color: #334155; }
 .hv-initial td { font-weight: 700; background: #f8fafc; }
+
+tr.hv-no-running {
+  color: #64748b;
+
+  td:nth-child(2) {
+    font-style: italic;
+  }
+}
 
 .hv-trace {
   display: block;

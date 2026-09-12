@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 import { PaginationComponent } from './pagination.component';
 
@@ -37,5 +38,17 @@ describe('PaginationComponent', () => {
     const lastPageButtons = fixture.nativeElement.querySelectorAll('.pagination__btn') as NodeListOf<HTMLButtonElement>;
     expect(lastPageButtons[0].disabled).toBe(false);
     expect(lastPageButtons[1].disabled).toBe(true);
+  });
+
+  it('deja un área táctil mínima compatible con touch en mobile', () => {
+    fixture.componentRef.setInput('currentPage', 1);
+    fixture.detectChanges();
+
+    const nextButton = fixture.nativeElement.querySelectorAll('.pagination__btn')[1] as HTMLButtonElement;
+    const styles = getComputedStyle(nextButton);
+
+    expect(parseFloat(styles.minHeight)).toBeGreaterThanOrEqual(44);
+    expect(parseFloat(styles.minWidth)).toBeGreaterThanOrEqual(44);
+    expect(styles.touchAction).toBe('manipulation');
   });
 });

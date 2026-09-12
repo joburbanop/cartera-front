@@ -79,6 +79,26 @@
     text-align: right;
     line-height: 1.35;
   }
+
+  .residual-row__value {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.2rem;
+  }
+
+  .residual-row__hint {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #b45309;
+    text-transform: none;
+    letter-spacing: 0;
+    max-width: 16rem;
+  }
+
+  .residual-row__hint--ready {
+    color: #047857;
+  }
 }
 
 .card-heading-icon {
@@ -127,5 +147,41 @@
 @media (max-width: 900px) {
   .summary-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .info-card {
+    padding: 1.05rem 1rem;
+  }
+
+  .info-card .data-row {
+    gap: 0.65rem;
+    padding: 0.7rem 0;
+  }
+
+  .info-card .label {
+    font-size: 0.66rem;
+  }
+
+  .info-card .value {
+    font-size: 0.88rem;
+  }
+
+  .total-financed {
+    margin-top: 1rem;
+    padding: 0.7rem 0.8rem;
+  }
+
+  .total-financed__label {
+    font-size: 0.66rem;
+  }
+
+  .total-financed__value {
+    font-size: 1rem;
+  }
+
+  .info-card .residual-row__hint {
+    max-width: 12.5rem;
   }
 }

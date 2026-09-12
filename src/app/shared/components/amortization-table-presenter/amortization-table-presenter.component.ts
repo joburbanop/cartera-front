@@ -11,7 +11,7 @@ import { AmortizationInstallment } from '../../../core/models/amortization-insta
 import { AmortizationFinancialsService } from '../../../core/services/amortization-financials.service';
 import { AmortizationStatusLabelPipe } from '../../pipes/amortization-status-label.pipe';
 import { PaginationComponent } from '../pagination/pagination.component';
-import { PaymentSource } from '../../../core/models/payment-source.model';
+import { PaymentSource, PaymentSourceAlsoApplied } from '../../../core/models/payment-source.model';
 
 @Component({
   selector: 'app-amortization-table-presenter',
@@ -255,20 +255,66 @@ export class AmortizationTablePresenterComponent {
     return this.financials.getFeeDebtValue(fee);
   }
 
-  alsoAppliedLabel(source: PaymentSource): string {
-    const others = source.also_applied_to ?? [];
-    if (others.length === 0) {
-      return '';
+  receiptRouteLabel(source: PaymentSource, currentNumber: number): string {
+    const route = source.route ?? [];
+    if (route.length > 0) {
+      const origin = route[0];
+      const path = route.map((item) => this.peerQuotaLabel(item)).join(' → ');
+      if (this.isSameQuota(origin, currentNumber)) {
+        if (route.length === 1) {
+          return 'Este recibo se aplicó solo a esta cuota.';
+        }
+
+        const rest = route
+          .slice(1)
+          .map((item) => `${this.peerQuotaLabel(item)} ($ ${this.peerAmount(item)})`)
+          .join(', ');
+
+        return `Empezó en esta cuota. Recorrido: ${path}. El resto fue a ${rest}.`;
+      }
+
+      return `Sobrante del mismo recibo. Empezó en ${this.peerQuotaLabel(origin)}. Recorrido: ${path}.`;
     }
 
-    return others
-      .map((item) => {
-        const dest = item.installment_number === 0
-          ? 'cuota inicial'
-          : (item.installment_number != null ? `cuota #${item.installment_number}` : item.target_label);
-        return `${dest} ($ ${Number(item.amount || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 })})`;
-      })
-      .join(', ');
+    const cameFrom = source.came_from?.[0];
+    if (cameFrom) {
+      return `Sobrante del mismo recibo. Empezó en ${this.peerQuotaLabel(cameFrom)}.`;
+    }
+
+    const others = source.also_applied_to ?? [];
+    if (others.length > 0) {
+      const rest = others
+        .map((item) => `${this.peerQuotaLabel(item)} ($ ${this.peerAmount(item)})`)
+        .join(', ');
+
+      return `Empezó en esta cuota. El resto fue a ${rest}.`;
+    }
+
+    return 'Este recibo se aplicó solo a esta cuota.';
+  }
+
+  private isSameQuota(item: PaymentSourceAlsoApplied, currentNumber: number): boolean {
+    if (item.installment_number == null) {
+      return false;
+    }
+
+    return Number(item.installment_number) === Number(currentNumber);
+  }
+
+  private peerQuotaLabel(item: PaymentSourceAlsoApplied): string {
+    if (item.installment_number === 0) {
+      return 'cuota inicial';
+    }
+
+    if (item.installment_number != null) {
+      return `cuota #${item.installment_number}`;
+    }
+
+    return item.target_label;
+  }
+
+  private peerAmount(item: { amount: number | string }): string {
+    return Number(item.amount || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
   }
 
   private sourceKey(fee: AmortizationInstallment): number | null {

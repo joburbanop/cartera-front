@@ -19,8 +19,10 @@ describe('AuthService preferencias de UI', () => {
   });
 
   afterEach(() => {
+    service.stopSessionKeepAlive();
     httpMock.verify();
     localStorage.clear();
+    sessionStorage.clear();
   });
 
   it('hidrata el orden de pestañas desde el login', () => {
@@ -41,6 +43,7 @@ describe('AuthService preferencias de UI', () => {
         user: {
           id: 1,
           name: 'Admin',
+          permissions: ['payments.reverse', 'payments.register'],
           ui_preferences: { contractTabs: custom },
         },
       },
@@ -48,6 +51,7 @@ describe('AuthService preferencias de UI', () => {
 
     expect(service.contractTabOrder()).toEqual(custom);
     expect(service.uiPreferencesReady()).toBe(true);
+    expect(service.hasPermission('payments.reverse')).toBe(true);
   });
 
   it('pide /me una vez por sesión aunque ya haya nombre guardado', () => {
@@ -93,5 +97,59 @@ describe('AuthService preferencias de UI', () => {
 
     expect(failed).toBe(true);
     expect(service.contractTabOrder()).toEqual([...DEFAULT_CONTRACT_TAB_IDS]);
+  });
+});
+
+describe('AuthService sesión', () => {
+  let service: AuthService;
+  let httpMock: HttpTestingController;
+
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    service = TestBed.inject(AuthService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    service.stopSessionKeepAlive();
+    httpMock.verify();
+    localStorage.clear();
+    sessionStorage.clear();
+    vi.useRealTimers();
+  });
+
+  it('hace ping a /me al iniciar keep-alive y cada 60s', () => {
+    vi.useFakeTimers();
+    localStorage.setItem('auth_token', 'tok');
+
+    service.startSessionKeepAlive();
+    const first = httpMock.expectOne((request) => request.url.includes('/me') && request.method === 'GET');
+    first.flush({ data: { user: { name: 'Admin' } } });
+
+    vi.advanceTimersByTime(60_000);
+    const second = httpMock.expectOne((request) => request.url.includes('/me') && request.method === 'GET');
+    second.flush({ data: { user: { name: 'Admin' } } });
+
+    service.stopSessionKeepAlive();
+    vi.advanceTimersByTime(60_000);
+    httpMock.expectNone((request) => request.url.includes('/me') && request.method === 'GET');
+  });
+
+  it('endWrite indica expirar solo si había un 401 diferido', () => {
+    service.beginWrite();
+    service.deferSessionExpiry();
+    expect(service.endWrite()).toBe(true);
+    expect(service.endWrite()).toBe(false);
+  });
+
+  it('notifySessionExpired es idempotente y deja el aviso para el login', () => {
+    expect(service.notifySessionExpired()).toBe(true);
+    expect(service.notifySessionExpired()).toBe(false);
+    expect(service.consumeSessionExpiredNotice()).toBe(true);
+    expect(service.consumeSessionExpiredNotice()).toBe(false);
   });
 });

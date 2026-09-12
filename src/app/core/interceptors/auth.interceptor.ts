@@ -1,12 +1,16 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { catchError, throwError } from 'rxjs';
-import { AuthService } from '../services/auth.service';
+import { catchError, finalize, throwError } from 'rxjs';
+import { AuthService, SESSION_EXPIRED_MESSAGE } from '../services/auth.service';
+import { ToastService } from '../../shared/services/toast.service';
+
+const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const router = inject(Router);
+  const toast = inject(ToastService);
   const token = authService.getToken();
 
   const headers: Record<string, string> = {
@@ -22,6 +26,22 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   });
 
   const shouldSkipAutoLogout = req.url.includes('/login') || req.url.includes('/logout');
+  const isWrite = WRITE_METHODS.has(req.method.toUpperCase()) && !shouldSkipAutoLogout;
+
+  if (isWrite) {
+    authService.beginWrite();
+  }
+
+  const expireSession = (): void => {
+    const shouldNotify = authService.notifySessionExpired();
+    if (shouldNotify) {
+      toast.show(SESSION_EXPIRED_MESSAGE, 'error');
+    }
+
+    authService.logout().subscribe(() => {
+      void router.navigate(['/login'], { queryParams: { expired: '1' } });
+    });
+  };
 
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
@@ -34,12 +54,23 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       }
 
       if (error.status === 401 && !shouldSkipAutoLogout && !authService.isLogoutRequest(req.url)) {
-        authService.logout().subscribe(() => {
-          void router.navigate(['/login']);
-        });
+        if (!isWrite && authService.hasInFlightWrites()) {
+          authService.deferSessionExpiry();
+        } else {
+          expireSession();
+        }
       }
 
       return throwError(() => error);
+    }),
+    finalize(() => {
+      if (!isWrite) {
+        return;
+      }
+
+      if (authService.endWrite()) {
+        expireSession();
+      }
     })
   );
 };
