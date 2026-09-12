@@ -11,6 +11,7 @@ export interface ContractListFilters {
   project_id?: string | number;
   lot_number?: string;
   status?: string;
+  exclude_status?: string;
   cartera?: string;
   start_date_from?: string;
   start_date_to?: string;
@@ -57,6 +58,9 @@ export class ContractService {
     }
     if (params?.status) {
       httpParams['status'] = params.status;
+    }
+    if (params?.exclude_status) {
+      httpParams['exclude_status'] = params.exclude_status;
     }
     if (params?.cartera) {
       httpParams['cartera'] = params.cartera;

@@ -1,0 +1,234 @@
+<div
+  *ngIf="isOpen"
+  class="modal-backdrop"
+  (click)="close()"
+>
+  <div
+    class="modal-card"
+    (click)="$event.stopPropagation()"
+  >
+    <!-- HEADER -->
+    <div class="modal-header">
+      <div>
+        <h3>Registrar desistimiento</h3>
+
+        <p class="modal-subtitle">
+          Registra la información del desistimiento del contrato.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="modal-close"
+        (click)="close()"
+        [disabled]="isSaving"
+      >
+        ✕
+      </button>
+    </div>
+
+    <!-- BODY -->
+    <div class="modal-body">
+
+      <!-- Fecha de solicitud -->
+      <div class="modal-field">
+        <label for="requestDate">
+          Fecha de solicitud
+        </label>
+
+        <input
+          id="requestDate"
+          type="date"
+          class="modal-input"
+          [(ngModel)]="requestDate"
+          [disabled]="isSaving"
+        />
+      </div>
+
+      <!-- Causa -->
+      <div class="modal-field">
+        <label for="cause">
+          Causa del desistimiento
+        </label>
+
+        <select
+          id="cause"
+          class="modal-input"
+          [(ngModel)]="cause"
+          [disabled]="isSaving"
+        >
+          <option
+            *ngFor="let option of causes"
+            [value]="option.value"
+          >
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Porcentaje de retención -->
+      <div class="modal-field">
+        <label for="retentionPercentage">
+          Porcentaje de retención
+        </label>
+
+        <div class="input-with-suffix">
+          <input
+            id="retentionPercentage"
+            type="number"
+            class="modal-input"
+            [(ngModel)]="retentionPercentage"
+            min="0"
+            max="100"
+            step="0.01"
+            [disabled]="isSaving"
+          />
+
+          <span class="input-suffix">%</span>
+        </div>
+
+        <p class="modal-note">
+          El porcentaje aplicado será utilizado para calcular la multa
+          sobre los aportes realizados.
+        </p>
+      </div>
+
+      <!-- Observaciones -->
+      <div class="modal-field">
+        <label for="observations">
+          Observaciones
+        </label>
+
+        <textarea
+          id="observations"
+          class="modal-input modal-textarea"
+          [(ngModel)]="observations"
+          rows="3"
+          [disabled]="isSaving"
+          placeholder="Observaciones del desistimiento..."
+        ></textarea>
+      </div>
+
+      <!-- Justificación -->
+      <div class="modal-field">
+        <label for="modificationJustification">
+          Justificación de modificación
+        </label>
+
+        <textarea
+          id="modificationJustification"
+          class="modal-input modal-textarea"
+          [(ngModel)]="modificationJustification"
+          rows="3"
+          [disabled]="isSaving"
+          placeholder="Justificación, si aplica..."
+        ></textarea>
+      </div>
+
+      <!-- LIQUIDACIÓN -->
+      <div class="summary-box">
+        <div class="summary-title">
+          Liquidación
+        </div>
+
+        <div class="summary-row">
+          <span>Aportes realizados</span>
+
+          <strong>
+            {{
+              calculation
+                ? (calculation.contributions | currency:'COP':'symbol':'1.0-0')
+                : '—'
+            }}
+          </strong>
+        </div>
+
+        <div class="summary-row">
+          <span>Retención</span>
+
+          <strong>
+            {{
+              calculation
+                ? calculation.authorized_retention_percentage + '%'
+                : '—'
+            }}
+          </strong>
+        </div>
+
+        <div class="summary-row">
+          <span>Multa</span>
+
+          <strong>
+            {{
+              calculation
+                ? (calculation.penalty_amount | currency:'COP':'symbol':'1.0-0')
+                : '—'
+            }}
+          </strong>
+        </div>
+
+        <div class="summary-row summary-total">
+          <span>Saldo a devolver</span>
+
+          <strong>
+            {{
+              calculation
+                ? (calculation.refund_balance | currency:'COP':'symbol':'1.0-0')
+                : '—'
+            }}
+          </strong>
+        </div>
+
+        <p
+          class="modal-note"
+          *ngIf="!calculation"
+        >
+          La liquidación se calculará antes de registrar el desistimiento.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="modal-footer">
+      <button
+        type="button"
+        class="btn-secondary"
+        (click)="close()"
+        [disabled]="isSaving"
+      >
+        Cancelar
+      </button>
+
+    <button
+        type="button"
+        class="btn-secondary"
+        (click)="calculate()"
+        [disabled]="isSaving || isCalculating || !requestDate"
+        >
+        <span *ngIf="!isCalculating">
+            Calcular liquidación
+        </span>
+
+        <span *ngIf="isCalculating">
+            Calculando...
+        </span>
+        </button>
+
+        <button
+        type="button"
+        class="btn-primary"
+        (click)="confirm()"
+        [disabled]="isSaving || isCalculating || !requestDate || !calculation"
+        >
+        <span *ngIf="!isSaving">
+            Registrar desistimiento
+        </span>
+
+        <span *ngIf="isSaving">
+            Registrando...
+        </span>
+    </button>
+    </div>
+  </div>
+</div>

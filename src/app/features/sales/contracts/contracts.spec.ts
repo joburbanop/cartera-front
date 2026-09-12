@@ -362,6 +362,93 @@ describe('ContractsComponent', () => {
     req.flush({ data: { data: [], total: 1, current_page: 1, last_page: 1, per_page: 100 } });
   });
 
+  it('la sección Contratos excluye los rescindidos con exclude_status', () => {
+    httpMock.match(() => true).forEach((req) => req.flush({ data: [] }));
+
+    component.loadContracts(1);
+
+    const req = httpMock.expectOne((request) => request.url.includes('/contracts') && request.method === 'GET');
+    expect(req.request.params.get('exclude_status')).toBe('rescindido');
+    expect(req.request.params.get('status')).toBeNull();
+    req.flush({ data: { data: [], total: 0, current_page: 1, last_page: 1, per_page: 10 } });
+  });
+
+  it('la sección Rescindidos pide status=rescindido y limpia la lista anterior', () => {
+    httpMock.match(() => true).forEach((req) => req.flush({ data: [] }));
+
+    component.contracts = [{ id: 1, contract_number: 'SM-LOTE-1', status: 'rescindido' }];
+    component.selectContractSection('rescindidos');
+
+    expect(component.showRescinded).toBe(true);
+    expect(component.contracts).toEqual([]);
+    expect(component.currentPage).toBe(1);
+
+    const req = httpMock.expectOne((request) => request.url.includes('/contracts') && request.method === 'GET');
+    expect(req.request.params.get('status')).toBe('rescindido');
+    expect(req.request.params.get('exclude_status')).toBeNull();
+    req.flush({
+      data: {
+        data: [
+          { id: 1, contract_number: 'SM-LOTE-1', status: 'rescindido' },
+          { id: 59, contract_number: 'SM-LOTE-60', status: 'rescindido' },
+        ],
+        total: 2,
+        current_page: 1,
+        last_page: 1,
+        per_page: 10,
+      },
+    });
+
+    expect(component.contracts.map((contract) => contract.contract_number)).toEqual([
+      'SM-LOTE-1',
+      'SM-LOTE-60',
+    ]);
+    expect(component.totalContracts).toBe(2);
+  });
+
+  it('al volver a Contratos descarta el status rescindido del filtro manual', () => {
+    httpMock.match(() => true).forEach((req) => req.flush({ data: [] }));
+
+    component.selectContractSection('rescindidos');
+    httpMock.match(() => true).forEach((req) =>
+      req.flush({ data: { data: [], total: 0, current_page: 1, last_page: 1, per_page: 10 } }),
+    );
+
+    component.filterForm.patchValue({ status: 'rescindido' }, { emitEvent: false });
+    component.selectContractSection('contratos');
+
+    expect(component.filterForm.get('status')?.value).toBe('');
+    const req = httpMock.expectOne((request) => request.url.includes('/contracts') && request.method === 'GET');
+    expect(req.request.params.get('exclude_status')).toBe('rescindido');
+    expect(req.request.params.get('status')).toBeNull();
+    req.flush({ data: { data: [], total: 0, current_page: 1, last_page: 1, per_page: 10 } });
+  });
+
+  it('la paginación de Archivados llama a loadArchivedContracts', () => {
+    httpMock.match(() => true).forEach((req) => req.flush({ data: [] }));
+
+    component.showArchived = true;
+    component.onPageChange(2);
+
+    const req = httpMock.expectOne((request) =>
+      request.url.endsWith('/contracts/archived') && request.method === 'GET',
+    );
+    expect(req.request.params.get('page')).toBe('2');
+    req.flush({ data: { data: [], total: 0, current_page: 2, last_page: 2, per_page: 10 } });
+  });
+
+  it('muestra las pestañas Contratos y Rescindidos en la vista general', () => {
+    httpMock.match(() => true).forEach((req) =>
+      req.flush({ data: { data: [], total: 0, current_page: 1, last_page: 1, per_page: 10 } }),
+    );
+    fixture.detectChanges();
+
+    const tabs = fixture.nativeElement.querySelectorAll('.view-tabs button');
+    expect(tabs.length).toBe(2);
+    expect(tabs[0].textContent).toContain('Contratos');
+    expect(tabs[1].textContent).toContain('Rescindidos');
+  });
+
   it('al abrir amortización desde el lote lleva el rastro de cuatro niveles', () => {
     component.selectedLotId = 12;
     component.selectedLot = { number: '49' };

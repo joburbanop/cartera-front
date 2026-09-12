@@ -100,6 +100,7 @@ export class ContractsComponent implements OnInit, OnDestroy {
   showCustomerModal = false;
   editingContractId: number | null = null;
   showArchived = false;
+  showRescinded = false;
 
   contractForm = this.fb.group({
     contract_number: ['', Validators.required],
@@ -145,6 +146,45 @@ export class ContractsComponent implements OnInit, OnDestroy {
     return n === 1
       ? '1 contrato encontrado'
       : `${n} contratos encontrados`;
+  }
+
+  /** La pestaña Rescindidos solo aplica a la vista general, nunca a Archivados. */
+  get isRescindedSection(): boolean {
+    return this.showRescinded && !this.showArchived;
+  }
+
+  get statusFilterOptions(): Array<{ value: string; label: string }> {
+    if (this.isRescindedSection) {
+      return [];
+    }
+
+    if (this.showArchived) {
+      return this.contractStatusOptions;
+    }
+
+    return this.contractStatusOptions.filter((option) => option.value !== 'rescindido');
+  }
+
+  get contractsSectionTitle(): string {
+    if (this.showArchived) {
+      return 'Contratos archivados';
+    }
+
+    return this.showRescinded ? 'Contratos rescindidos' : 'Contratos';
+  }
+
+  get emptyContractsMessage(): string {
+    if (this.selectedLotId) {
+      return 'Este lote no tiene contratos registrados.';
+    }
+
+    if (this.showArchived) {
+      return 'No hay contratos archivados.';
+    }
+
+    return this.showRescinded
+      ? 'No hay contratos rescindidos.'
+      : 'No hay contratos registrados aún.';
   }
 
   get paymentPromises(): FormArray<FormGroup> {
@@ -829,20 +869,64 @@ export class ContractsComponent implements OnInit, OnDestroy {
     this.loadContracts(1);
   }
 
+  /**
+   * Filtros de la seccion activa: la pestana manda sobre el filtro manual de
+   * estado para que la consulta nunca sea contradictoria.
+   */
+  private currentSectionFilters(): ContractListFilters {
+    const filters = this.currentFilters();
+
+    if (this.showRescinded) {
+      filters.status = 'rescindido';
+      delete filters.exclude_status;
+      return filters;
+    }
+
+    if (filters.status === 'rescindido') {
+      delete filters.status;
+    }
+
+    filters.exclude_status = 'rescindido';
+    return filters;
+  }
+
+  selectContractSection(section: 'contratos' | 'rescindidos'): void {
+    const nextRescinded = section === 'rescindidos';
+
+    if (nextRescinded || this.filterForm.get('status')?.value === 'rescindido') {
+      this.filterForm.patchValue({ status: '' }, { emitEvent: false });
+    }
+
+    this.showRescinded = nextRescinded;
+    this.currentPage = 1;
+    this.contracts = [];
+    this.totalContracts = 0;
+    this.errorMessage = '';
+    this.isLoading = true;
+
+    this.loadContracts(1);
+    this.cdr.detectChanges();
+  }
+
 loadContracts(page = 1) {
+  
   this.currentPage = page;
+  this.isLoading = true;
+  this.errorMessage = '';
 
   const params = {
-    ...(this.selectedLotId ? { lotId: this.selectedLotId } : this.currentFilters()),
+    ...(this.selectedLotId ? { lotId: this.selectedLotId } : this.currentSectionFilters()),
     page: this.currentPage,
     perPage: this.selectedLotId ? 100 : this.pageSize,
   };
 
   this.contractService.getContracts(params).subscribe({
     next: (response) => {
+       
       const paginator = unwrapPaginator(response);
-
+        console.log('Contratos recibidos:', paginator.items);
       this.contracts = paginator.items as any[];
+      console.log('this.contracts:', this.contracts);
       this.currentPage = paginator.currentPage;
       this.totalContracts = paginator.total;
 
@@ -903,12 +987,23 @@ loadArchivedContracts(page = 1): void {
 
     this.currentPage = 1;
     this.errorMessage = '';
+    this.contracts = [];
+    this.totalContracts = 0;
 
     if (this.showArchived) {
       this.loadArchivedContracts(1);
     } else {
       this.loadContracts(1);
     }
+  }
+
+  onPageChange(page: number): void {
+    if (this.showArchived) {
+      this.loadArchivedContracts(page);
+      return;
+    }
+
+    this.loadContracts(page);
   }
 
   calculatePreview(values: any) {

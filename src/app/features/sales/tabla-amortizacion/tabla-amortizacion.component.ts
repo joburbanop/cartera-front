@@ -44,6 +44,9 @@ import {
   visibleContractTabs,
 } from '../../../core/utils/contract-tabs';
 import { buildAppBreadcrumbs, penultimateBreadcrumb } from '../../../core/utils/breadcrumbs';
+import {WithdrawalService,WithdrawalCalculation,CreateWithdrawalRequest,} from '../../../core/services/Financial/withdrawal.service';
+import { WithdrawalModal } from './withdrawal-modal/withdrawal-modal';
+
 @Component({
   selector: 'app-tabla-amortizacion',
   standalone: true,
@@ -60,6 +63,7 @@ import { buildAppBreadcrumbs, penultimateBreadcrumb } from '../../../core/utils/
     EditDueDateModalComponent,
     EditPaymentDateModalComponent,
     RefinanceModalComponent,
+    WithdrawalModal,
     LifeSheetTabComponent,
     BitacoraComponent,
     PaginationComponent,
@@ -98,6 +102,7 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   private pageTitle = inject(PageTitleService);
   private trail = inject(NavigationTrailService);
   private toast = inject(ToastService);
+  private withdrawalService = inject(WithdrawalService);
   private host = inject(ElementRef<HTMLElement>);
   readonly backCrumb = computed(() => penultimateBreadcrumb(buildAppBreadcrumbs(
     this.router.url.split('?')[0],
@@ -231,6 +236,10 @@ export class AmortizationComponent implements OnInit, OnDestroy {
   isRefinanceModalOpen = false;
   isRefinancing = false;
   isReorderingPromises = false;
+  isWithdrawalModalOpen = false;
+  isCalculatingWithdrawal = false;
+  isRegisteringWithdrawal = false;
+  withdrawalCalculation: WithdrawalCalculation | null = null;
 
   /** Socio gerencia ve la bitácora completa del contrato y del cliente. */
   get canViewFullBitacora(): boolean {
@@ -854,6 +863,128 @@ export class AmortizationComponent implements OnInit, OnDestroy {
         },
       });
   }
+
+  openWithdrawalModal(): void {
+  if (!this.canRefinance) {
+    return;
+  }
+
+  this.withdrawalCalculation = null;
+  this.isCalculatingWithdrawal = false;
+  this.isWithdrawalModalOpen = true;
+
+  this.cdr.detectChanges();
+}
+
+closeWithdrawalModal(): void {
+  if (this.isCalculatingWithdrawal || this.isRegisteringWithdrawal) {
+    return;
+  }
+
+  this.isWithdrawalModalOpen = false;
+  this.withdrawalCalculation = null;
+
+  this.cdr.detectChanges();
+}
+
+calculateWithdrawal(
+  payload: {
+    cause: 'retracto_de_ley' | 'fuerza_mayor' | 'voluntario';
+    retentionPercentage: number | null;
+    requestDate: string;
+    observations: string | null;
+    modificationJustification: string | null;
+  },
+): void {
+  if (!this.contractId || this.isCalculatingWithdrawal) {
+    return;
+  }
+
+  const request: CreateWithdrawalRequest = {
+    contract_id: this.contractId,
+    request_date: payload.requestDate,
+    cause: payload.cause,
+    retention_percentage: payload.retentionPercentage,
+    observations: payload.observations,
+    modification_justification: payload.modificationJustification,
+  };
+
+  this.isCalculatingWithdrawal = true;
+
+  this.withdrawalService.calculatePreventa(request).subscribe({
+    next: (response) => {
+    this.withdrawalCalculation = response.data ?? null;
+    this.isCalculatingWithdrawal = false;
+
+    this.cdr.detectChanges();
+  },
+    error: (err) => {
+      this.isCalculatingWithdrawal = false;
+
+      this.toast.show(
+        'No se pudo calcular la liquidación',
+        'error',
+        this.readFirstBackendError(err),
+      );
+
+      this.cdr.detectChanges();
+    },
+  });
+}
+
+    confirmWithdrawal(
+      payload: {
+        cause: 'retracto_de_ley' | 'fuerza_mayor' | 'voluntario';
+        retentionPercentage: number | null;
+        requestDate: string;
+        observations: string | null;
+        modificationJustification: string | null;
+      },
+    ): void {
+      if (!this.contractId || this.isRegisteringWithdrawal) {
+        return;
+      }
+
+      const request: CreateWithdrawalRequest = {
+        contract_id: this.contractId,
+        request_date: payload.requestDate,
+        cause: payload.cause,
+        retention_percentage: payload.retentionPercentage,
+        observations: payload.observations,
+        modification_justification: payload.modificationJustification,
+      };
+
+      this.isRegisteringWithdrawal = true;
+
+      this.withdrawalService.createPreventa(request).subscribe({
+        next: () => {
+          this.isRegisteringWithdrawal = false;
+          this.isWithdrawalModalOpen = false;
+          this.withdrawalCalculation = null;
+
+          this.toast.show(
+            'Desistimiento registrado',
+            'success',
+            'El desistimiento se registró correctamente.',
+          );
+
+          this.loadContractData();
+          this.cargarTablaAmortizacion();
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.isRegisteringWithdrawal = false;
+
+          this.toast.show(
+            'No se pudo registrar el desistimiento',
+            'error',
+            this.readFirstBackendError(err),
+          );
+
+          this.cdr.detectChanges();
+        },
+      });
+    }
 
   toggleSelectAll(event: any): void {
     this.selection.toggleSelectAll(event, this.amortizationPlan, (item: any) => this.isFeeSelectable(item));
